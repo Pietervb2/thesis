@@ -11,16 +11,19 @@ class Pipes:
             pipe_radius_inner : float,
             dt : float,
             num_steps : int,
-            K : float):
+            K : float,
+            T_ambt : float):
         """
         Initialize pipe.
 
         Parameters: 
         pipe_length [m]
-        pipe_radius [m]
+        pipe_radius_outer [m]
+        pipe_radius_inner [m]
         dt: time step [t]
         num_steps: number of simulation steps 
         K: overall heat transmission coefficient [W/m2K]
+        T_ambt: ambient temperature [C]
 
         #TODO: update
         """
@@ -34,12 +37,13 @@ class Pipes:
 
         # Physical constants
         self.K = K
+         
         self.rho_water = 1e3 # [kg/m3] NOTE: maybe later make a constant file. When there are too many constants.
         self.rho_pipe = 8e3 #  [kg/m3] 
         self.c_water = 4.18e3 # [J/kg K] specific heat capacity
         self.c_pipe = 0.466e3 # [J/kg K] specific heat capacity of steel NOTE: DUMMY checked on wiki, needs to be more accurate 
         
-        self.T_ambt = 10 # [C] ambient temperature NOTE: constant
+        self.T_ambt = T_ambt # [C] ambient temperature 
         self.C_pipe = np.pi * (self.radius_outer ** 2 - self.radius_inner ** 2) * self.rho_pipe * self.c_pipe * self.L # [J/K] total heat capacity pipe
         self.inner_cs = np.pi * self.radius_inner ** 2 # inner cross section area
         self.outer_cs = np.pi * self.radius_outer ** 2 # outer cross section area
@@ -62,6 +66,7 @@ class Pipes:
         min_steps = int(np.ceil((self.L + v_init * self.dt) / (v_init * self.dt)))
         # Add some margin to ensure we have enough history NOTE: based on what?
         history_length = min_steps + 5
+        print(f' HISTORY LENGTH {history_length}')
         
         # Initialize velocity and temperature of water 
         self.v_history = np.ones(history_length) * v_init
@@ -70,7 +75,7 @@ class Pipes:
         # initialize temperature for the pipe
         self.T_pipe = np.ones(history_length + self.num_steps) * T_init  # NOTE: maybe use a different initialization, but for now it is good. It is longer than it should be but it works better with actual_N
 
-        self.t_stay_array = np.zeros(history_length + self.num_steps) # debug 
+        self.t_stay_array = np.ones(self.num_steps) # debug 
         self.first_term_array = np.zeros(history_length + self.num_steps) # debug
         self.second_term_array = np.zeros(history_length + self.num_steps) # debug
         self.third_term_array = np.zeros(history_length + self.num_steps) # debug
@@ -116,7 +121,7 @@ class Pipes:
         
         #debug print(R, Y, S)
 
-        # Compute the output temperature T_N
+        # Compute the lossless output temperature T_N
         T_N_lossless = ((R - self.L) * T_k[N-n] + Y + (v[N] * self.dt - S + self.L) * T_k[N-m]) / (v[N] * self.dt)
         
         # Take into account the heat capacity of the steel pipe
@@ -124,19 +129,33 @@ class Pipes:
         
         T_N_pipe = (m_flow * self.c_water * T_N_lossless * self.dt + self.C_pipe * self.T_pipe[N-1]) / (self.C_pipe + m_flow * self.c_water * self.dt)
 
-        self.T_pipe[N] = T_N_pipe # NOTE: maybe use here the final temperature of the node
+        self.T_pipe[N] = T_N_pipe # update temperature pipe
 
         # determine average delay in the pipe
-        t_stay = self.average_delay(n,m,N,R,S,v,m_flow)
-        self.t_stay_array[N] = t_stay
-        print(f't_stay {t_stay}')
+        t_stay = self.average_delay(n,m,N,R,S,v)
+        self.t_stay_array[N-len(self.v_history)] = t_stay
+        print(f't_stay {t_stay}') #debug 
 
         T_real_out = self.T_ambt + (T_N_pipe - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section
 
        
         return T_N_lossless, T_N_pipe, T_real_out #debug 
 
-    def average_delay(self,n,m,N,R,S,v,m_flow):
+    def average_delay(self,n,m,N,R,S,v):
+        """    
+        Source: Maurer. J, Comparison of discrete dynamic pipeline models for operational optimization of District Heating Networks. 2021
+
+        Parameters:
+        n : The number of complete pipe lengths traversed.
+        m : The number of time steps for the final partial pipe length.
+        N : Total number of time steps.
+        R : The remaining distance at the start of the calculation.
+        S : The remaining distance at the end of the calculation.
+        v : Array of velocities at each time step.
+        
+        Returns:
+        The average delay time of the water in the pipe.
+        """
 
         first_term = n * (R - self.L)
 
@@ -146,13 +165,14 @@ class Pipes:
 
         third_term = m * (v[N] * self.dt + (self.L - S))
 
+        print(f' n = {n} and m = {m}')
+
         return (first_term + second_term + third_term)/v[N]
 
     def simulate_pipe_temperature(self, T_inlet, v_flow, num_steps):
         """
         Simulate temperature dynamics for a pipe section
-        dfad
-        
+                
         Parameters:
         T_inlet: array of inlet temperatures
         v_flow: array of flow velocities
@@ -169,47 +189,59 @@ class Pipes:
         v_extended = np.concatenate([self.v_history, v_flow])
         T_extended = np.concatenate([self.T_history, T_inlet])
         
-        self.T_lossless_out = np.zeros(num_steps)
-        self.T_pipe_out  = np.zeros(num_steps)
-        self.T_real_out = np.zeros(num_steps)
+        self.T_lossless_out = np.zeros(self.num_steps)
+        self.T_cap_out  = np.zeros(self.num_steps)
+        self.T_real_out = np.zeros(self.num_steps)
 
         hist_len = len(self.v_history)
         
         # Run simulation with the extended arrays
         for N in range(num_steps):
             actual_N = N + hist_len  # Adjust index to account for history
-            self.T_lossless_out[N], self.T_pipe_out[N], self.T_real_out[N] = self.bnode_method(v_extended[:actual_N+1], 
+            self.T_lossless_out[N], self.T_cap_out[N], self.T_real_out[N] = self.bnode_method(v_extended[:actual_N+1], 
                                     T_extended[:actual_N+1], 
                                     actual_N)
-          
+            
+    def thermal_transmission_coef(self):
+        """
+        Calculate the thermal transmission coefficient of the pipe.
+        TODO: Implement this function
+        """
+        pass
+
+
+
 
 # Example test case
 if __name__ == "__main__":
-    # Set up parameters
+
+    # Pipe parameters
     Z = 30.0  # pipe length
-    dt = 1   # time step NOTE: used to be 1
     pipe_radius_outer = 0.1 # m DUMMY
     pipe_radius_inner = 0.08 # m DUMMY
-    num_steps = 200
-    time = np.linspace(0,num_steps-1,num_steps)*dt
-
-    K = 500 # heat transmission coefficient DUMMY 
-    pipe = Pipes(Z,pipe_radius_outer,pipe_radius_inner,dt,num_steps,K)
-   
-    # Create test data
-    T_inlet = 20 + 5 * np.sin(np.linspace(0, 2*np.pi, num_steps))  # Oscillating inlet temperature
-    # T_inlet = np.ones(num_steps)*20 #constant
+    K = 100 # heat transmission coefficient DUMMY 
     
-    v_flow = 2+0.8*np.cos(np.linspace(0, 2*np.pi, num_steps))  # Oscillating flow velocity
-    # v_flow = np.ones(num_steps)*2  # constant
+    # Time parameters
+    dt = 1  # time step
+    total_time = 100 # sec
+    time = time_array = np.arange(0, total_time + dt, dt)
+    num_steps = len(time)
+    
+    # Ambient temperature
+    T_ambt = 15 # [C]
 
-    # Create square wave for velocity (alternating between 1 and 2 m/s)
-    period = 200  # length of one complete cycle
-    v1 = np.ones(period//2) * 1  # first half of period
-    v2 = np.ones(period//2) * 2  # second half of period
-    v_base = np.concatenate((v1, v2))  # one complete cycle
-    # v_flow = np.tile(v_base, num_steps//period + 1)[:num_steps]  # repeat to fill desired length
-
+    pipe = Pipes(Z,pipe_radius_outer,pipe_radius_inner,dt,num_steps,K, T_ambt)
+   
+    # Inlet temperature
+    # T_inlet = 20 + 5 * np.sin(np.linspace(0, 2*np.pi, num_steps))  # Oscillating inlet temperature
+    # T_inlet = np.ones(pipe.num_steps) * 20 #constant
+    T_inlet = 20 + 1* square(2 * np.pi * time / 20)  # Square wave with a period of 20 steps
+    
+    # Flow velocity
+    v_flow = 2+0.8*np.cos(np.linspace(0, 2*np.pi, pipe.num_steps))  # Oscillating flow velocity
+    # v_flow = np.ones(num_steps) * 2  # constant
+    # v_flow = 1.5 + 0.5 * square(2 * np.pi * time / 50)  # Square wave flow velocity, 50 is the period
+ 
     # Run simulation
     pipe.simulate_pipe_temperature(T_inlet, v_flow, num_steps)
     
@@ -218,7 +250,7 @@ if __name__ == "__main__":
     plt.title("Water temperature")
     plt.plot(time, T_inlet, label='Inlet Temperature')
     plt.plot(time, pipe.T_lossless_out, label = "Lossless temperature")
-    plt.plot(time, pipe.T_pipe_out, label='Pipe temperature')
+    plt.plot(time, pipe.T_cap_out, label='Pipe temperature')
     plt.plot(time, pipe.T_real_out, label = 'Real temperature')
     plt.xlabel('Time')
     plt.ylabel('Temperature')
@@ -229,20 +261,21 @@ if __name__ == "__main__":
     plt.plot(pipe.t_stay_array)
     plt.title('Average delay in the pipe')
 
-    plt.figure()
-    plt.plot(pipe.first_term_array)
-    plt.title('First term')
+    # plt.figure()
+    # plt.plot(pipe.first_term_array)
+    # plt.title('First term')
 
-    plt.figure()
-    plt.plot(pipe.second_term_array)
-    plt.title('Second term')
+    # plt.figure()
+    # plt.plot(pipe.second_term_array)
+    # plt.title('Second term')
 
-    plt.figure()
-    plt.plot(pipe.third_term_array)
-    plt.title('Third term')
+    # plt.figure()
+    # plt.plot(pipe.third_term_array)
+    # plt.title('Third term')
 
     plt.figure()
     plt.plot(v_flow)
+    plt.title('Flow velocity')
 
     plt.show()
 
@@ -250,3 +283,4 @@ if __name__ == "__main__":
     # import code
     # code.interact(local=locals())
     
+# TODO: validate the model with real data
