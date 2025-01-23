@@ -17,6 +17,19 @@ class Node:
         """
         TODO: Working with T and flow requires using a timestep. This can be later implemented when implementing the for loop simulation. 
         """
+        
+
+    def initialize_node(self, num_steps, T_init) -> None:
+        """
+        Initialize the temperature in the node
+
+        Args:
+        num_steps: number of steps the simulation takes
+        T_init: initial temperature [K]
+        """
+
+        self.T = np.zeros(num_steps)
+        self.T[0] = T_init
 
 
     def add_pipe(self, pipe_id, pipe, direction):
@@ -57,7 +70,7 @@ class Node:
 
         # TODO: workout the pressure calculation to further give this meaning. 
 
-    def set_T(self):
+    def set_T(self, N):
         """
         Function that calculates the temperature at the node
 
@@ -69,11 +82,11 @@ class Node:
         for pipe_id in self.pipes_in.keys():
             
             pipe_instance = self.pipes_in[pipe_id]
-            sum_T_flow += pipe_instance.T * pipe_instance.m_flow 
+            sum_T_flow += pipe_instance.T[N] * pipe_instance.m_flow 
             sum_m_flow += pipe_instance.m_flow
         
         try:    
-            self.T = sum_T_flow / sum_m_flow
+            self.T[N] = sum_T_flow / sum_m_flow
         except(ZeroDivisionError):
             print("No ingoing mass flow")
 

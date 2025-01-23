@@ -2,6 +2,8 @@ from node import Node
 from pipe import Pipe
 import numpy as np
 
+from typing import Union
+
 
 class Network:
     """
@@ -74,40 +76,82 @@ class Network:
         """
         return np.sqrt((Node1.x - Node2.x)**2 + (Node1.y - Node2.y)**2 + (Node1.z - Node2.z)**2)
     
-    def get_neighbor_nodes(self, node_id):
-        """Get all neighbouring nodes of a node."""
+    def get_neighbor_nodes(self, node_id : str) -> tuple[Union[dict]]:
+        """
+        Get all attached nodes of a node.
+        
+        Parameters:
+        self: Network instance
+        node_id : name of the node
+
+        Returns:
+        downstream : dictionary of downstream nodes
+        upstream: dictionary of upstream nodes
+        """
         
         if node_id not in self.nodes:
-            return []
+            raise ValueError(f"Node with id: {node_id} does not exist in the network")
         
-        incoming = []
-        outgoing = []
-        for pipe in self.pipes.values():
+        downstream = {}
+        upstream = {}
+
+        for _, pipe in self.pipes.items():
             if pipe['from'] == node_id:
-                outgoing.append(pipe['to'])
+                downstream[node_id] = self.nodes[node_id]
             elif pipe['to'] == node_id:
-                incoming.append(pipe['from'])
+                upstream[node_id] = self.nodes[node_id]
+
+        return downstream, upstream
+    
+    def get_attached_pipes(self, node_id) -> tuple[Union[dict]]:
+        """Get all attached pipes of a node.
+        
+        Parameters:
+        self: Network instance
+        node_id : name of the node
+
+        Returns:
+        incoming : dictionary of incoming pipes
+        outgoing: dictionary of outgoing pipes
+        """
+
+        if node_id not in self.nodes:
+            raise ValueError(f"Node with id: {node_id} does not exist in the network")
+        
+        incoming = self.nodes[node_id].pipes_in
+        outgoing = self.nodes[node_id].pipes_out
+
+        # TODO: vraag me af of dit goed gaat
 
         return incoming, outgoing
     
-    def get_attached_pipes(self, node_id):
-        """Get all attached pipes of a node."""
+    def initialize_network(self, dt : float, num_steps : int, v_init : float, T_init : float):
+        """
+        Initialize the temperature in the network
 
-        if node_id not in self.nodes:
-            return []
-        
-        incoming = []
-        outgoing = []
+        # NOTE: for now just visit all nodes and pipes a give them the initial temperature of the first node. 
+        """
+
+        for node in self.nodes.values():
+            node.T = T_init
+
         for pipe in self.pipes.values():
-            if pipe['from'] == node_id:
-                outgoing.append(pipe['id'])
-            elif pipe['to'] == node_id:
-                incoming.append(pipe['id'])
+            pipe['pipe_class'].bnode_init(dt, num_steps, v_init, T_init)
+            pipe['pipe_class'].calc_mass_flow(v_init)
 
-        return incoming, outgoing
+        # TODO: wat gaat hier fout naast het missen van de arguments?
 
-    def set_T_network():
-        pass
+    def set_T_network(self):
+        
+        """  
+        pak de Temperatuur van node zo heb je overal de inlet temperatuur
+        dan update je de pipes
+        dan update je temperatuur in de pipes
+        """
+        
+        
+
+
 
     def set_m_flow_network():
         pass
@@ -124,38 +168,35 @@ if __name__ == "__main__":
     net = Network()
     net.add_node('Node 1',1,1,1)
     net.add_node('Node 2',2,2,2)
-    net.add_pipe('Pipe 1','Node 1','Node 2')
-    net.add_pipe('Pipe 2','Node 1','Node 2')	
-
-
-    net.add_node('Node 3', 2,3,4)
     
+    # Pipe parameters
+    pipe_radius_outer = 0.1 # [m] DUMMY
+    pipe_radius_inner = 0.08 # [m] DUMMY
+    K = 0.4 # heat transmission coefficient DUMMY zie ik staan in book van Max pagina 77
+    pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
 
-    print(net.get_attached_pipes('Node 1'))
-    print(net.get_neighbor_nodes('Node 1'))
+    net.add_pipe('Pipe 1','Node 1','Node 2', pipe_data)
+    net.add_pipe('Pipe 2','Node 1','Node 2', pipe_data)	
+    
+    net.get_attached_pipes('Node 1')
 
+    # print(net.get_attached_pipes('Node 1'))
+    # print(type(net.get_neighbor_nodes('Node 1')))
+    
+    print(f'dictionary of network of pipes before init{net.pipes}')
+    net.initialize_network(0.1, 100, 2, 80)
+    print(f'dictionary of network of pipes after init{net.pipes}')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    print(net.nodes['Node 1'])
+    print(net.nodes['Node 2'])
 
 
+    # Start interactive session
+    import code
+    code.interact(local=locals())
 
-    # NOTE: Functions written bij copilot. Maybe useful later on. 
+
+   # NOTE: Functions written bij copilot. Maybe useful later on. 
 
     # def remove_node(self, node_id):
     #     """Remove a node and all its connected edges."""
