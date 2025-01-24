@@ -14,7 +14,7 @@ class Simulation:
         self.dt = dt
         self.total_time = total_time
         self.time = np.arange(0, total_time + dt, dt) # time array
-        self.num_steps = len(time) 
+        self.num_steps = len(self.time) 
    
     def simulate_pipe_temperature(self,
                                 pipe: Pipe,
@@ -118,17 +118,17 @@ if __name__ == "__main__":
     sim = Simulation(dt, total_time)
 
     # Inlet temperature
-    # T_inlet = 80 + 5 * np.sin(np.linspace(0, 2*np.pi, sim.num_steps))   # Oscillating inlet temperature
+    T_inlet = 80 + 5 * np.sin(np.linspace(0, 2*np.pi, sim.num_steps))   # Oscillating inlet temperature
     # T_inlet = np.ones(sim.num_steps) * 80                          # Constant
-    T_inlet = 80 + 1* square(2 * np.pi * sim.time / 20)                 # Square wave with a period of 20 steps
+    # T_inlet = 80 + 1* square(2 * np.pi * sim.time / 20)                 # Square wave with a period of 20 steps
     
     # Flow velocity
-    # v_flow = 2+0.8*np.cos(np.linspace(0, 2*np.pi, sim.num_steps)) # Oscillating flow velocity
-    v_flow = np.ones(sim.num_steps) * 2                           # Constant
+    v_flow = 2+0.8*np.cos(np.linspace(0, 2*np.pi, sim.num_steps)) # Oscillating flow velocity
+    # v_flow = np.ones(sim.num_steps) * 2                           # Constant
     # v_flow = 1.5 + 0.5 * square(2 * np.pi * sim.time / 50)        # Square wave flow velocity, 50 is the period
 
     pipe = (net.pipes['Pipe 1'])['pipe_class']
-    sim.simulate_pipe_temperature(pipe, dt, total_time, T_ambt, T_inlet, v_flow)
+    sim.simulate_pipe_temperature(pipe, T_ambt, T_inlet, v_flow)
      
     # Plot results
     sim.plot_results_single_pipe_simulation(T_inlet, pipe, v_flow)

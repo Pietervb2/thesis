@@ -138,7 +138,6 @@ class Network:
 
         for pipe in self.pipes.values():
             pipe['pipe_class'].bnode_init(dt, num_steps, v_init, T_init)
-            pipe['pipe_class'].calc_mass_flow(v_init)
 
       # TODO: hoe doe je dit nu met de nieuwe bnode_init functie? Want nu vraag je al een hele array van v_flow en T_inlet. terwijl je die nog niet hebt. 
       # Ben opzich wel tevreden met hoe het nu er uit ziet alleen moet het waarschijnlijk wat aanpassen.
@@ -156,8 +155,10 @@ class Network:
         voer bnode methode uit
         sla de nieuwe temperatuur op in de node en gebruik de mass_flow bij node 'to' 
         """
-
-        # Moet het hele stuk over de stroomsnelheid nog doorgeven
+        ####################################################
+        # Goed naar kijken
+        # Moet het hele stuk over de stroomsnelheid nog doorvoeren 
+        ###############################################
 
         for pipe in self.pipes.keys():
 

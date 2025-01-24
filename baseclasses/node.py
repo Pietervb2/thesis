@@ -49,22 +49,24 @@ class Node:
         else:
             raise ValueError(f"Invalid direction: {direction}")
         
-    def set_flow(self):
+    def set_flow(self, N):
         """
         Function that calculates the flow of each in- and output pipe of the node.
 
         For now divide the mass flow based on the diameter of the pipes. 
+
+        # TODO: maybe it need to put in the new flow at N + 1
         """         
 
         # total mass in flow
-        total_m_inflow = sum(pipe['pipe'].m_flow for pipe in self.pipes_in)
+        total_m_inflow = sum(pipe['pipe'].get_m_flow(N) for pipe in self.pipes_in)
 
         try:
             # assume complete filling of pipe and simply divide total mass flow NOTE: check this assumption
             m_outflow = total_m_inflow / len(self.pipes_in)
 
             for pipe in self.pipes_out:
-                pipe['pipe'].m_flow = m_outflow      
+                pipe['pipe'].set_m_flow(m_outflow, N)     
         except(ZeroDivisionError):
             print("No ingoing mass flow")
 
@@ -81,9 +83,10 @@ class Node:
         sum_m_flow = 0
         for pipe_id in self.pipes_in.keys():
             
+            m_flow = pipe_instance.get_m_flow(N)
             pipe_instance = self.pipes_in[pipe_id]
-            sum_T_flow += pipe_instance.T[N] * pipe_instance.m_flow 
-            sum_m_flow += pipe_instance.m_flow
+            sum_T_flow += pipe_instance.T[N] * m_flow
+            sum_m_flow += m_flow
         
         try:    
             self.T[N] = sum_T_flow / sum_m_flow
