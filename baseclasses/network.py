@@ -1,5 +1,6 @@
 from node import Node
 from pipe import Pipe
+
 import numpy as np
 
 from typing import Union
@@ -129,7 +130,7 @@ class Network:
         """
         Initialize the temperature in the network
 
-        # NOTE: for now just visit all nodes and pipes a give them the initial temperature of the first node. 
+        # NOTE: for now just visit all nodes and pipes. They are all given the initial temperature of the first node. 
         """
 
         for node in self.nodes.values():
@@ -139,15 +140,37 @@ class Network:
             pipe['pipe_class'].bnode_init(dt, num_steps, v_init, T_init)
             pipe['pipe_class'].calc_mass_flow(v_init)
 
-        # TODO: wat gaat hier fout naast het missen van de arguments?
+      # TODO: hoe doe je dit nu met de nieuwe bnode_init functie? Want nu vraag je al een hele array van v_flow en T_inlet. terwijl je die nog niet hebt. 
+      # Ben opzich wel tevreden met hoe het nu er uit ziet alleen moet het waarschijnlijk wat aanpassen.
 
-    def set_T_network(self):
+    def set_T_network(self, T_ambt : float, N : int, v_in_flow: float):
         
         """  
         pak de Temperatuur van node zo heb je overal de inlet temperatuur
         dan update je de pipes
         dan update je temperatuur in de pipes
+        TODO: update text and add comments
         """
+        """
+        pak de inlet snelheid uit de node en de temperatuur van de node, bij node 'from' 
+        voer bnode methode uit
+        sla de nieuwe temperatuur op in de node en gebruik de mass_flow bij node 'to' 
+        """
+
+        # Moet het hele stuk over de stroomsnelheid nog doorgeven
+
+        for pipe in self.pipes.keys():
+
+            node_out = self.nodes[pipe['from']]
+            T_inlet = node_out.T
+            pipe['pipe_class'].set_inlet_temperature(T_inlet, N)
+
+            # Get output temperature of the pipe
+            pipe["pipe_instance"].bnode_method(N, T_ambt)
+
+        for node in self.nodes.keys():
+            node_instance = self.nodes[node]
+            node_instance.set_T(N)
         
         
 

@@ -60,7 +60,7 @@ class Node:
         total_m_inflow = sum(pipe['pipe'].m_flow for pipe in self.pipes_in)
 
         try:
-            # assume complete filling of pipe and simply divide total mass flow #NOTE: check this assumption
+            # assume complete filling of pipe and simply divide total mass flow NOTE: check this assumption
             m_outflow = total_m_inflow / len(self.pipes_in)
 
             for pipe in self.pipes_out:
