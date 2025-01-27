@@ -36,12 +36,12 @@ class Simulation:
                
         # Run simulation with the extended arrays
         for N in range(self.num_steps):
-            pipe.bnode_method(N, T_ambt)           
+            pipe.bnode_method(T_ambt, N)           
       
-    def simulate_network_thermodynamics(self, 
+    def simulate_network(self, 
                          network : Network, 
                          T_in : np.ndarray[Union[float]],
-                         v_in_flow : np.ndarray[Union[float]],
+                         v_inflow : np.ndarray[Union[float]],
                          T_ambt: float) -> None:
         """
         Simulate temperature dynamics for a network.
@@ -52,10 +52,11 @@ class Simulation:
         time: total time of simulation
         """
 
-        network.initialize_network(self.dt, self.num_steps, v_in_flow[0], T_in[0])
+        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in)
 
         for N in range(self.num_steps):
-            network.set_T_network(N, T_ambt, v_in_flow[N])
+            print(f'N = {N}')
+            network.set_T_and_flow_network(T_ambt, v_inflow[N], T_in[N], N)
         
 
     def plot_results_single_pipe_simulation(self, T_inlet, pipe, v_flow, decimal = 4):
@@ -89,8 +90,30 @@ class Simulation:
         plt.plot(v_flow)
         plt.title('Flow velocity')
 
+        plt.figure()
+        plt.plot(pipe.m_outflow_array)
+        plt.title("Mass outflow [m3/s]")
         plt.show()
-
+    
+    def plot_temperature_results_network(self, network: Network, T_inlet):
+        """
+        Plot the temperature history for all nodes in the network
+        
+        Args:
+            network: Network object containing the nodes to plot
+        """
+        plt.figure(figsize=(10, 6))
+        plt.title("Node Temperatures")
+        
+        for node_id, node in network.nodes.items():
+            plt.plot(self.time, node.T, label=f'Node {node_id}')
+        plt.plot(T_inlet)
+        
+        plt.xlabel('Time [s]')
+        plt.ylabel('Temperature [°C]')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
 # Example test case
 if __name__ == "__main__":
@@ -137,5 +160,5 @@ if __name__ == "__main__":
     # print(net.nodes['Node 2'].get_T())
     
     # Start interactive session
-    # import code
-    # code.interact(local=locals())
+    import code
+    code.interact(local=locals())

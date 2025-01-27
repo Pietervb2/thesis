@@ -126,7 +126,11 @@ class Network:
 
         return incoming, outgoing
     
-    def initialize_network(self, dt : float, num_steps : int, v_init : float, T_init : float):
+    def initialize_network(self, 
+                           dt : float, 
+                           num_steps : int, 
+                           v_init_array : np.ndarray[Union[float]], 
+                           T_init_array : np.ndarray[Union[float]]):
         """
         Initialize the temperature in the network
 
@@ -134,48 +138,53 @@ class Network:
         """
 
         for node in self.nodes.values():
-            node.T = T_init
+            node.initialize_node(num_steps, T_init_array[0])
 
         for pipe in self.pipes.values():
-            pipe['pipe_class'].bnode_init(dt, num_steps, v_init, T_init)
+            pipe['pipe_class'].bnode_init(dt, num_steps, v_init_array, T_init_array)
+
 
       # TODO: hoe doe je dit nu met de nieuwe bnode_init functie? Want nu vraag je al een hele array van v_flow en T_inlet. terwijl je die nog niet hebt. 
       # Ben opzich wel tevreden met hoe het nu er uit ziet alleen moet het waarschijnlijk wat aanpassen.
 
-    def set_T_network(self, T_ambt : float, N : int, v_in_flow: float):
+    def set_T_and_flow_network(self, T_ambt : float, v_inflow: float, T_in: float, N : int):
         
-        """  
-        pak de Temperatuur van node zo heb je overal de inlet temperatuur
-        dan update je de pipes
-        dan update je temperatuur in de pipes
-        TODO: update text and add comments
-        """
-        """
-        pak de inlet snelheid uit de node en de temperatuur van de node, bij node 'from' 
-        voer bnode methode uit
-        sla de nieuwe temperatuur op in de node en gebruik de mass_flow bij node 'to' 
-        """
-        ####################################################
-        # Goed naar kijken
-        # Moet het hele stuk over de stroomsnelheid nog doorvoeren 
-        ###############################################
+        self.pipes_finished = []
 
-        for pipe in self.pipes.keys():
+        # Initialize the first pipe as it does not inheret the values from the previous pipes
+        pipe1 = self.pipes["Pipe 1"]['pipe_class']
+        pipe1.set_inlet_T_and_m_inflow_v(T_in, v_inflow, N)
 
-            node_out = self.nodes[pipe['from']]
-            T_inlet = node_out.T
-            pipe['pipe_class'].set_inlet_temperature(T_inlet, N)
+        self.pipes_finished.append("Pipe 1")
 
-            # Get output temperature of the pipe
-            pipe["pipe_instance"].bnode_method(N, T_ambt)
+        next_node_id = self.pipes["Pipe 1"]['to']
+        next_node = self.nodes[next_node_id]
 
-        for node in self.nodes.keys():
-            node_instance = self.nodes[node]
-            node_instance.set_T(N)
-        
+        self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N)
         
 
+    def set_T_and_flow_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int):
+        # print(f'Current node = {node_id}') #debug
 
+        for pipe_id, pipe in node.pipes_out.items():
+
+            pipe.bnode_method(T_ambt, N)
+            self.pipes_finished.append(pipe_id)
+            
+            next_node_id = self.pipes[pipe_id]['to']
+            next_node = self.nodes[next_node_id]
+            # print(f' pipes finished = {self.pipes_finished}') #debug
+            # print(f' next node id = {next_node_id}')    #debug
+
+
+
+            if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
+                next_node.set_flow_and_T(N) # here the initial values for the mass inflow and the temperature are set
+                self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N)
+
+                # print(f' all pipes are good for {next_node_id}') #debug
+
+    
 
     def set_m_flow_network():
         pass
@@ -188,36 +197,10 @@ class Network:
 
 
 if __name__ == "__main__":
-
-    net = Network()
-    net.add_node('Node 1',1,1,1)
-    net.add_node('Node 2',2,2,2)
-    
-    # Pipe parameters
-    pipe_radius_outer = 0.1 # [m] DUMMY
-    pipe_radius_inner = 0.08 # [m] DUMMY
-    K = 0.4 # heat transmission coefficient DUMMY zie ik staan in book van Max pagina 77
-    pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
-
-    net.add_pipe('Pipe 1','Node 1','Node 2', pipe_data)
-    net.add_pipe('Pipe 2','Node 1','Node 2', pipe_data)	
-    
-    net.get_attached_pipes('Node 1')
-
-    # print(net.get_attached_pipes('Node 1'))
-    # print(type(net.get_neighbor_nodes('Node 1')))
-    
-    print(f'dictionary of network of pipes before init{net.pipes}')
-    net.initialize_network(0.1, 100, 2, 80)
-    print(f'dictionary of network of pipes after init{net.pipes}')
-
-    print(net.nodes['Node 1'])
-    print(net.nodes['Node 2'])
-
-
+    pass 
     # Start interactive session
-    import code
-    code.interact(local=locals())
+    # import code
+    # code.interact(local=locals())
 
 
    # NOTE: Functions written bij copilot. Maybe useful later on. 
@@ -240,4 +223,3 @@ if __name__ == "__main__":
     #     """Remove an edge from the network."""
     #     if edge_id in self.edges:
     #         del self.edges[edge_id]
-
