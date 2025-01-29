@@ -35,7 +35,7 @@ class Network:
         if node_id in self.nodes.keys():
             raise ValueError(f"Node with id {node_id} already esxists in the network")
         
-        node = Node(x,y,z)
+        node = Node(x, y, z, node_id)
         self.nodes[node_id] = node
 
     def add_pipe(self, pipe_id : str, from_node : str, to_node : str, pipe_data : list) -> None:
@@ -53,7 +53,7 @@ class Network:
             raise ValueError(f"{to_node} must exist in the network")
 
         L = self.pipe_length(self.nodes[from_node], self.nodes[to_node])
-        pipe = Pipe(L, pipe_data[0], pipe_data[1], pipe_data[2])
+        pipe = Pipe(pipe_id, L, pipe_data[0], pipe_data[1], pipe_data[2])
 
         # pipe_id = self._next_pipe_id
         self.pipes[pipe_id] = {
@@ -143,28 +143,29 @@ class Network:
         for pipe in self.pipes.values():
             pipe['pipe_class'].bnode_init(dt, num_steps, v_init_array, T_init_array)
 
-
-      # TODO: hoe doe je dit nu met de nieuwe bnode_init functie? Want nu vraag je al een hele array van v_flow en T_inlet. terwijl je die nog niet hebt. 
-      # Ben opzich wel tevreden met hoe het nu er uit ziet alleen moet het waarschijnlijk wat aanpassen.
-
     def set_T_and_flow_network(self, T_ambt : float, v_inflow: float, T_in: float, N : int):
-        
-        self.pipes_finished = []
+            
+            self.pipes_finished = []
+            # Done by hand as no inflow pipe connected to node
+            self.nodes['Node 1'].T[N] = T_in
 
-        # Initialize the first pipe as it does not inheret the values from the previous pipes
-        pipe1 = self.pipes["Pipe 1"]['pipe_class']
-        pipe1.set_inlet_T_and_m_inflow_v(T_in, v_inflow, N)
+            pipe1 = self.pipes['Pipe 1']['pipe_class']
 
-        self.pipes_finished.append("Pipe 1")
+            pipe1.set_T_in(T_in, N)
+            pipe1.bnode_method(T_ambt, N)
+            
+            self.pipes_finished.append("Pipe 1")
 
-        next_node_id = self.pipes["Pipe 1"]['to']
-        next_node = self.nodes[next_node_id]
+            next_node_id = self.pipes["Pipe 1"]['to']
+            next_node = self.nodes[next_node_id]
+            next_node.set_T(N)
+            next_node.set_m_flow(N)
+            
 
-        self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N)
-        
-
+            self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N)
+            
     def set_T_and_flow_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int):
-        # print(f'Current node = {node_id}') #debug
+        print(f'Current node = {node_id}') #debug
 
         for pipe_id, pipe in node.pipes_out.items():
 
@@ -173,20 +174,67 @@ class Network:
             
             next_node_id = self.pipes[pipe_id]['to']
             next_node = self.nodes[next_node_id]
-            # print(f' pipes finished = {self.pipes_finished}') #debug
-            # print(f' next node id = {next_node_id}')    #debug
+            print(f' pipes finished = {self.pipes_finished}') #debug
+            print(f' next node id = {next_node_id}')    #debug
+
+            if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
+                print(f'Activate {next_node}') #debug
+                next_node.set_m_flow(N) # here the inlet values for the mass flow is set
+                next_node.set_T(N)      # here the inlet temperature for the pipe is set coming from the node. 
+
+                self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N)
+
+    def set_T_network(self, T_ambt : float, v_inflow: float, T_in: float, N : int):
+        """
+        Function that determines the the mass flow for the whole network. 
+
+        TODO: T and m flow functions are split as eventually when the implementation will become more ellaborated the determination of the mass flow will be done in a different approach to the system. 
+        """
+        
+        self.pipes_finished = []
+
+        # Initialize the first pipe as it does not inheret the values from the previous pipes
+        pipe1 = self.pipes["Pipe 1"]['pipe_class']
+        pipe1.set_T_in(T_in, v_inflow, N)
+
+        self.pipes_finished.append("Pipe 1")
+
+        next_node_id = self.pipes["Pipe 1"]['to']
+        next_node = self.nodes[next_node_id]
+
+        self.set_T_network_rec(next_node, next_node_id, T_ambt, N)
+      
+    def set_T_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int):
+        """
+        Recurring function for walking through the network.
+        """
+        print(f'Current node = {node_id}') #debug
+
+        for pipe_id, pipe in node.pipes_out.items():
+
+            pipe.bnode_method(T_ambt, N)
+            self.pipes_finished.append(pipe_id)
+            
+            next_node_id = self.pipes[pipe_id]['to']
+            next_node = self.nodes[next_node_id]
+            print(f' pipes finished = {self.pipes_finished}') #debug
+            print(f' next node id = {next_node_id}')    #debug
 
 
 
             if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
-                next_node.set_flow_and_T(N) # here the initial values for the mass inflow and the temperature are set
-                self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N)
+                print(f'Activate {next_node}') #debug
+                next_node.set_T(N) # here the initial values for the mass inflow and the temperature are set
+                self.set_T_network_rec(next_node, next_node_id, T_ambt, N)
 
-                # print(f' all pipes are good for {next_node_id}') #debug
+   
+    def set_m_flow_network(self, ):
+        """
+        Function that determines the the mass flow for the whole network. 
 
-    
+        TODO: T and m flow functions are split as eventually when the implementation will become more ellaborated the determination of the mass flow will be done in a different approach to the system. 
+        """
 
-    def set_m_flow_network():
         pass
     
     def overview_network(self):

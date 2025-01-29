@@ -5,6 +5,7 @@ class Pipe:
 
     def __init__(
             self, 
+            pipe_id : str, 
             pipe_length : float, 
             pipe_radius_outer : float,
             pipe_radius_inner : float,
@@ -20,6 +21,8 @@ class Pipe:
 
         #TODO: update
         """
+
+        self.pipe_id = pipe_id #debug 
 
         self.L = pipe_length
         self.radius_outer = pipe_radius_outer 
@@ -69,7 +72,7 @@ class Pipe:
         self.T_history = np.ones(self.hist_len) * T_inlet_array[0]
 
         # Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
-        self.m_inflow_extended = np.concatenate([self.v_history, v_flow_array]) * self.inner_cs * self.rho_water
+        self.m_flow_extended = np.concatenate([self.v_history, v_flow_array]) * self.inner_cs * self.rho_water
         self.T_in_extended = np.concatenate([self.T_history, T_inlet_array])
 
         # initialize temperature arrays
@@ -77,10 +80,12 @@ class Pipe:
         self.T_cap = np.ones(self.num_steps) * T_inlet_array[0] # water temperature at the pipe output with heat loss  # debug
         self.T = np.ones(self.num_steps) * T_inlet_array[0] # real water temperature at the pipe output
 
+        # Initialize flow array without history
+        self.m_flow = np.ones(self.num_steps)
+
         self.T_pipe = np.ones(self.num_steps) * T_inlet_array[0]  # temperature of the pipe NOTE: maybe use a different initialization, but for now it is good. It is longer than it should be but it works better with actual_N
 
         self.t_stay_array = np.ones(self.num_steps) # debug 
-        self.m_outflow_array = np.ones(self.num_steps) #debug 
 
     def bnode_method(self,
                      T_ambt : float,
@@ -102,8 +107,11 @@ class Pipe:
         # N_hist is for the extended arrays containing the fictive history of the pipe. The normal N is for the actual time step.
         N_hist = N + self.hist_len
 
+        self.m_flow[N] = self.m_flow_extended[N_hist]
+
+
         # TODO: needs to be done more elegantly
-        m_inflow = self.m_inflow_extended
+        m_flow_ex = self.m_flow_extended
         T_k = self.T_in_extended
         
         self.T_ambt = T_ambt 
@@ -111,7 +119,7 @@ class Pipe:
         # Find smallest integer n and corresponding R
         n = 0
         while True:
-            R = sum(m_inflow[N_hist-n:N_hist+1] * self.dt)
+            R = sum(m_flow_ex[N_hist-n:N_hist+1] * self.dt)
             if R > self.L * self.inner_cs * self.rho_water:
                 break
             n += 1
@@ -119,40 +127,41 @@ class Pipe:
         # Find smallest integer m
         m = 0
         while True:
-            sum_term = sum(m_inflow[N_hist-m:N_hist+1] * self.dt)
-            if sum_term > self.L * self.inner_cs * self.rho_water + m_inflow[N_hist] * self.dt:
+            sum_term = sum(m_flow_ex[N_hist-m:N_hist+1] * self.dt)
+            if sum_term > self.L * self.inner_cs * self.rho_water + m_flow_ex[N_hist] * self.dt:
                 break
             m += 1
         
         # Compute Y and S
-        Y = sum(m_inflow[N_hist-m+1:N_hist-n] * T_k[N_hist-m+1:N_hist-n] * self.dt)
+        Y = sum(m_flow_ex[N_hist-m+1:N_hist-n] * T_k[N_hist-m+1:N_hist-n] * self.dt)
         
         # Calculate S based on conditions
         if m > n:
-            S = sum(m_inflow[N_hist-m+1:N_hist+1] * self.dt)
+            S = sum(m_flow_ex[N_hist-m+1:N_hist+1] * self.dt)
         else:  # m == n
             S = R
         
         # Compute the lossless output temperature T_N
-        self.T_lossless[N] = ((R - self.L * self.inner_cs * self.rho_water) * T_k[N_hist-n] + Y + (m_inflow[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_k[N_hist-m]) / (m_inflow[N_hist] * self.dt)
+        self.T_lossless[N] = ((R - self.L * self.inner_cs * self.rho_water) * T_k[N_hist-n] + Y + (m_flow_ex[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_k[N_hist-m]) / (m_flow_ex[N_hist] * self.dt)
         
         # Take into account the heat capacity of the steel pipe      
-        self.T_cap[N] = (m_inflow[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.C_pipe * self.T_pipe[N-1]) / (self.C_pipe + m_inflow[N_hist] * self.c_water * self.dt)
+        self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.C_pipe * self.T_pipe[N-1]) / (self.C_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
 
         self.T_pipe[N] = self.T_cap[N] # update temperature pipe
 
         # determine average delay in the pipe
-        t_stay, m_outflow = self.average_delay_m_outflow_bnode(n,m,R,S,m_inflow,N_hist)
+        t_stay = self.average_delay_bnode(n,m,R,S,m_flow_ex,N_hist)
 
         self.t_stay_array[N] = t_stay
-        self.m_outflow_array[N] = m_outflow
 
         # print(f't_stay {t_stay}') #debug 
 
         self.T[N] = self.T_ambt + (self.T_cap[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+
+        # print(f' temperature {self.T[N]}, {self.pipe_id}') # debug
        
 
-    def average_delay_m_outflow_bnode(self,n,m,R,S,m_inflow,N):
+    def average_delay_bnode(self,n,m,R,S,m_flow_ex,N):
         """    
         Source: Maurer. J, Comparison of discrete dynamic pipeline models for operational optimization of District Heating Networks. 2021
 
@@ -164,56 +173,56 @@ class Pipe:
         N : Total number of time steps.
         R : The remaining distance at the start of the calculation.
         S : The remaining distance at the end of the calculation.
-        m_inflow : Array of mass flows at in let of the pipe
+        m_flow_ex : Array of mass flows at in let of the pipe
         
         Returns:
         The average delay time of the water in the pipe.
         """
 
         first_term_delay = n * (R - self.L * self.inner_cs  * self.rho_water)
-        first_term_m_outflow = m_inflow[N-n] * (R - self.L * self.inner_cs  * self.rho_water)
-
         second_term_delay = 0
-        second_term_m_outflow = 0
         for i in range(N-m+1, N-n):
-            second_term_delay += (N - i) * m_inflow[i] * self.dt
-            second_term_m_outflow += m_inflow[i] * m_inflow[i] * self.dt
+            second_term_delay += (N - i) * m_flow_ex[i] * self.dt
             
-
-        third_term_delay = m * (m_inflow[N] * self.dt + (self.L * self.inner_cs * self.rho_water - S))
-        third_term_m_outflow = m_inflow[N - m] * (m_inflow[N] * self.dt + (self.L * self.inner_cs * self.rho_water - S))
+        third_term_delay = m * (m_flow_ex[N] * self.dt + (self.L * self.inner_cs * self.rho_water - S))
 
         # print(f' n = {n} and m = {m}') # debug
-        delay = (first_term_delay + second_term_delay + third_term_delay)/m_inflow[N]
-        m_outflow = (first_term_m_outflow + second_term_m_outflow + third_term_m_outflow)/(m_inflow[N] * self.dt)
+        delay = (first_term_delay + second_term_delay + third_term_delay)/m_flow_ex[N]
 
-        return delay, m_outflow
+        return delay
     
-    def set_inlet_T_and_m_inflow_v(self, T_inlet, v_inflow, N):
+    def set_m_flow_v(self, v_inflow, N):
         """
-        Set the inlet temperature of the pipe based on the temperature of the node
+        Set the mass flow of the pipe based on the inetlet velocity
         """
 
-        self.T_in_extended[N + self.hist_len] = T_inlet
-        self.m_inflow_extended[N + self.hist_len] = v_inflow * self.inner_cs * self.rho_water
+        self.m_flow_extended[N + self.hist_len] = v_inflow * self.inner_cs * self.rho_water
 
-    def set_inlet_T_and_m_inflow_m(self, T_inlet, m_inflow, N):
-
-        self.T_in_extended[N + self.hist_len] = T_inlet
-        self.m_inflow_extended[N + self.hist_len] = m_inflow
+    def set_m_flow_m(self, m_flow, N):
+        """
+        Set the mass flow of the pipe basedon the mass flow
+        """
+ 
+        self.m_flow_extended[N + self.hist_len] = m_flow
     
-    def get_m_inflow(self, N):
+    def set_T_in(self, T_inlet, N):
+        """
+        Set inlet temperature of the pipe
+        """ 
+        self.T_in_extended[N + self.hist_len] = T_inlet
+
+    def get_m_flow(self, N):
         """ 
         Get the inlet mass flow at timestep N
         """
-        return self.m_inflow_extended[N + self.hist_len]
+        return self.m_flow_extended[N + self.hist_len]
     
-    def set_m_inflow(self, m_inflow, N):
+    def set_m_flow(self, m_flow, N):
         """
         Set the inlet mass flow at timestep N
         """
         
-        self.m_inflow_extended[N + self.hist_len] = m_inflow
+        self.m_flow_extended[N + self.hist_len] = m_flow
     
     def thermal_transmission_coef(self):
         """

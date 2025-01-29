@@ -91,11 +91,11 @@ class Simulation:
         plt.title('Flow velocity')
 
         plt.figure()
-        plt.plot(pipe.m_outflow_array)
-        plt.title("Mass outflow [m3/s]")
+        plt.plot(pipe.m_flow)
+        plt.title("Mass flow [m3/s]")
         plt.show()
     
-    def plot_temperature_results_network(self, network: Network, T_inlet):
+    def plot_node_temperature_results_network(self, network: Network, T_inlet):
         """
         Plot the temperature history for all nodes in the network
         
@@ -106,11 +106,80 @@ class Simulation:
         plt.title("Node Temperatures")
         
         for node_id, node in network.nodes.items():
-            plt.plot(self.time, node.T, label=f'Node {node_id}')
-        plt.plot(T_inlet)
+            plt.plot(self.time, node.T, label=f'{node_id}')
         
         plt.xlabel('Time [s]')
         plt.ylabel('Temperature [°C]')
+        plt.legend()
+        plt.grid(True)
+
+        plt.figure()
+        plt.plot(T_inlet)
+        plt.title('Inlet temperature at first node')
+
+        
+        plt.xlabel('Time [s]')
+        plt.ylabel('Temperature [°C]')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def plot_pipe_temperature_results_network(self, network: Network, T_inlet):
+        """
+        Plot the temperature history for all nodes in the network
+        
+        Args:
+            network: Network object containing the nodes to plot
+        """
+        plt.figure(figsize=(10, 6))
+        plt.title('Temperature at outlet pipe')
+        
+        for pipe_id in network.pipes.keys():
+
+            pipe = network.pipes[pipe_id]['pipe_class']
+            # plt.figure()
+            plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
+        plt.xlabel('Time [s]')
+        plt.ylabel('Temperature [°C]')
+        plt.legend()
+        plt.grid(True)
+        plt.figure()
+        plt.plot(T_inlet)
+        plt.title('Inlet temperature at first node')
+        
+        plt.xlabel('Time [s]')
+        plt.ylabel('Temperature [°C]')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def plot_pipe_m_flow_results_network(self, network: Network, v_flow):
+        """
+        Plot the temperature history for all nodes in the network
+        
+        Args:
+            network: Network object containing the nodes to plot
+        """
+        plt.figure(figsize=(10, 6))
+        plt.title("Pipe mass flows")
+        
+        for pipe_id in network.pipes.keys():
+
+            pipe = network.pipes[pipe_id]['pipe_class']
+            # plt.figure()
+            plt.plot(self.time, pipe.m_flow, label=f'{pipe_id}')
+        plt.xlabel('Time [s]')
+        plt.legend()
+        plt.grid(True)
+
+        pipe1 = network.pipes['Pipe 1']['pipe_class']
+
+        plt.figure()
+        plt.plot(v_flow * pipe1.inner_cs * pipe1.rho_water)
+        plt.title('Mass in flow')
+        
+        plt.xlabel('Time [s]')
+        plt.ylabel('Mass flow [kg/s]')
         plt.legend()
         plt.grid(True)
         plt.show()
@@ -160,5 +229,5 @@ if __name__ == "__main__":
     # print(net.nodes['Node 2'].get_T())
     
     # Start interactive session
-    import code
-    code.interact(local=locals())
+    # import code
+    # code.interact(local=locals())

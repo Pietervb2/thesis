@@ -4,7 +4,7 @@ from pipe import Pipe
 
 class Node:
 
-    def __init__(self, x, y, z):
+    def __init__(self, x, y, z, node_id):
 
         self.pipes_in = {}
         self.pipes_out = {}
@@ -12,6 +12,7 @@ class Node:
         self.x = x
         self.y = y
         self.z = z  
+        self.node_id = node_id 
 
         """
         TODO: Working with T and flow requires using a timestep. This can be later implemented when implementing the for loop simulation. 
@@ -48,7 +49,7 @@ class Node:
         else:
             raise ValueError(f"Invalid direction: {direction}")
         
-    def set_flow_and_T(self, N):
+    def set_T(self, N):
         """
         Function that calculates the flow of each in- and output pipe of the node. And sets the node temperature
 
@@ -56,97 +57,58 @@ class Node:
 
         # TODO: maybe it need to put in the new flow at N + 1
         """         
+        # print(f'temperature node {self.T[N]}')
 
         sum_T_flow = 0
         sum_m_inflow = 0
-        for pipe_id, pipe in self.pipes_in.items():
+        for _, pipe in self.pipes_in.items():
             
-            m_inflow = pipe.m_outflow_array[N]
+            m_inflow = pipe.get_m_flow(N)
             sum_T_flow += pipe.T[N] * m_inflow
             sum_m_inflow += m_inflow
-        
         try:    
             self.T[N] = sum_T_flow / sum_m_inflow # set the node temperature
 
-            # Set the node mass outflow and temperature per pipe
-            m_pipe_outflow = sum_m_inflow / len(self.pipes_in)
-            for pipe_id, pipe in self.pipes_out.items():
-                pipe.set_inlet_T_and_m_inflow_m(self.T[N], m_pipe_outflow, N)
+            # Set temperature per pipe
+            for _, pipe in self.pipes_out.items():
+                pipe.set_T_in(self.T[N], N)
+
         except(ZeroDivisionError):
-            print("No ingoing mass flow")
+            print(f"No ingoing mass flow in node  = {self.node_id}")
             
 
+    def set_m_flow(self, N):
+        """
+        Function that calculates the flow of each in- and output pipe of the node. And sets the node temperature
 
-        # TODO: workout the pressure calculation to further give this meaning. 
+        For now divide the mass flow based on the diameter of the pipes. 
 
-    # def set_T(self, N):
-    #     """
-    #     Function that calculates the temperature at the node
+        # TODO: put in a ratio for the mass flow, to decide how it will be divided. 
+        """         
 
-    #     TODO: for now it just uses the weighted average based on the in- and outflow. 
-    #     """
-        
-    #     sum_T_flow = 0
-    #     sum_m_flow = 0
-    #     for pipe_id in self.pipes_in.keys():
+        sum_m_flow = 0
+        for _, pipe in self.pipes_in.items():
             
-    #         m_flow = pipe_instance.get_m_flow(N)
-    #         pipe_instance = self.pipes_in[pipe_id]
-    #         sum_T_flow += pipe_instance.T[N] * m_flow
-    #         sum_m_flow += m_flow
+            m_inflow = pipe.get_m_flow(N)
+            sum_m_flow += m_inflow
         
-    #     try:    
-    #         self.T[N] = sum_T_flow / sum_m_flow
-    #     except(ZeroDivisionError):
-    #         print("No ingoing mass flow")
+        try:    
+            # Set the node mass outflow and temperature per pipe
+            m_pipe_flow = sum_m_flow / len(self.pipes_out)
+            for pipe_id, pipe in self.pipes_out.items():
+                pipe.set_m_flow_m(m_pipe_flow, N)
 
-        
-    # def set_flow_T(self, N):
-    #     """
-    #     Function that calculates the flow of each in- and output pipe of the node.
+                # print(f'{pipe_id}, flow : {m_pipe_flow}') # debug
 
-    #     For now divide the mass flow based on the diameter of the pipes. 
-
-    #     # TODO: maybe it need to put in the new flow at N + 1
-    #     """         
-
-    #     # total mass in flow
-    #     total_m_inflow = sum(pipe['pipe'].m_outflow_array[N] for pipe in self.pipes_in)
-
-    #     try:
-    #         # assume complete filling of pipe and simply divide total mass flow NOTE: check this assumption
-    #         m_outflow = total_m_inflow / len(self.pipes_in)
-
-    #         for pipe in self.pipes_out:
-    #             pipe['pipe'].set_m_inflow(m_outflow, N)     
-    #     except(ZeroDivisionError):
-    #         print("No ingoing mass flow")
+        except(ZeroDivisionError):
+            print(f"No ingoing mass flow in node  = {self.node_id}")
 
     #     # TODO: workout the pressure calculation to further give this meaning. 
 
-    # def set_T(self, N):
-    #     """
-    #     Function that calculates the temperature at the node
 
-    #     TODO: for now it just uses the weighted average based on the in- and outflow. 
-    #     """
-        
-    #     sum_T_flow = 0
-    #     sum_m_flow = 0
-    #     for pipe_id in self.pipes_in.keys():
-            
-    #         m_flow = pipe_instance.get_m_flow(N)
-    #         pipe_instance = self.pipes_in[pipe_id]
-    #         sum_T_flow += pipe_instance.T[N] * m_flow
-    #         sum_m_flow += m_flow
-        
-    #     try:    
-    #         self.T[N] = sum_T_flow / sum_m_flow
-    #     except(ZeroDivisionError):
-    #         print("No ingoing mass flow")
 
-    def get_T(self):
-        return self.T
+    def get_T(self, N):
+        return self.T[N]
 
     def get_number_pipes_in(self):
         return len(self.pipes_in)
@@ -155,7 +117,7 @@ class Node:
         return len(self.pipes_out)
 
 
-# NOTE: Generated by Github Copilot, not sure yet how to use it. 
+# NOTE: Generated by Github Copilot, not sure whether I would use it
     # def remove_pipe(self,pipe):
     #     """
     #     Function that removes an pipe from the node.
