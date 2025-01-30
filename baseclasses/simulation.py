@@ -115,15 +115,11 @@ class Simulation:
 
         plt.figure()
         plt.plot(T_inlet)
-        plt.title('Inlet temperature at first node')
-
-        
+        plt.title('Inlet temperature at first node')     
         plt.xlabel('Time [s]')
         plt.ylabel('Temperature [°C]')
-        plt.legend()
         plt.grid(True)
-        plt.show()
-
+        
     def plot_pipe_temperature_results_network(self, network: Network, T_inlet):
         """
         Plot the temperature history for all nodes in the network
@@ -151,7 +147,6 @@ class Simulation:
         plt.ylabel('Temperature [°C]')
         plt.legend()
         plt.grid(True)
-        plt.show()
 
     def plot_pipe_m_flow_results_network(self, network: Network, v_flow):
         """
@@ -182,7 +177,6 @@ class Simulation:
         plt.ylabel('Mass flow [kg/s]')
         plt.legend()
         plt.grid(True)
-        plt.show()
 
 # Example test case
 if __name__ == "__main__":

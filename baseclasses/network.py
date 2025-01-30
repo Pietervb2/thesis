@@ -2,6 +2,7 @@ from node import Node
 from pipe import Pipe
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from typing import Union
 
@@ -165,7 +166,7 @@ class Network:
             self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N)
             
     def set_T_and_flow_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int):
-        print(f'Current node = {node_id}') #debug
+        # print(f'Current node = {node_id}') #debug
 
         for pipe_id, pipe in node.pipes_out.items():
 
@@ -174,11 +175,11 @@ class Network:
             
             next_node_id = self.pipes[pipe_id]['to']
             next_node = self.nodes[next_node_id]
-            print(f' pipes finished = {self.pipes_finished}') #debug
-            print(f' next node id = {next_node_id}')    #debug
+            # print(f' pipes finished = {self.pipes_finished}') #debug
+            # print(f' next node id = {next_node_id}')    #debug
 
             if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
-                print(f'Activate {next_node}') #debug
+                # print(f'Activate {next_node}') #debug
                 next_node.set_m_flow(N) # here the inlet values for the mass flow is set
                 next_node.set_T(N)      # here the inlet temperature for the pipe is set coming from the node. 
 
@@ -243,12 +244,81 @@ class Network:
         """
         pass 
 
+    def plot_network(self):
+        """
+        Plot the network showing nodes as points and pipes as lines.
+        Returns a matplotlib figure of the network.
+        """
+        # Create figure
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(111, projection='3d')
 
+        # Plot nodes
+        for node_id, node in self.nodes.items():
+            ax.scatter(node.x, node.y, node.z, c='red', marker='o')
+            ax.text(node.x, node.y, node.z, node_id)
+
+        # Plot pipes
+        for pipe_id, pipe_info in self.pipes.items():
+            from_node = self.nodes[pipe_info['from']]
+            to_node = self.nodes[pipe_info['to']]
+            ax.plot([from_node.x, to_node.x], 
+                    [from_node.y, to_node.y], 
+                    [from_node.z, to_node.z], 'b-')
+            
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title('Network Layout')
+        
 if __name__ == "__main__":
     pass 
     # Start interactive session
     # import code
     # code.interact(local=locals())
+
+    pipe_radius_outer = 0.1 # [m] DUMMY
+    pipe_radius_inner = 0.08 # [m] DUMMY
+    K = 1 # heat transmission coefficient DUMMY zie ik staan in book van Max pagina 77
+    pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
+
+    net = Network()
+    net.add_node('Node 1',0,0,0)
+    net.add_node('Node 2',0,5,0)
+    net.add_node('Node 3',-100,5,0)
+    net.add_node('Node 4',-100,10,0)
+    net.add_node('Node 5',0,10,0)
+    net.add_node('Node 6',0,100,0)
+    net.add_node('Node 7',50,100,0)
+
+
+    net.add_pipe('Pipe 1','Node 1','Node 2', pipe_data)
+    net.add_pipe('Pipe 2','Node 2','Node 3', pipe_data)	
+    net.add_pipe('Pipe 3','Node 3','Node 4', pipe_data)	
+    net.add_pipe('Pipe 4','Node 4','Node 5', pipe_data)	
+    net.add_pipe('Pipe 5','Node 2','Node 5', pipe_data)	
+    net.add_pipe('Pipe 6','Node 5','Node 6', pipe_data)	
+    net.add_pipe('Pipe 7','Node 6','Node 7', pipe_data)	
+
+    net.plot_network()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
    # NOTE: Functions written bij copilot. Maybe useful later on. 

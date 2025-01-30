@@ -1,6 +1,9 @@
 from network import Network 
 from simulation import Simulation
+from scipy.signal import square
+
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Test:
 
@@ -48,22 +51,21 @@ class Test:
             print(f'{pipe_id} -> pipe outlet temp : {pipe.T[0]}, pipe mass flow : {pipe.m_flow[0]}')
         
 
+    def small_network_test_full_simulation(temp_type, flow_type, plot_nodes_T = False, plot_pipes_T = False, plot_pipes_m_flow = False):
 
-    def network_test_full_simulation(plot_nodes_T = False, plot_pipes_T = False, plot_pipes_m_flow = False):
         pipe_radius_outer = 0.1 # [m] DUMMY
         pipe_radius_inner = 0.08 # [m] DUMMY
-        K = 10 # heat transmission coefficient DUMMY zie ik staan in book van Max pagina 77
+        K = 1 # heat transmission coefficient DUMMY, de normale waarde is 0.4. Staat in het boek van Max p77
         pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
 
         net = Network()
         net.add_node('Node 1',0,0,0)
-        net.add_node('Node 2',0,100,0)
-        net.add_node('Node 3',-10,100,0)
-        net.add_node('Node 4',-10,10,0)
+        net.add_node('Node 2',0,5,0)
+        net.add_node('Node 3',-100,5,0)
+        net.add_node('Node 4',-100,10,0)
         net.add_node('Node 5',0,10,0)
         net.add_node('Node 6',0,100,0)
         net.add_node('Node 7',50,100,0)
-
 
         net.add_pipe('Pipe 1','Node 1','Node 2', pipe_data)
         net.add_pipe('Pipe 2','Node 2','Node 3', pipe_data)	
@@ -74,16 +76,29 @@ class Test:
         net.add_pipe('Pipe 7','Node 6','Node 7', pipe_data)	
 
         dt = 1
-        total_time = 300 # [s]
+        total_time = 500 # [s]
 
-        T_ambt = 20
+        T_ambt = 20 # [C]
 
         sim = Simulation(dt, total_time)
+
+        if temp_type == "constant":
+            T_inlet = np.ones(sim.num_steps) * 80                                 # Constant
+        elif temp_type == "oscillation":
+            T_inlet = 80 + 5 * np.sin(np.linspace(0, 2*np.pi, sim.num_steps))   # Oscillating inlet temperature
+        elif temp_type == "square":
+            T_inlet = 80 + 1* square(2 * np.pi * sim.time / 20)                 # Square wave with a period of 20 steps
         
-        v_flow = np.ones(sim.num_steps) * 2                           # Constant
-        T_inlet = np.ones(sim.num_steps) * 80                          # Constant
+        if flow_type == "constant":
+            v_flow = np.ones(sim.num_steps) * 2                           # Constant
+        elif flow_type == "oscillation":
+            v_flow = 2+0.8*np.cos(np.linspace(0, 2*np.pi, sim.num_steps)) # Oscillating flow velocity
+        elif flow_type == "square":
+            v_flow = 1.5 + 0.5 * square(2 * np.pi * sim.time / 50)        # Square wave flow velocity, 50 is the period
 
         sim.simulate_network(net, T_inlet, v_flow, T_ambt)
+
+        net.plot_network()
 
         if plot_nodes_T:
             sim.plot_node_temperature_results_network(net, T_inlet)
@@ -94,12 +109,12 @@ class Test:
         if plot_pipes_m_flow:
             sim.plot_pipe_m_flow_results_network(net, v_flow)
 
+        plt.show()
 
 if __name__ == "__main__":
     # Test.network_test_one_iteration()
-    Test.network_test_full_simulation(plot_nodes_T = True, plot_pipes_m_flow = False)
-
-
-    ########################################################
-    # De plot klopt niet dus kijke naar hoe de temperatuur door wordt gegeven. Maar het doorlopen van het netwerk werkt!!!!
-    #######################################################
+    temp_type = "oscillation"
+    temp_type2 = "constant"
+    flow_type = "constant"
+    Test.small_network_test_full_simulation(temp_type2, flow_type, plot_nodes_T = True, plot_pipes_m_flow = False)
+    # Test.small_network_test_full_simulation(temp_type2, flow_type, plot_nodes_T = True, plot_pipes_m_flow = False)
