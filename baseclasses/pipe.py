@@ -70,6 +70,7 @@ class Pipe:
         # Initialize velocity and temperature of water 
         self.v_history = np.ones(self.hist_len) * v_flow_array[0]
         self.T_history = np.ones(self.hist_len) * T_inlet_array[0]
+        # self.T_history = np.ones(self.hist_len) * 20 #### HARD CODED NEED TO CHANGE debug
 
         # Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
         self.m_flow_extended = np.concatenate([self.v_history, v_flow_array]) * self.inner_cs * self.rho_water

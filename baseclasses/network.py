@@ -12,14 +12,13 @@ class Network:
     Class used to build the network
     """
     
-    def __init__(self):
+    def __init__(self, net_id):
         """
         Initialize an empty network.
         """
         self.nodes = {}
         self.pipes = {}
-        # self._next_node_id = 0
-        # self._next_edge_id = 0
+        self.net_id = net_id
 
     def add_node(self, node_id : str, x : float, y : float , z : float, data = None) -> None:
         """
@@ -237,40 +236,7 @@ class Network:
         """
 
         pass
-    
-    def overview_network(self):
-        """
-        Get overview of network. TODO: eventually it should return a plot of the network. 
-        """
-        pass 
-
-    def plot_network(self):
-        """
-        Plot the network showing nodes as points and pipes as lines.
-        Returns a matplotlib figure of the network.
-        """
-        # Create figure
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot nodes
-        for node_id, node in self.nodes.items():
-            ax.scatter(node.x, node.y, node.z, c='red', marker='o')
-            ax.text(node.x, node.y, node.z, node_id)
-
-        # Plot pipes
-        for pipe_id, pipe_info in self.pipes.items():
-            from_node = self.nodes[pipe_info['from']]
-            to_node = self.nodes[pipe_info['to']]
-            ax.plot([from_node.x, to_node.x], 
-                    [from_node.y, to_node.y], 
-                    [from_node.z, to_node.z], 'b-')
-            
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        ax.set_title('Network Layout')
-        
+           
 if __name__ == "__main__":
     pass 
     # Start interactive session

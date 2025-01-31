@@ -59,6 +59,9 @@ class Node:
         """         
         # print(f'temperature node {self.T[N]}')
 
+        if N == 100 and self.node_id == 'Node 5': # debug
+            pass 
+
         sum_T_flow = 0
         sum_m_inflow = 0
         for _, pipe in self.pipes_in.items():
@@ -137,11 +140,11 @@ class Node:
 
 if __name__ == "__main__":
 
-    node1 = Node(1,1,1)
-    pipe1 = Pipe(10, 0.1, 0.08, 100)
+    node1 = Node(1,1,1, 'Node 1')
+    pipe1 = Pipe(10, 0.1, 0.08, 100, 'Pipe 1')
     node1.add_pipe('pipe1', pipe1, 'outgoing')
     
-    node1.set_flow()
-    node1.set_T()
+    node1.set_m_flow(0)
+    node1.set_T(0)
 
     print(node1.get_number_pipes_out())

@@ -6,16 +6,29 @@ from typing import Union
 from node import Node
 from pipe import Pipe
 from network import Network
+import os
 
 class Simulation:
 
-    def __init__(self, dt, total_time):
+    def __init__(self, dt, total_time, net_id, temp_type, flow_type):
 
         self.dt = dt
         self.total_time = total_time
         self.time = np.arange(0, total_time + dt, dt) # time array
         self.num_steps = len(self.time) 
-   
+
+        # Create simulation-specific subfolder
+        self.folder = os.path.join('figures', 
+                                   'dt=' + str(dt) + '_' + 
+                                   'total_time=' + str(total_time) + "_" +
+                                    'network=' + net_id + "_" +
+                                    'Tin=' + temp_type + "_" +
+                                    'mflow=' + flow_type)
+        
+        if not os.path.exists(self.folder):
+            os.makedirs(self.folder)
+
+  
     def simulate_pipe_temperature(self,
                                 pipe: Pipe,
                                 T_ambt : float,
@@ -57,7 +70,6 @@ class Simulation:
         for N in range(self.num_steps):
             print(f'N = {N}')
             network.set_T_and_flow_network(T_ambt, v_inflow[N], T_in[N], N)
-        
 
     def plot_results_single_pipe_simulation(self, T_inlet, pipe, v_flow, decimal = 4):
         """
@@ -95,14 +107,14 @@ class Simulation:
         plt.title("Mass flow [m3/s]")
         plt.show()
     
-    def plot_node_temperature_results_network(self, network: Network, T_inlet):
+    def plot_node_temperature_results_network(self, network: Network, T_inlet, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
         Args:
             network: Network object containing the nodes to plot
         """
-        plt.figure(figsize=(10, 6))
+        fig_node_T = plt.figure(figsize=(10, 6))
         plt.title("Node Temperatures")
         
         for node_id, node in network.nodes.items():
@@ -113,21 +125,29 @@ class Simulation:
         plt.legend()
         plt.grid(True)
 
-        plt.figure()
+        fig_T_in = plt.figure()
         plt.plot(T_inlet)
         plt.title('Inlet temperature at first node')     
         plt.xlabel('Time [s]')
         plt.ylabel('Temperature [°C]')
         plt.grid(True)
+
+        # Create directory if it doesn't exist
+        plt.savefig(self.folder + '/node_temperatures.png')
+        plt.savefig(self.folder + '/inlet_temperature.png')
+
+        if not plot:
+            plt.close(fig_node_T)
+            plt.close(fig_T_in)
         
-    def plot_pipe_temperature_results_network(self, network: Network, T_inlet):
+    def plot_pipe_temperature_results_network(self, network: Network, T_inlet, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
         Args:
             network: Network object containing the nodes to plot
         """
-        plt.figure(figsize=(10, 6))
+        fig_pipe = plt.figure(figsize=(10, 6))
         plt.title('Temperature at outlet pipe')
         
         for pipe_id in network.pipes.keys():
@@ -139,23 +159,20 @@ class Simulation:
         plt.ylabel('Temperature [°C]')
         plt.legend()
         plt.grid(True)
-        plt.figure()
-        plt.plot(T_inlet)
-        plt.title('Inlet temperature at first node')
-        
-        plt.xlabel('Time [s]')
-        plt.ylabel('Temperature [°C]')
-        plt.legend()
-        plt.grid(True)
 
-    def plot_pipe_m_flow_results_network(self, network: Network, v_flow):
+        plt.savefig(self.folder + '/pipe_temperatures.png')
+
+        if not plot:
+            plt.close(fig_pipe)
+
+    def plot_pipe_m_flow_results_network(self, network: Network, v_flow, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
         Args:
             network: Network object containing the nodes to plot
         """
-        plt.figure(figsize=(10, 6))
+        fig_pipe_flow = plt.figure(figsize=(10, 6))
         plt.title("Pipe mass flows")
         
         for pipe_id in network.pipes.keys():
@@ -169,14 +186,66 @@ class Simulation:
 
         pipe1 = network.pipes['Pipe 1']['pipe_class']
 
-        plt.figure()
+        fig_m_flow_in = plt.figure()
         plt.plot(v_flow * pipe1.inner_cs * pipe1.rho_water)
         plt.title('Mass in flow')
-        
         plt.xlabel('Time [s]')
         plt.ylabel('Mass flow [kg/s]')
-        plt.legend()
         plt.grid(True)
+
+        plt.savefig(self.folder + '/pipe_flows.png')
+        plt.savefig(self.folder + '/inlet_mass_flow.png')
+
+        if not plot:
+            plt.close(fig_pipe_flow)
+            plt.close(fig_m_flow_in)
+
+    def plot_network(self, network: Network, plot = False):
+
+        """
+        Plot the network showing nodes as points and pipes as lines.
+        Returns a matplotlib figure of the network.
+        """
+        # Create figure
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot nodes
+        for node_id, node in network.nodes.items():
+            ax.scatter(node.x, node.y, node.z, c='red', marker='o')
+            ax.text(node.x, node.y, node.z, node_id)
+
+        # Plot pipes
+        for pipe_id, pipe_info in network.pipes.items():
+            from_node = network.nodes[pipe_info['from']]
+            to_node = network.nodes[pipe_info['to']]
+
+            # Pipe endpoints
+            x_values = [from_node.x, to_node.x]
+            y_values = [from_node.y, to_node.y]
+            z_values = [from_node.z, to_node.z]
+
+            # Plot the pipe line
+            ax.plot(x_values, y_values, z_values, 'b-')
+
+            # Compute midpoint of the pipe
+            mid_x = (from_node.x + to_node.x) / 2
+            mid_y = (from_node.y + to_node.y) / 2
+            mid_z = (from_node.z + to_node.z) / 2
+
+            # Add pipe number at the midpoint
+            pipe_number = pipe_id.split()[1]
+            ax.text(mid_x, mid_y, mid_z, f'{pipe_number}', color='red', fontsize=14)
+            
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title('Network Layout')
+
+        plt.savefig(self.folder + '/network.png')
+
+        if not plot:
+            plt.close(fig)
 
 # Example test case
 if __name__ == "__main__":
@@ -188,7 +257,7 @@ if __name__ == "__main__":
     pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
       
     # Create network
-    net = Network()
+    net = Network('test_id')
     net.add_node("Node 1", 0.0, 0.0, 0.0)
     net.add_node("Node 2", 1.0, 2.0, 30.0)
     net.add_pipe("Pipe 1", "Node 1", "Node 2", pipe_data)
