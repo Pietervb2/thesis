@@ -256,7 +256,7 @@ if __name__ == "__main__":
     temp_type = "oscillation"
     temp_type2 = "constant"
     flow_type = "constant"
-    Test.test_small_network_one_loop_full_simulation('constant', 'constant')
+    Test.test_small_network_one_loop_full_simulation('oscillation', 'constant')
     # Test.test_small_network_two_loops_full_simulation('constant','constant')
 
     # Test.test_pipe_four_nodes_simulation('constant','constant', plot_nodes_T=True, plot_pipes_T = True)
