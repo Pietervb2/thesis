@@ -4,6 +4,8 @@ from scipy.signal import square
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import os
 
 class Test:
 
@@ -52,22 +54,25 @@ class Test:
         
 
     def test_small_network_one_loop_full_simulation(temp_type, 
-                                                    flow_type, 
+                                                    flow_type,
+                                                    dt, 
+                                                    total_time, 
                                                     plot_nodes_T = False, 
                                                     plot_pipes_T = False, 
                                                     plot_pipes_m_flow = False,
-                                                    plot_network = False):
+                                                    plot_network = False,
+                                                    plot_nodes_dT = False):
 
         pipe_radius_outer = 0.1 # [m] DUMMY
         pipe_radius_inner = 0.08 # [m] DUMMY
-        K = 1 # heat transmission coefficient DUMMY, NOTE de normale waarde is 0.4. Staat in het boek van Max p77
+        K = 100 # heat transmission coefficient DUMMY, NOTE de normale waarde is 0.4. Staat in het boek van Max p77
         pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
 
         net = Network('one_loop')
         net.add_node('Node 1',0,0,0)
         net.add_node('Node 2',0,10,0)
-        net.add_node('Node 3',-10,10,0)
-        net.add_node('Node 4',-10,20,0)
+        net.add_node('Node 3',-300,10,0)
+        net.add_node('Node 4',-300,20,0)
         net.add_node('Node 5',0,20,0)
         net.add_node('Node 6',0,30,0)
         net.add_node('Node 7',0,40,0)
@@ -79,9 +84,6 @@ class Test:
         net.add_pipe('Pipe 5','Node 2','Node 5', pipe_data)	
         net.add_pipe('Pipe 6','Node 5','Node 6', pipe_data)	
         net.add_pipe('Pipe 7','Node 6','Node 7', pipe_data)	
-
-        dt = 1
-        total_time = 500 # [s]
 
         T_ambt = 20 # [C]
 
@@ -106,10 +108,11 @@ class Test:
         
         # Plot outcome and save figure        
         sim.plot_network(net, plot = plot_network)
-        sim.plot_node_temperature_results_network(net, T_inlet, plot = plot_nodes_T)
-        sim.plot_pipe_temperature_results_network(net, T_inlet, plot = plot_pipes_T)
-        sim.plot_pipe_m_flow_results_network(net, v_flow, plot = plot_pipes_m_flow)            
-       
+        sim.plot_node_temperature_network(net, T_inlet, plot = plot_nodes_T)
+        sim.plot_pipe_temperature_network(net, T_inlet, plot = plot_pipes_T)
+        sim.plot_pipe_m_flow_network(net, v_flow, plot = plot_pipes_m_flow)
+        sim.plot_node_difference_temperature_network(net,plot = plot_nodes_dT)               
+        sim.save_data(net, T_inlet, v_flow)
         # plt.figure()
 
         # plt.plot(net.nodes['Node 1'].T - net.nodes['Node 2'].T, label = 'dT12')
@@ -127,11 +130,14 @@ class Test:
         plt.show()
 
     def test_small_network_two_loops_full_simulation(temp_type, 
-                                                     flow_type, 
+                                                     flow_type,
+                                                     dt,
+                                                     total_time, 
                                                      plot_nodes_T = False, 
                                                      plot_pipes_T = False, 
                                                      plot_pipes_m_flow = False, 
-                                                     plot_network = False):
+                                                     plot_network = False,
+                                                     plot_nodes_dT = False):
 
         pipe_radius_outer = 0.1 # [m] DUMMY
         pipe_radius_inner = 0.08 # [m] DUMMY
@@ -165,10 +171,6 @@ class Test:
         net.add_pipe('Pipe 10','Node 6','Node 9',pipe_data)
         net.add_pipe('Pipe 11','Node 9','Node 10',pipe_data)
 
-
-        dt = 1
-        total_time = 500 # [s]
-
         T_ambt = 20 # [C]
 
         sim = Simulation(dt, total_time, net.net_id, temp_type, flow_type)
@@ -190,18 +192,22 @@ class Test:
         # Plot outcome and save figure
         sim.simulate_network(net, T_inlet, v_flow, T_ambt)
         sim.plot_network(net, plot = plot_network)
-        sim.plot_node_temperature_results_network(net, T_inlet, plot = plot_nodes_T)
-        sim.plot_pipe_temperature_results_network(net, T_inlet, plot = plot_pipes_T)
-        sim.plot_pipe_m_flow_results_network(net, v_flow, plot = plot_pipes_m_flow)          
-
+        sim.plot_node_temperature_network(net, T_inlet, plot = plot_nodes_T)
+        sim.plot_pipe_temperature_network(net, T_inlet, plot = plot_pipes_T)
+        sim.plot_pipe_m_flow_network(net, v_flow, plot = plot_pipes_m_flow)
+        sim.plot_node_difference_temperature_network(net,plot = plot_nodes_dT)          
+        sim.save_data(net, T_inlet, v_flow)
         plt.show()
 
     def test_pipe_four_nodes_simulation(temp_type,
                                         flow_type,
+                                        dt,
+                                        total_time,
                                         plot_nodes_T = False, 
                                         plot_pipes_T = False, 
                                         plot_pipes_m_flow = False, 
-                                        plot_network = False):
+                                        plot_network = False,
+                                        plot_nodes_dT = False):
         
         pipe_radius_outer = 0.1 # [m] DUMMY
         pipe_radius_inner = 0.08 # [m] DUMMY
@@ -218,9 +224,6 @@ class Test:
         net.add_pipe('Pipe 2','Node 2','Node 3', pipe_data)	
         net.add_pipe('Pipe 3','Node 3','Node 4', pipe_data)	
 
-        dt = 1
-        total_time = 500 # [s]
-
         T_ambt = 20 # [C]
 
         sim = Simulation(dt, total_time, net.net_id, temp_type, flow_type)
@@ -244,19 +247,32 @@ class Test:
 
         # Plot outcome and save figure
         sim.plot_network(net, plot = plot_network)
-        sim.plot_node_temperature_results_network(net, T_inlet, plot = plot_nodes_T)
-        sim.plot_pipe_temperature_results_network(net, T_inlet, plot = plot_pipes_T)
-        sim.plot_pipe_m_flow_results_network(net, v_flow, plot = plot_pipes_m_flow)          
+        sim.plot_node_temperature_network(net, T_inlet, plot = plot_nodes_T)
+        sim.plot_pipe_temperature_network(net, T_inlet, plot = plot_pipes_T)
+        sim.plot_pipe_m_flow_network(net, v_flow, plot = plot_pipes_m_flow)
+        sim.plot_node_difference_temperature_network(net,plot = plot_nodes_dT)
+        sim.save_data(net, T_inlet, v_flow)           
 
         plt.show()
     
 
 if __name__ == "__main__":
     # Test.network_test_one_iteration()
-    temp_type = "oscillation"
-    temp_type2 = "constant"
-    flow_type = "constant"
-    Test.test_small_network_one_loop_full_simulation('oscillation', 'constant')
+
+    Test.test_small_network_one_loop_full_simulation('constant', 'constant', 1, 2000, plot_nodes_dT = True, plot_nodes_T = True, plot_pipes_T = True)
     # Test.test_small_network_two_loops_full_simulation('constant','constant')
 
     # Test.test_pipe_four_nodes_simulation('constant','constant', plot_nodes_T=True, plot_pipes_T = True)
+
+    # Read simulation results for one loop network
+    # dt = 1
+    # total_time = 2000
+    # net_id = 'one_loop'
+    # file = os.path.join('figures', 
+    #                         'dt=' + str(dt) + '_' + 
+    #                         'total_time=' + str(total_time) + "_" +
+    #                         'network=' + net_id + "_" +
+    #                         'Tin=' + temp_type + "_" +
+    #                         'mflow=' + flow_type, 'simulation_data.csv')
+    
+    # df = pd.read_csv(file)

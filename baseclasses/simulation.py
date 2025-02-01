@@ -1,12 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import os
+
 from scipy.signal import square
 from typing import Union
 
 from node import Node
 from pipe import Pipe
 from network import Network
-import os
+
 
 class Simulation:
 
@@ -69,6 +72,8 @@ class Simulation:
 
         for N in range(self.num_steps):
             print(f'N = {N}')
+            if N == 400:
+                pass
             network.set_T_and_flow_network(T_ambt, v_inflow[N], T_in[N], N)
 
     def plot_results_single_pipe_simulation(self, T_inlet, pipe, v_flow, decimal = 4):
@@ -107,7 +112,7 @@ class Simulation:
         plt.title("Mass flow [m3/s]")
         plt.show()
     
-    def plot_node_temperature_results_network(self, network: Network, T_inlet, plot = False):
+    def plot_node_temperature_network(self, network: Network, T_inlet, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
@@ -125,6 +130,8 @@ class Simulation:
         plt.legend()
         plt.grid(True)
 
+        plt.savefig(self.folder + '/node_temperatures.png')
+
         fig_T_in = plt.figure()
         plt.plot(T_inlet)
         plt.title('Inlet temperature at first node')     
@@ -133,14 +140,36 @@ class Simulation:
         plt.grid(True)
 
         # Create directory if it doesn't exist
-        plt.savefig(self.folder + '/node_temperatures.png')
         plt.savefig(self.folder + '/inlet_temperature.png')
 
         if not plot:
             plt.close(fig_node_T)
             plt.close(fig_T_in)
+
+    def plot_node_difference_temperature_network(self, network: Network, plot = False):
         
-    def plot_pipe_temperature_results_network(self, network: Network, T_inlet, plot = False):
+        fig = plt.figure()
+        for _, pipe in network.pipes.items():
+
+            node_to = pipe['to']
+            node_from = pipe['from']
+
+            dT = network.nodes[node_from].T - network.nodes[node_to].T 
+
+            plt.plot(dT, label = 'dT' + node_from.split()[1] + node_to.split()[1])
+        
+        plt.title("Temperature differences between nodes")
+        plt.ylabel("Temperature difference [°C]")
+        plt.xlabel("Time [s]")
+        plt.legend()
+        plt.grid(True)
+
+        plt.savefig(self.folder + '/node_diff_temperatures.png')
+
+        if not plot:
+            plt.close(fig)
+    
+    def plot_pipe_temperature_network(self, network: Network, T_inlet, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
@@ -153,7 +182,6 @@ class Simulation:
         for pipe_id in network.pipes.keys():
 
             pipe = network.pipes[pipe_id]['pipe_class']
-            # plt.figure()
             plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
         plt.xlabel('Time [s]')
         plt.ylabel('Temperature [°C]')
@@ -165,7 +193,7 @@ class Simulation:
         if not plot:
             plt.close(fig_pipe)
 
-    def plot_pipe_m_flow_results_network(self, network: Network, v_flow, plot = False):
+    def plot_pipe_m_flow_network(self, network: Network, v_flow, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
@@ -183,6 +211,8 @@ class Simulation:
         plt.xlabel('Time [s]')
         plt.legend()
         plt.grid(True)
+        plt.savefig(self.folder + '/pipe_flows.png')
+
 
         pipe1 = network.pipes['Pipe 1']['pipe_class']
 
@@ -193,7 +223,6 @@ class Simulation:
         plt.ylabel('Mass flow [kg/s]')
         plt.grid(True)
 
-        plt.savefig(self.folder + '/pipe_flows.png')
         plt.savefig(self.folder + '/inlet_mass_flow.png')
 
         if not plot:
@@ -246,6 +275,41 @@ class Simulation:
 
         if not plot:
             plt.close(fig)
+
+    def save_data(self, network: Network, T_inlet, v_flow):
+        """
+        Save simulation data to CSV file.
+        
+        Args:
+            network: Network object containing nodes and pipes
+            T_inlet: Input temperature array
+            v_flow: Input flow velocity array
+        """
+        # Initialize empty dictionary to store data
+        data = {}
+        
+        # Store input data
+        data['T_inlet'] = T_inlet
+        data['v_flow'] = v_flow
+        
+        # Store node temperatures
+        for node_id, node in network.nodes.items():
+            data[f'T_{node_id}'] = node.T
+        
+        # Store pipe mass flows and temperatures, and the temperature differences between nodes
+        for pipe_id, pipe_info in network.pipes.items():
+            pipe = pipe_info['pipe_class']
+            data[f'T_{pipe_id}'] = pipe.T
+            data[f'm_flow_{pipe_id}'] = pipe.m_flow
+
+        for pipe_id, pipe_info in network.pipes.items():
+            node_from = pipe_info['from']
+            node_to = pipe_info['to']
+            data[f'dT_{node_from.split()[1]}_{node_to.split()[1]}'] = network.nodes[node_from].T - network.nodes[node_to].T
+        
+        # Create DataFrame and save to CSV
+        df = pd.DataFrame(data)
+        df.to_csv(os.path.join(self.folder, 'simulation_data.csv'), index=False)
 
 # Example test case
 if __name__ == "__main__":
