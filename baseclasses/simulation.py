@@ -22,9 +22,9 @@ class Simulation:
 
         # Create simulation-specific subfolder
         self.folder = os.path.join('figures', 
+                                   'network=' + net_id + "_" +
                                    'dt=' + str(dt) + '_' + 
                                    'total_time=' + str(total_time) + "_" +
-                                    'network=' + net_id + "_" +
                                     'Tin=' + temp_type + "_" +
                                     'mflow=' + flow_type)
         
@@ -48,7 +48,7 @@ class Simulation:
         """
 
         # Initialize history
-        pipe.bnode_init(self.dt, self.num_steps, v_flow, T_inlet) # NOTE: maybe use the minimum velocity as initial velocity
+        pipe.bnode_init(self.dt, self.num_steps, v_flow, T_inlet, T_ambt) # NOTE: maybe use the minimum velocity as initial velocity
                
         # Run simulation with the extended arrays
         for N in range(self.num_steps):
@@ -68,12 +68,10 @@ class Simulation:
         time: total time of simulation
         """
 
-        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in)
+        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_ambt)
 
         for N in range(self.num_steps):
             print(f'N = {N}')
-            if N == 400:
-                pass
             network.set_T_and_flow_network(T_ambt, v_inflow[N], T_in[N], N)
 
     def plot_results_single_pipe_simulation(self, T_inlet, pipe, v_flow, decimal = 4):
@@ -104,11 +102,11 @@ class Simulation:
         plt.title('Average delay in the pipe')
 
         plt.figure()
-        plt.plot(v_flow)
+        plt.plot(self.time, v_flow)
         plt.title('Flow velocity')
 
         plt.figure()
-        plt.plot(pipe.m_flow)
+        plt.plot(self.time, pipe.m_flow)
         plt.title("Mass flow [m3/s]")
         plt.show()
     
@@ -125,18 +123,18 @@ class Simulation:
         for node_id, node in network.nodes.items():
             plt.plot(self.time, node.T, label=f'{node_id}')
         
-        plt.xlabel('Time [s]')
-        plt.ylabel('Temperature [°C]')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Temperature (°C)')
         plt.legend()
         plt.grid(True)
 
         plt.savefig(self.folder + '/node_temperatures.png')
 
         fig_T_in = plt.figure()
-        plt.plot(T_inlet)
+        plt.plot(self.time, T_inlet)
         plt.title('Inlet temperature at first node')     
-        plt.xlabel('Time [s]')
-        plt.ylabel('Temperature [°C]')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Temperature (°C)')
         plt.grid(True)
 
         # Create directory if it doesn't exist
@@ -156,11 +154,11 @@ class Simulation:
 
             dT = network.nodes[node_from].T - network.nodes[node_to].T 
 
-            plt.plot(dT, label = 'dT' + node_from.split()[1] + node_to.split()[1])
+            plt.plot(self.time, dT, label = 'dT' + node_from.split()[1] + node_to.split()[1])
         
         plt.title("Temperature differences between nodes")
-        plt.ylabel("Temperature difference [°C]")
-        plt.xlabel("Time [s]")
+        plt.ylabel("Temperature difference (°C)")
+        plt.xlabel("Time (s)")
         plt.legend()
         plt.grid(True)
 
@@ -183,8 +181,8 @@ class Simulation:
 
             pipe = network.pipes[pipe_id]['pipe_class']
             plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
-        plt.xlabel('Time [s]')
-        plt.ylabel('Temperature [°C]')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Temperature (°C)')
         plt.legend()
         plt.grid(True)
 
@@ -208,7 +206,7 @@ class Simulation:
             pipe = network.pipes[pipe_id]['pipe_class']
             # plt.figure()
             plt.plot(self.time, pipe.m_flow, label=f'{pipe_id}')
-        plt.xlabel('Time [s]')
+        plt.xlabel('Time (s)')
         plt.legend()
         plt.grid(True)
         plt.savefig(self.folder + '/pipe_flows.png')
@@ -219,8 +217,8 @@ class Simulation:
         fig_m_flow_in = plt.figure()
         plt.plot(v_flow * pipe1.inner_cs * pipe1.rho_water)
         plt.title('Mass in flow')
-        plt.xlabel('Time [s]')
-        plt.ylabel('Mass flow [kg/s]')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Mass flow (kg/s)')
         plt.grid(True)
 
         plt.savefig(self.folder + '/inlet_mass_flow.png')
@@ -276,7 +274,7 @@ class Simulation:
         if not plot:
             plt.close(fig)
 
-    def save_data(self, network: Network, T_inlet, v_flow):
+    def save_data(self, network: Network, T_inlet, v_flow, T_ambt):
         """
         Save simulation data to CSV file.
         
@@ -289,6 +287,7 @@ class Simulation:
         data = {}
         
         # Store input data
+        data['time'] = self.time
         data['T_inlet'] = T_inlet
         data['v_flow'] = v_flow
         
@@ -299,13 +298,22 @@ class Simulation:
         # Store pipe mass flows and temperatures, and the temperature differences between nodes
         for pipe_id, pipe_info in network.pipes.items():
             pipe = pipe_info['pipe_class']
-            data[f'T_{pipe_id}'] = pipe.T
-            data[f'm_flow_{pipe_id}'] = pipe.m_flow
+            data[f'T {pipe_id}'] = pipe.T
+            data[f'm_flow {pipe_id}'] = pipe.m_flow
 
         for pipe_id, pipe_info in network.pipes.items():
             node_from = pipe_info['from']
             node_to = pipe_info['to']
-            data[f'dT_{node_from.split()[1]}_{node_to.split()[1]}'] = network.nodes[node_from].T - network.nodes[node_to].T
+            data[f'dT {node_from.split()[1]}_{node_to.split()[1]}'] = network.nodes[node_from].T - network.nodes[node_to].T
+        
+        # Store data for pipes and ambient temperature, #TODO: maybe later order the figures in a folder based on the pipe data
+        data['T_ambient'] = T_ambt
+
+        pipe_1_instance = network.pipes['Pipe 1']['pipe_class']
+        data['pipe_radius_outer'] = pipe_1_instance.radius_outer
+        data['pipe_radius_inner'] = pipe_1_instance.radius_inner
+        data['K'] = pipe_1_instance.K
+
         
         # Create DataFrame and save to CSV
         df = pd.DataFrame(data)

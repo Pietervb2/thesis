@@ -130,7 +130,8 @@ class Network:
                            dt : float, 
                            num_steps : int, 
                            v_init_array : np.ndarray[Union[float]], 
-                           T_init_array : np.ndarray[Union[float]]):
+                           T_init_array : np.ndarray[Union[float]],
+                           T_ambt : float):
         """
         Initialize the temperature in the network
 
@@ -141,7 +142,8 @@ class Network:
             node.initialize_node(num_steps, T_init_array[0])
 
         for pipe in self.pipes.values():
-            pipe['pipe_class'].bnode_init(dt, num_steps, v_init_array, T_init_array)
+            T_init = T_ambt # NOTE: check this 
+            pipe['pipe_class'].bnode_init(dt, num_steps, v_init_array, T_init_array, T_init)
 
     def set_T_and_flow_network(self, T_ambt : float, v_inflow: float, T_in: float, N : int):
             

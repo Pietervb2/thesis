@@ -31,19 +31,28 @@ class Pipe:
 
         # Physical constants       
         self.rho_water = 1e3 # [kg/m3] NOTE: maybe later make a constant file. When there are too many constants.
-        self.rho_pipe = 8e3 #  [kg/m3] 
         self.c_water = 4.18e3 # [J/kg K] specific heat capacity
-        self.c_pipe = 0.466e3 # [J/kg K] specific heat capacity of steel NOTE: DUMMY checked on wiki, needs to be more accurate 
-        
-        self.C_pipe = np.pi * (self.radius_outer ** 2 - self.radius_inner ** 2) * self.rho_pipe * self.c_pipe * self.L # [J/K] total heat capacity pipe
+
+        self.rho_steel = 8e3 #  [kg/m3] 
+        self.c_steel = 0.477e3 # [J/kg K] specific heat capacity of steel  
+        self.C_steel = np.pi * (self.radius_outer ** 2 - self.radius_inner ** 2) * self.rho_steel * self.c_steel * self.L # [J/K] total heat capacity pipe
+
+        insulation_layer = 0.2 # [m] thickness of the insulation layer
+        self.rho_iso = 23 # [kg/m3] density of the insulation from [Spearpoint: Thermophysical properties of polyurethane foams and their melts]
+        self.c_iso = 2000 # [J/kg K] specific heat capacity of the insulation, from [Spearpoint: Thermophysical properties of polyurethane foams and their melts]
+        self.C_iso = np.pi * ((self.radius_outer+insulation_layer) ** 2 - self.radius_outer ** 2) * self.rho_iso * self.c_iso * self.L # [J/K] total heat capacity insulation
+
+        self.C_pipe = self.C_steel + self.C_iso
         self.inner_cs = np.pi * self.radius_inner ** 2 # inner cross section area
         self.outer_cs = np.pi * self.radius_outer ** 2 # outer cross section area
+
 
     def bnode_init(self, 
             dt : float,
             num_steps : int,
             v_flow_array : np.ndarray[Union[float]],
-            T_inlet_array : np.ndarray[Union[float]]):
+            T_inlet_array : np.ndarray[Union[float]],
+            T_init: float):
         """
         Initialize history of velocities and temperatures to ensure valid solutions.
         
@@ -69,7 +78,7 @@ class Pipe:
         
         # Initialize velocity and temperature of water 
         self.v_history = np.ones(self.hist_len) * v_flow_array[0]
-        self.T_history = np.ones(self.hist_len) * T_inlet_array[0]
+        self.T_history = np.ones(self.hist_len) * T_init
         # self.T_history = np.ones(self.hist_len) * 20 #### HARD CODED NEED TO CHANGE debug
 
         # Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
@@ -77,14 +86,14 @@ class Pipe:
         self.T_in_extended = np.concatenate([self.T_history, T_inlet_array])
 
         # initialize temperature arrays
-        self.T_lossless = np.ones(self.num_steps) * T_inlet_array[0] # water temperature at the pipe output without heat loss or capacity of the pipe # debug
-        self.T_cap = np.ones(self.num_steps) * T_inlet_array[0] # water temperature at the pipe output with heat loss  # debug
-        self.T = np.ones(self.num_steps) * T_inlet_array[0] # real water temperature at the pipe output
+        self.T_lossless = np.ones(self.num_steps) # water temperature at the pipe output without heat loss or capacity of the pipe # debug
+        self.T_cap = np.ones(self.num_steps) # water temperature at the pipe output with heat loss  # debug
+        self.T = np.ones(self.num_steps)  # real water temperature at the pipe output
 
         # Initialize flow array without history
         self.m_flow = np.ones(self.num_steps)
 
-        self.T_pipe = np.ones(self.num_steps) * T_inlet_array[0]  # temperature of the pipe NOTE: maybe use a different initialization, but for now it is good. It is longer than it should be but it works better with actual_N
+        self.T_pipe = np.ones(self.num_steps) * T_init  # temperature of the pipe NOTE: maybe use a different initialization, but for now it is good. It is longer than it should be but it works better with actual_N
 
         self.t_stay_array = np.ones(self.num_steps) # debug 
 
@@ -145,8 +154,11 @@ class Pipe:
         # Compute the lossless output temperature T_N
         self.T_lossless[N] = ((R - self.L * self.inner_cs * self.rho_water) * T_k[N_hist-n] + Y + (m_flow_ex[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_k[N_hist-m]) / (m_flow_ex[N_hist] * self.dt)
         
-        # Take into account the heat capacity of the steel pipe      
-        self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.C_pipe * self.T_pipe[N-1]) / (self.C_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+        # Take into account the heat capacity of the steel pipe
+        if N - 1 < 0: # for beginning pipe temperature
+            self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.C_pipe * self.T_pipe[N]) / (self.C_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+        else:
+            self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.C_pipe * self.T_pipe[N-1]) / (self.C_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
 
         self.T_pipe[N] = self.T_cap[N] # update temperature pipe
 

@@ -1,5 +1,6 @@
 # My own changes to git ignore:
 figures/
+validation/data/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
