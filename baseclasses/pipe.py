@@ -9,7 +9,13 @@ class Pipe:
             pipe_length : float, 
             pipe_radius_outer : float,
             pipe_radius_inner : float,
-            K : float):
+            K : float,
+            cp_pipe_mat : float,
+            rho_pipe_mat : float,
+            cp_insu : float,
+            rho_insu : float,
+            insu_thickness : float
+            ):
         """
         Initialize pipe.
 
@@ -21,28 +27,28 @@ class Pipe:
 
         #TODO: update
         """
-
-        self.pipe_id = pipe_id #debug 
+        self.pipe_id = pipe_id 
 
         self.L = pipe_length
         self.radius_outer = pipe_radius_outer 
         self.radius_inner = pipe_radius_inner
         self.K = K
+        self.insu_thickness = insu_thickness
 
         # Physical constants       
         self.rho_water = 1e3 # [kg/m3] NOTE: maybe later make a constant file. When there are too many constants.
         self.c_water = 4.18e3 # [J/kg K] specific heat capacity
 
-        self.rho_steel = 8e3 #  [kg/m3] 
-        self.c_steel = 0.477e3 # [J/kg K] specific heat capacity of steel  
-        self.C_steel = np.pi * (self.radius_outer ** 2 - self.radius_inner ** 2) * self.rho_steel * self.c_steel * self.L # [J/K] total heat capacity pipe
+        self.rho_pipe_mat = rho_pipe_mat #  [kg/m3]
+        self.cp_pipe_mat = cp_pipe_mat # [J/kg K] specific heat capacity of steel
+        self.Cp_pipe_mat = np.pi * (self.radius_outer ** 2 - self.radius_inner ** 2) * self.rho_pipe_mat * self.cp_pipe_mat * self.L # [J/K] total heat capacity pipe
 
-        insulation_layer = 0.2 # [m] thickness of the insulation layer
-        self.rho_iso = 23 # [kg/m3] density of the insulation from [Spearpoint: Thermophysical properties of polyurethane foams and their melts]
-        self.c_iso = 2000 # [J/kg K] specific heat capacity of the insulation, from [Spearpoint: Thermophysical properties of polyurethane foams and their melts]
-        self.C_iso = np.pi * ((self.radius_outer+insulation_layer) ** 2 - self.radius_outer ** 2) * self.rho_iso * self.c_iso * self.L # [J/K] total heat capacity insulation
+        self.rho_insu = rho_insu
+        self.cp_insu = cp_insu 
+        self.Cp_insu = np.pi * ((self.radius_outer + self.insu_thickness) ** 2 - self.radius_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
 
-        self.C_pipe = self.C_steel + self.C_iso
+        self.Cp_whole_pipe = self.Cp_pipe_mat + self.Cp_insu
+        # self.Cp_whole_pipe = self. Cp_pipe_mat
         self.inner_cs = np.pi * self.radius_inner ** 2 # inner cross section area
         self.outer_cs = np.pi * self.radius_outer ** 2 # outer cross section area
 
@@ -156,9 +162,9 @@ class Pipe:
         
         # Take into account the heat capacity of the steel pipe
         if N - 1 < 0: # for beginning pipe temperature
-            self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.C_pipe * self.T_pipe[N]) / (self.C_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+            self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.Cp_whole_pipe * self.T_pipe[N]) / (self.Cp_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
         else:
-            self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.C_pipe * self.T_pipe[N-1]) / (self.C_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+            self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.Cp_whole_pipe * self.T_pipe[N-1]) / (self.Cp_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
 
         self.T_pipe[N] = self.T_cap[N] # update temperature pipe
 

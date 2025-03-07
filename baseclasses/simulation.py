@@ -13,20 +13,26 @@ from network import Network
 
 class Simulation:
 
-    def __init__(self, dt, total_time, net_id, temp_type, flow_type):
+    def __init__(self, dt, total_time, net_id, temp_type, flow_type, T_ambt):
 
         self.dt = dt
         self.total_time = total_time
-        self.time = np.arange(0, total_time + dt, dt) # time array
+        self.time = np.arange(0, total_time, dt) # time array
         self.num_steps = len(self.time) 
+
+        if flow_type == 'oscillating' or flow_type == 'square' or flow_type == 'constant':
+            total_time_str = str(total_time)
+        else:
+            total_time_str = str(total_time - 1) 
 
         # Create simulation-specific subfolder
         self.folder = os.path.join('figures', 
                                    'network=' + net_id + "_" +
                                    'dt=' + str(dt) + '_' + 
-                                   'total_time=' + str(total_time) + "_" +
+                                   'total_time=' + total_time_str + "_" +
                                     'Tin=' + temp_type + "_" +
-                                    'mflow=' + flow_type)
+                                    'mflow=' + flow_type + '_' +
+                                    'Tambt=' + str(T_ambt))
         
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
@@ -122,8 +128,8 @@ class Simulation:
         
         for node_id, node in network.nodes.items():
             plt.plot(self.time, node.T, label=f'{node_id}')
-        
-        plt.xlabel('Time (s)')
+      
+        plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend()
         plt.grid(True)
@@ -133,7 +139,7 @@ class Simulation:
         fig_T_in = plt.figure()
         plt.plot(self.time, T_inlet)
         plt.title('Inlet temperature at first node')     
-        plt.xlabel('Time (s)')
+        plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.grid(True)
 
@@ -181,7 +187,7 @@ class Simulation:
 
             pipe = network.pipes[pipe_id]['pipe_class']
             plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
-        plt.xlabel('Time (s)')
+        plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend()
         plt.grid(True)
@@ -206,7 +212,7 @@ class Simulation:
             pipe = network.pipes[pipe_id]['pipe_class']
             # plt.figure()
             plt.plot(self.time, pipe.m_flow, label=f'{pipe_id}')
-        plt.xlabel('Time (s)')
+        plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.legend()
         plt.grid(True)
         plt.savefig(self.folder + '/pipe_flows.png')
@@ -217,7 +223,7 @@ class Simulation:
         fig_m_flow_in = plt.figure()
         plt.plot(v_flow * pipe1.inner_cs * pipe1.rho_water)
         plt.title('Mass in flow')
-        plt.xlabel('Time (s)')
+        plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Mass flow (kg/s)')
         plt.grid(True)
 
@@ -305,19 +311,32 @@ class Simulation:
             node_from = pipe_info['from']
             node_to = pipe_info['to']
             data[f'dT {node_from.split()[1]}_{node_to.split()[1]}'] = network.nodes[node_from].T - network.nodes[node_to].T
-        
-        # Store data for pipes and ambient temperature, #TODO: maybe later order the figures in a folder based on the pipe data
+
         data['T_ambient'] = T_ambt
 
-        pipe_1_instance = network.pipes['Pipe 1']['pipe_class']
-        data['pipe_radius_outer'] = pipe_1_instance.radius_outer
-        data['pipe_radius_inner'] = pipe_1_instance.radius_inner
-        data['K'] = pipe_1_instance.K
-
-        
         # Create DataFrame and save to CSV
         df = pd.DataFrame(data)
         df.to_csv(os.path.join(self.folder, 'simulation_data.csv'), index=False)
+
+        # Store data for pipes #TODO: need to think of better way when using different pipes in one network.
+
+        data_pipes = {}
+        pipe_1_instance = network.pipes['Pipe 1']['pipe_class']
+        data_pipes['pipe_radius_outer'] = pipe_1_instance.radius_outer
+        data_pipes['pipe_radius_inner'] = pipe_1_instance.radius_inner
+        data_pipes['K'] = pipe_1_instance.K
+        data_pipes["rho_pipe_mat"] = pipe_1_instance.rho_pipe_mat
+        data_pipes["rho_insu"] = pipe_1_instance.rho_insu 
+        data_pipes["cp_pipe_mat"] = pipe_1_instance.cp_pipe_mat
+        data_pipes["cp_insu"] = pipe_1_instance.cp_insu
+        data_pipes["insu_thickness"] = pipe_1_instance.insu_thickness
+
+        Index = [1]
+
+        df_pipes = pd.DataFrame(data_pipes, index = Index)
+        df_pipes.to_csv(os.path.join(self.folder, 'pipe_data.csv'), index=False)
+        
+
 
 # Example test case
 if __name__ == "__main__":

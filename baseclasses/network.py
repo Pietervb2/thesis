@@ -53,7 +53,7 @@ class Network:
             raise ValueError(f"{to_node} must exist in the network")
 
         L = self.pipe_length(self.nodes[from_node], self.nodes[to_node])
-        pipe = Pipe(pipe_id, L, pipe_data[0], pipe_data[1], pipe_data[2])
+        pipe = Pipe(pipe_id, L, pipe_data[0], pipe_data[1], pipe_data[2], pipe_data[3], pipe_data[4], pipe_data[5], pipe_data[6], pipe_data[7])
 
         # pipe_id = self._next_pipe_id
         self.pipes[pipe_id] = {
@@ -142,7 +142,8 @@ class Network:
             node.initialize_node(num_steps, T_init_array[0])
 
         for pipe in self.pipes.values():
-            T_init = T_ambt # NOTE: check this 
+            T_init = T_ambt # NOTE: check this.
+            # T_init = T_init_array[0]
             pipe['pipe_class'].bnode_init(dt, num_steps, v_init_array, T_init_array, T_init)
 
     def set_T_and_flow_network(self, T_ambt : float, v_inflow: float, T_in: float, N : int):
@@ -245,32 +246,30 @@ if __name__ == "__main__":
     # import code
     # code.interact(local=locals())
 
-    pipe_radius_outer = 0.1 # [m] DUMMY
-    pipe_radius_inner = 0.08 # [m] DUMMY
-    K = 1 # heat transmission coefficient DUMMY zie ik staan in book van Max pagina 77
-    pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
+#     pipe_radius_outer = 0.1 # [m] DUMMY
+#     pipe_radius_inner = 0.08 # [m] DUMMY
+#     K = 1 # heat transmission coefficient DUMMY zie ik staan in book van Max pagina 77
+#     pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
 
-    net = Network()
-    net.add_node('Node 1',0,0,0)
-    net.add_node('Node 2',0,5,0)
-    net.add_node('Node 3',-100,5,0)
-    net.add_node('Node 4',-100,10,0)
-    net.add_node('Node 5',0,10,0)
-    net.add_node('Node 6',0,100,0)
-    net.add_node('Node 7',50,100,0)
-
-
-    net.add_pipe('Pipe 1','Node 1','Node 2', pipe_data)
-    net.add_pipe('Pipe 2','Node 2','Node 3', pipe_data)	
-    net.add_pipe('Pipe 3','Node 3','Node 4', pipe_data)	
-    net.add_pipe('Pipe 4','Node 4','Node 5', pipe_data)	
-    net.add_pipe('Pipe 5','Node 2','Node 5', pipe_data)	
-    net.add_pipe('Pipe 6','Node 5','Node 6', pipe_data)	
-    net.add_pipe('Pipe 7','Node 6','Node 7', pipe_data)	
-
-    net.plot_network()
+#     net = Network()
+#     net.add_node('Node 1',0,0,0)
+#     net.add_node('Node 2',0,5,0)
+#     net.add_node('Node 3',-100,5,0)
+#     net.add_node('Node 4',-100,10,0)
+#     net.add_node('Node 5',0,10,0)
+#     net.add_node('Node 6',0,100,0)
+#     net.add_node('Node 7',50,100,0)
 
 
+#     net.add_pipe('Pipe 1','Node 1','Node 2', pipe_data)
+#     net.add_pipe('Pipe 2','Node 2','Node 3', pipe_data)	
+#     net.add_pipe('Pipe 3','Node 3','Node 4', pipe_data)	
+#     net.add_pipe('Pipe 4','Node 4','Node 5', pipe_data)	
+#     net.add_pipe('Pipe 5','Node 2','Node 5', pipe_data)	
+#     net.add_pipe('Pipe 6','Node 5','Node 6', pipe_data)	
+#     net.add_pipe('Pipe 7','Node 6','Node 7', pipe_data)	
+
+#     net.plot_network()
 
 
 
@@ -289,23 +288,25 @@ if __name__ == "__main__":
 
 
 
-   # NOTE: Functions written bij copilot. Maybe useful later on. 
 
-    # def remove_node(self, node_id):
-    #     """Remove a node and all its connected edges."""
-    #     if node_id in self.nodes:
-    #         # Remove all edges connected to this node
-    #         edges_to_remove = [
-    #             edge_id for edge_id, edge in self.edges.items()
-    #             if edge['from'] == node_id or edge['to'] == node_id
-    #         ]
-    #         for edge_id in edges_to_remove:
-    #             del self.edges[edge_id]
+
+#    # NOTE: Functions written bij copilot. Maybe useful later on. 
+
+#     # def remove_node(self, node_id):
+#     #     """Remove a node and all its connected edges."""
+#     #     if node_id in self.nodes:
+#     #         # Remove all edges connected to this node
+#     #         edges_to_remove = [
+#     #             edge_id for edge_id, edge in self.edges.items()
+#     #             if edge['from'] == node_id or edge['to'] == node_id
+#     #         ]
+#     #         for edge_id in edges_to_remove:
+#     #             del self.edges[edge_id]
             
-    #         # Remove the node
-    #         del self.nodes[node_id]
+#     #         # Remove the node
+#     #         del self.nodes[node_id]
 
-    # def remove_edge(self, edge_id):
-    #     """Remove an edge from the network."""
-    #     if edge_id in self.edges:
-    #         del self.edges[edge_id]
+#     # def remove_edge(self, edge_id):
+#     #     """Remove an edge from the network."""
+#     #     if edge_id in self.edges:
+#     #         del self.edges[edge_id]
