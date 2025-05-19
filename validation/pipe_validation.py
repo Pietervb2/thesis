@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
+from sklearn.metrics import root_mean_squared_error
+
 class PipeValidation:
     def plot_pipe_data(file_path):
         # Read data
@@ -47,7 +49,7 @@ class PipeValidation:
                                         'OutletWaterTemp', 'InletPipeTemp', 'InletWaterTemp'] )  
             df.to_csv(save_path, index = False)
 
-    def compare_node_method_and_modelica_no_pressure_drop(distances, timesteps, type_T, type_mflow, T_ambt):
+    def compare_node_method_and_modelica_no_pressure_drop(distances, timesteps, type_T, type_mflow, T_ambt, no_cap = False):
 
         # NOTE: in both the node method and the modelica simulation there is no pressure drop
 
@@ -59,7 +61,11 @@ class PipeValidation:
             total_time = int(data_modelica['time'].iloc[-1])
 
             thesis_dir = os.path.dirname(val_dir)
-            figure_folder_dir = 'network=One_pipe_#nodes_2_length=' + str(distances[i]) + '_dt=' + str(timesteps[i]) + '_total_time=' + str(total_time) + '_Tin=' + type_T + '_mflow=' + type_mflow + '_Tambt=' + str(T_ambt)         
+            figure_folder_dir = 'network=One_pipe_#nodes_2_length=' + str(distances[i]) + '_dt=' + str(timesteps[i]) + '_total_time=' + str(total_time) + '_Tin=' + type_T + '_mflow=' + type_mflow + '_Tambt=' + str(T_ambt)    
+
+            if no_cap:
+                figure_folder_dir = figure_folder_dir + '_no_cap'
+
             node_file_path = os.path.join(thesis_dir, 'figures', figure_folder_dir, 'simulation_data.csv') 
 
             data_node = pd.read_csv(node_file_path)
@@ -130,7 +136,7 @@ class PipeValidation:
             # Save to csv
             new_df.to_csv(output_csv, index=False)
 
-    def compare_real_and_modelica_and_node_method_no_pressure_drop(T_ambt = 20):
+    def compare_real_and_modelica_and_node_method_no_pressure_drop(T_ambt = 20, no_cap = False):
         
         val_dir =  os.path.dirname(os.path.abspath(__file__))   
         files = ['PipeDataULg151202', 'PipeDataULg151204_4', 'PipeDataULg160118_1', 'PipeDataULg160104_2']
@@ -145,6 +151,9 @@ class PipeValidation:
             
             # Read the node method data 
             figure_folder_dir = 'network=One_pipe_#nodes_2_length=' + '39' + '_dt=' + str(dt[i]) + '_total_time=' + str(len(df_real) - 1) + '_Tin=' + file + '_mflow=' + file + '_Tambt=' + str(T_ambt)
+            if no_cap:
+                figure_folder_dir = figure_folder_dir + '_no_cap'
+            
             file_loc_node = os.path.join(thesis_dir, 'figures', figure_folder_dir, 'simulation_data.csv')
             df_node = pd.read_csv(file_loc_node)
 
@@ -166,8 +175,8 @@ class PipeValidation:
             plt.title("Temperature ")
             plt.plot(df_node["time"], df_real["OutletWaterTemp"][::dt[i]], label = 'Outlet Water Temp')
             plt.plot(df_node["time"], df_real["InletWaterTemp"][::dt[i]], label = 'Inlet Water Temp', linestyle = '--')
-            plt.plot(df_node["time"], df_node["T_Node 2"], label = 'Node Method')
-            plt.plot(df_node["time"], modelica_temp[::dt[i]], label = "Modelica")
+            plt.plot(df_node["time"], df_node["T_Node 2"], label = f'Node Method, RMSE = {np.round(root_mean_squared_error(df_node["T_Node 2"], df_real["OutletWaterTemp"][::dt[i]]),2)}')
+            plt.plot(df_node["time"], modelica_temp[::dt[i]], label = f'Modelica, RMSE = {np.round(root_mean_squared_error(modelica_temp[::dt[i]], df_real["OutletWaterTemp"][::dt[i]]),2)}')
             plt.legend()
             plt.grid(True)
             plt.savefig(os.path.join(plots_folder, 'temperature_comparison.png'))
@@ -216,11 +225,14 @@ class PipeValidation:
                 text_file.write(f"#1 \ndouble tab{total_time,number_of_colums} \n")  # Add header line
                 text_file.write(content)
 
+    # def heat_capacitance_fitting():
+
+
 if __name__ == "__main__":
     # convert_mos_to_csv()
     distances = ['2000']
     timesteps = ['30']
     T_ambt = 20
-    PipeValidation.compare_node_method_and_modelica_no_pressure_drop(distances, timesteps, 'oscillation', 'constant', T_ambt)
+    PipeValidation.compare_node_method_and_modelica_no_pressure_drop(distances, timesteps, 'constant', 'constant', T_ambt, no_cap = True)
     # compare_research_and_node_method()
-    # PipeValidation.compare_real_and_modelica_and_node_method_no_pressure_drop(T_ambt)
+    # PipeValidation.compare_real_and_modelica_and_node_method_no_pressure_drop(T_ambt, no_cap=False)

@@ -48,7 +48,7 @@ class Pipe:
         self.Cp_insu = np.pi * ((self.radius_outer + self.insu_thickness) ** 2 - self.radius_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
 
         self.Cp_whole_pipe = self.Cp_pipe_mat + self.Cp_insu
-        # self.Cp_whole_pipe = self. Cp_pipe_mat
+        # self.Cp_whole_pipe = self.Cp_pipe_mat
         self.inner_cs = np.pi * self.radius_inner ** 2 # inner cross section area
         self.outer_cs = np.pi * self.radius_outer ** 2 # outer cross section area
 
@@ -175,7 +175,8 @@ class Pipe:
 
         # print(f't_stay {t_stay}') #debug 
 
-        self.T[N] = self.T_ambt + (self.T_cap[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+        # self.T[N] = self.T_ambt + (self.T_cap[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+        self.T[N] = self.T_ambt + (self.T_lossless[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
 
         # print(f' temperature {self.T[N]}, {self.pipe_id}') # debug
        

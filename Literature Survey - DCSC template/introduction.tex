@@ -1,0 +1,187 @@
+%
+% Introduction
+\chapter{Introduction} \label{chap::intro}
+\section{Climate Change}
+Bla bla bla
+\section{Sustainable Heating}
+\todo[inline]{Here some story about the necessity of district heating networks for the problem of global warming. As a large part of the of the energy consumption of the Netherlands is heating. Where you can also mention the use for DHN in storing energy from the grid.} And then write about the fuel flexibility of district heating networks. And how big their part to play is in the future... afvalwarmte enzo, warmte opslag. Ook goed om kort het gebruik van individuele warmtepompen per huis te benoemen. 
+% The fundamental idea of district heating is sustainable as it wants to use local fuel or heat that would otherwise be wasted to meet the local heat demand \cite{bookMax}. Of course, this ideal is not always achieved and then it needs to make use of extra fuel but it shows the sustainable and effective mindset around district heating. 
+
+\section{District Heating Networks}
+Current district heating networks transport thermal energy by heating or cooling water through insulated pipes. These pipes are connected in an underground local network with one (or more) energy sources, possibly storage, and buildings. The district heating (and cooling) networks facilitate the heating and cooling of these buildings. The temperature of the water going in and out of the building is called the supply and return temperature, respectively. 
+
+% iets vertellen over de verschillende structuren van netwerken?
+
+District heating was commercially introduced in the late 19th century in the United States and at the beginning of the 20th century in Europe \cite{bookMax}. Currently, the use of district heating networks is increasing worldwide. The International Energy Agency predicts that 350 million housing units will be connected to a district heating network in 2030. Accounting for about 20 $\%$ of the global space heating needs \cite{IEAheating}. \\
+
+At first, heat was transported using steam, which led to too much corrosion due to condensation and high heat losses. Therefore, they switched to water as the heat carrier. The next generation district heating networks used pressurized water from 100 $^{\circ}\text{C}$, which still causes high heat losses \cite{FemkeJanssenLit}. Nowadays, the newest networks are of the fourth generation. These networks are implemented with a focus on decarbonization, in contrast to the previous three generations, which heavily relied on fossil fuels. The water temperature in these systems has a maximum of 60 - 70$70^{\circ}\text{C}$. This was made possible by reducing heat loss of the buildings themselves and using floor heating, requiring a lower supply temperature \cite{FemkeJanssenLit}. This supply temperature lowers grid losses and makes it economically feasible to implement waste heat sources, such as excess heat from data centers. Also, heat pumps and solar collectors become more efficient, making it more suitable for implementing (seasonal) thermal energy storage. In the literature, a fifth generation of district heating networks is discussed. The extension of adding a cooling network is often mentioned in its definitions. However, the authors of the paper "\textit{Perspectives on fourth and fifth generation district heating}" conclude that it is a complementary technology, not a new generation of district heating networks \cite{4GDH5GDH}. 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/GDH.jpg}
+    \caption{The development of the district heating networks from the first up to the fourth generation \cite{4GDH5GDH}.}
+    \label{fig:devDHN}
+\end{figure}
+
+\section{Changing Legislation}
+In contrast to the electricity or gas networks, district heating networks are not connected to a national grid. This grid connects all producers and consumers and enables consumers to choose between energy providers. District heating networks are local networks connected to local heat producers. Narrowing the choice of energy providers. Most of the time, one energy provider owns and supplies the district heating networks, creating a monopoly. The Dutch government is working on new legislation, the "Collective Heat Act" (Wet Collectieve Warmte, Wcw), to change these monopolies and regulate these networks' heating and cooling prices. The government wants to stimulate the development of heating networks and guarantee their affordability, sustainability, and reliability. One of the provisions of the law states that collective heating networks serving 1,500 or more connections must be majority-owned for at least 51 $\%$ by public entities such as municipalities, provinces, or the national government \cite{WcWsite}. The Wcw allows more flexibility for heating networks with fewer than 1,500 connections. These smaller systems can be owned and operated by private entities, provided that they obtain an exemption from the municipality. The proposed law
+must still be approved by both the House of Representatives (Tweede Kamer) and the Senate (Eerste Kamer) before it comes into effect. This legislative process may lead to changes to the bill and introduces uncertainty for energy companies.
+
+\subsection{Decentralized Solutions}
+Eneco is the market leader in District Heating in the Netherlands, with 150.000 customers. They have 68 heating networks, mainly in and around the cities of Utrecht, The Hague, Rotterdam, and Amsterdam. These networks differ in size. The profitability of large networks already faced challenges due to their high investment costs. With the additional uncertainty caused by the Wcw, Eneco decided to focus on building smaller networks, called Decentralized Solutions (DCS) \cite{nos2025warmtenetten}. \\
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.5\linewidth]{}
+%     \caption{Caption}
+%     \label{fig:enter-label}
+% \end{figure}
+Decentralized Solutions are small local networks with up to 1,500 connections. These networks generate, store, and manage all their thermal energy near the consumer. They consist of consumers (households and larger users), one or more heat sources often including a heat pump, and heat and cold storage in the ground, and an underground pipeline network to connect them all. In some cases, the DCS is also connected to a larger nearby district heating system as a backup for the peak demand \cite{opdracht_eneco}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/DCS.png}
+    \caption{Depiction of Decentralized Solution. In this image, the DCS is not connected to a larger network for backup \cite{DCSeneco}.}
+    \label{fig:DCS}
+\end{figure}
+The heat and cold underground storage is an Aquifer Thermal Energy Storage (ATES), in Dutch "Warmte Koude Opslag". The ATES generally consists of a heat pump and two wells. These wells are sandy layers underground where it simultaneously stores and extracts thermal energy by heating or cooling the groundwater. These are called hot or cold wells, respectively. The cold water used to cool the network is heated during the process and stored in the hot well. The same holds for the hot water that is stored in the cold well after being used for heating. When in summer the cold well is heated to above approximately 10 $^{\circ}\text{C}$, the heat pump is used as a backup cooling machine. In winter, the heat pump increases the temperature of the groundwater extracted from the hot well to 40 $^{\circ}\text{C}$ needed to heat the associated building. And during heating, the heat pump cools the used groundwater to 5-8 $^{\circ}\text{C}$ \cite{bloemendal2018hidden}. ATES addresses the seasonal mismatch between the availability and demand for heating and cooling in buildings. While it significantly reduces reliance on fossil fuels, the heat pump still requires a substantial amount of electricity to operate \cite{tudelft_ates_triplet}.
+
+\subsection{Problem Setup}
+During summer, the demand for heat decreases significantly, leading to increased return temperatures for the Decentralized Solutions. Return temperatures can reach up to 45-55 $^{\circ}\text{C}$, which is considered excessively high. Lowering the return temperature has certain benefits, which can be illustrated using the equation below. This relation shows how much thermal energy the water has lost (or gained) after it flows through the district heating network. 
+
+\begin{equation}
+    Q = \dot{m} c_p (T_s - T_r)
+\end{equation}
+$Q$ (J/s) is the change in thermal energy of the water, $\dot{m}$ (kg/s) is the mass flow of the water, $c_p$ (J/(kg K)) is its specific heat capacity and $T_s$ and $T_r$ ($^{\circ}\text{C}$) are respectively the supply and return temperatures. 
+
+If the supply temperature remains constant, the temperature difference will increase as the return temperature is reduced. This makes it possible to lower the flow rate of the water while still delivering the required heat. The pump will need less electricity, and the used pipes can be made smaller, saving on operational and initial costs. 
+
+One could also choose to lower the supply temperature, maintaining the initial temperature difference. This causes less heat loss as the supply temperature is closer to its surroundings. In addition, the network becomes more suitable for excess heat and renewable energy sources such as solar or geothermal energy. Because these energy sources operate at temperatures lower than those of fossil fuels \cite{sustainableResources}. The required temperature lift becomes smaller, making the heat pump more efficient, making it beneficial for the ATES as well. A too high return temperature might even lead to the malfunction and failure of a heat pump. Additionally, the solar collectors connected to the network become more efficient at a lower supply temperature \cite{booklowT}. Of course, lowering the supply temperature and the flow rate can also be performed at the same time, but then there is a trade-off of what you find more important in your operation. However, there is a certain limit to how far you can reduce the supply temperature. As the temperature still needs to be sufficient for heating purposes, but legislation plays a role as well. According to regulations, hot tap water must be kept at 55 degrees to prevent the growth of Legionella bacteria \cite{tapwaterWet}. 
+\todo{kijken naar verdere specifieke uitwerking hiervan, met ook richtlijnen. }
+
+Eneco wants to develop a dynamic simulation model of the Decentralized Solutions, to be able to optimize their designs and operation in order to lower the return temperature. Since DCS networks can still differ from one another in terms of components and overall setup, it was decided to focus on a use-case to make the scope of the research suitable for a master's thesis. However, the model should be built in such a way that it would be easily extendable and scalable for other DCS networks. 
+
+The Cooltower was chosen for the use case. It is a 154-meter-tall flat in the city center of Rotterdam consisting of 272 apartments. It was completed in 2022 and was selected because it is the decentralized solution with the most sensors, providing the data for the eventual model validation.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/Cooltorenfoto.jpg}
+    \caption{Picture of the Cooltower \cite{fotoCooltoren}.}
+    \label{fig:Cooltoren}
+\end{figure}
+
+The Cooltower contains a heating and cooling network that is connected to the ATES below the building. Also, its network is connected to the city heating network ("Stadsverwarming" in Dutch), which serves as a backup during peak demand. The internal heating and cooling network of the building is split into a lower and upper part as otherwise the heat interface units (HUI) in the lower floors would experience too high pressure. The scope of the thesis will remain on the district heating system within the Cooltower, with a focus on the thermodynamics and hydraulics of the heat distribution system within the building. If time permits, the dynamics of the ATES or the city heat network may be addressed at a later stage.
+This research looks at two actuators in the model to reduce the return temperature: the supply temperature and the overflow mechanism within the building. The overflow mechanism is a valve located at the top of the building where the supply pipeline directly flows into the return pipeline. 
+
+To conclude this section the objective of this literature survey is formulated the following.
+
+{\centering
+\textbf{Investigate methods to dynamically model the thermodynamics and hydraulics of the heat distribution system within the Cooltower. And how to optimize the DCS to reduce the return temperature actuating over the supply temperature and the overflow mechanism.}\par
+}
+The research must be done with the following model requirements in mind:
+
+\begin{itemize}
+    \item The timestep must be on the order of 1 minute. 
+    \item The model should not only simulate the return temperature but also capture the internal hydraulic and thermodynamic behavior of the DCS heat distribution system.
+    \item The model should be scalable and extendable, allowing it to be applied to other DCS networks as well.
+    \item When the overflow mechanism turns out to be relatively simple and limits optimization performance, the optimization can additionally be performed implementing a more advanced mechanism to evaluate its effects.
+\end{itemize}
+
+\section{Approach \& Outline}
+First, Section \ref{chap::sysmodel} discusses methods for dynamically modeling the components of the heat distribution network of the Decentralized Solution in the Cooltower, including the modeling of heat demand and the development of a system framework. Next, Section \ref{chap::optimization} explores various approaches to optimization. Finally, Section \ref{chap::PoA} presents a proposed plan for conducting the thesis.
+
+% \begin{itemize}
+%     \item Problem is too high return temperature in the summer
+%     \item want bigger difference in temperature for heat pump, explain why.
+%     \item also explain why they want 
+%     \item dynamic model, while static models can already give some security concerns. 
+%     \item Cooltower
+%     \item has a DHN and DCN 
+%     \item make difference between the high and low building
+%     \item mention the overflow mechanism
+%     \item name the components that will be modelled
+%     \item clearly define the scope
+% \end{itemize}
+
+
+% This is a \LaTeX\ thesis and this is Chapter\ \ref{chap::intro}.
+
+% \section{About \texorpdfstring{\LaTeX}{LaTeX}}
+
+% \LaTeX\ is a document preparation system for the \TeX\ typesetting program. It offers programmable desktop publishing features and extensive facilities for automating most aspects of typesetting and desktop publishing, including numbering and cross-referencing, tables and figures, page layout, bibliographies, and much more.
+
+% \LaTeX\ was originally written in 1984 by Leslie Lamport and has become the dominant method for using \TeX; few people write in plain \TeX\ anymore. The current version is \LaTeXe.
+
+% If you want to know more about \LaTeX\ you better read \cite{texbook}.\index{LaTeX}
+
+
+% \section{About Acronyms}
+
+% This section contains an acronym of the \ac{DCSC}. The \ac{DCSC} is our department within the faculty of \ac{3mE} at \ac{TU}. \index{acronym}
+
+% Acronyms are automatically listed in the Glossary in the back of this thesis. You have to define acronyms in \texttt{glossary.tex} using \verb"\acro{ACRONYM}{Full text}". You print an acronym by using the command \verb"\ac{...}". You can always force a full, long or short printout by using \verb"\acf{...}", \verb"\acl{...}" or \verb"\acs{...}" respectively.
+
+% \begin{itemize}
+%     \item \verb"\acf{DCSC}": \acf{DCSC};
+%     \item \verb"\acl{DCSC}": \acl{DCSC};
+%     \item \verb"\acs{DCSC}": \acs{DCSC}.
+% \end{itemize}
+
+% \section{About the Nomenclature}
+
+% When you use symbols in your thesis -- as you probably will -- you can put them into the nomenclature listing (List of Symbols) at the back of your thesis. \tabref{tab:nomencl} shows the \LaTeX\ commands you need.\index{nomenclature}
+
+% \begin{table}%
+%     \centering
+%     \caption{Nomenclature codes}
+%     \label{tab:nomencl}
+%     \begin{tabular}{llcl}
+%         \toprule
+%         Code & Usage & Example\\
+%         \midrule
+%         \verb"\gsymb{}" & Greek symbols & \gsymb{$\gamma$}{Path Angle}\\
+%         \verb"\lsymb{}" & Letter symbols & \lsymb{$H(s)$}{Transfer function}\\
+%         \verb"\supers{}" & Superscript symbols & \supers{max}{Maximum} &\emph{only printed in the List of Symbols} \\
+%         \verb"\subs{}" & Subscript symbols & \subs{min}{Minimum} &\emph{only printed in the List of Symbols}\\
+%         \verb"\others{}" & Other symbols & \others{[kts]}{Knots} \others{$^{\circ}$, [deg]}{Degrees} &\emph{only printed in the List of Symbols}\\
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
+
+% \section{About {\textbackslash}(re)newcommand}
+% As you will (soon) know the \LaTeX\ system makes use of commands in
+% the form of \verb"\command". This can be used to make your life
+% easier, since you can also define these commands yourself. Suppose
+% that you often use an expression $e^{it}$. This would
+% normally be written as \verb"$e^{it}$", or if already in math mode
+% as \verb"e^{it}". Now you can define a command
+% \verb"\eit" as follows\\
+% \verb"\newcommand{\eit}{e^{it}}"\\
+% This definition has to be placed in the so-called preamble, i.e.
+% before the declaration\\ \verb"\begin{document}".\\ Now you can use
+% this
+% command in your text, so \verb"\eit" replaces \verb"e^{it}".\\
+% Be aware that many commands are already in use by various packages.
+% If you define an already existing command this will result in an
+% error message. The best way to deal with this is to make sure your
+% own command is unique, for instance by defining it as\\
+% \verb"\newcommand{\MYeit}{e^{it}}".\\
+% An alternative is to redefine the existing command by\\
+% \verb"\renewcommand{\eit}{e^{it}}",\\
+% but this is in general considered a tedious practice and should be
+% avoided.
+% See the \LaTeX\ documentation for more details and possibilities. You can also use arguments.\\
+% %
+% Don't underestimate the power of this feature. Suppose that you
+% frequently use the expectation operator $E(x)$ in your text which is
+% created with \verb"E(x)" (in math mode). Now your supervisor decides
+% that he would prefer to see this as $\bf{E}(x)$. If you haven't
+% defined your own command, you will have to go through the complete
+% text, changing every instance. If you would have thought about it
+% and
+% would have defined originally\\
+% \verb"\newcommand{\MyE{1}}{E(#1)}",\\
+% using this in your text as \\
+% \verb"\MyE{x}", \verb"\MyE{y}" etc.,\\
+% then you can change this simply by adapting the definition to\\
+% \verb"\newcommand{\MyE{1}}{\bf{E}(#1)}".

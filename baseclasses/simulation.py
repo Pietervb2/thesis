@@ -13,7 +13,7 @@ from network import Network
 
 class Simulation:
 
-    def __init__(self, dt, total_time, net_id, temp_type, flow_type, T_ambt):
+    def __init__(self, dt, total_time, net_id, temp_type, flow_type, T_ambt, no_cap = False):
 
         self.dt = dt
         self.total_time = total_time
@@ -33,6 +33,9 @@ class Simulation:
                                     'Tin=' + temp_type + "_" +
                                     'mflow=' + flow_type + '_' +
                                     'Tambt=' + str(T_ambt))
+                   
+        if no_cap:
+            self.folder = self.folder + "_no_cap" 
         
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)

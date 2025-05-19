@@ -381,7 +381,8 @@ class Test:
                     plot_pipes_T = False, 
                     plot_pipes_m_flow = False, 
                     plot_network = False,
-                    plot_nodes_dT = False):
+                    plot_nodes_dT = False,
+                    no_cap = False):
         
         thesis_dir = os.path.dirname(os.path.abspath(__file__))
         constants_file = os.path.join(thesis_dir, 'constants.json')
@@ -410,7 +411,7 @@ class Test:
         for node in range(1, number_of_nodes):
             net.add_pipe('Pipe ' + str(node), 'Node ' + str(node), 'Node ' + str(node + 1), pipe_data) 
 
-        sim = Simulation(dt, total_time, net.net_id, temp_type, flow_type, T_ambt)      
+        sim = Simulation(dt, total_time, net.net_id, temp_type, flow_type, T_ambt, no_cap)
 
         if temp_type == "constant":
             T_inlet = np.ones(sim.num_steps) * 65                                 # Constant
@@ -443,7 +444,8 @@ class Test:
                         plot_pipes_T = False, 
                         plot_pipes_m_flow = False, 
                         plot_network = False,
-                        plot_nodes_dT = False):
+                        plot_nodes_dT = False,
+                        no_cap = True):
         
         thesis_dir = os.path.dirname(os.path.abspath(__file__))
         constants_file = os.path.join(thesis_dir, 'constants.json')
@@ -497,7 +499,7 @@ class Test:
             pipe1 = net.pipes['Pipe 1']['pipe_class']
             v_flow = m_flow / pipe1.rho_water / pipe1.inner_cs       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
 
-            sim = Simulation(dt[i], total_time, net.net_id, file, file, T_ambt)      
+            sim = Simulation(dt[i], total_time, net.net_id, file, file, T_ambt, no_cap)      
             sim.simulate_network(net, T_inlet, v_flow, T_ambt)
 
             # Plot outcome and save figure
@@ -518,6 +520,7 @@ if __name__ == "__main__":
     total_time = 8000 # [s]
     total_length = 2000 # [m]
 
-    # Test.test_one_pipe(number_of_nodes, 'constant', 'constant', dt, total_time, total_length, "Pipe of District Heating and Cooling Book", plot_nodes_T = True)
+    # Test.test_one_pipe(number_of_nodes, 'constant', 'constant', dt, total_time, total_length, "Pipe of District Heating and Cooling Book", plot_nodes_T = True, no_cap = True)
 
-    Test.test_real_input_data("Pipe of experiment van der Heijden") # 20 T ambient
+    Test.test_real_input_data("Pipe of experiment van der Heijden", no_cap = True) # 20 T ambient
+ 
