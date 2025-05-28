@@ -2,6 +2,13 @@
 As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lower the return temperature of the small-scale heating networks. To achieve this, a simulation model needs to be made that captures the thermodynamic and hydraulic behavior of these networks to predict the return temperature. It will be used to perform an optimization, actuating the overflow mechanism and the supply temperature, to lower the return temperature. This research focuses on the Cooltower as a use case, but preferably, the findings should also apply to other networks. This chapter covers the approach to building the model and the outline for its optimization.
 
 \section{Simulation Model}
+Extensive research has been conducted on modeling district heating networks (DHNs), resulting in a wide range of simulation tools. A recently published paper by Kuntuarova et al. contains an extensive review of the most popular modeling and simulation tools, comparing their modeling approaches, application scope, and functional capabilities \cite{KUNTUAROVA}. Using this review, the article from Brown et al. \cite{BROWN2022125060} and some independent searching, an overview was made of the possibly suitable simulation tools. However, many of the interesting tools require a paid license, which is not possible for this thesis. While several free tools exist, many lack dynamic simulation capabilities or are not well-suited for DCS modeling. For example, EnergyPLAN \cite{EnergyPlan} uses an hourly timestep, and EnergyPlus \cite{EnergyPlus} focuses on building thermal behavior without detailed network modeling. TESPy \cite{TESPy}, meanwhile, only supports steady-state simulations.
+
+Some open-source Python libraries, such as PyDHN \cite{PyDHN}, PandaPipes \cite{pandapipes}, and GridPinguin \cite{GridPenguin}, support dynamic simulation and were promising, especially since Eneco uses Python internally, making it easier to adapt into their working routine. However, these libraries need to be extended to model all the DCS components. Their complex coding structure and the lack of documentation complicated this and make debugging time-consuming. Whereas PyDHN was still a beta version. The most serious option was OpenModelica \cite{OpenModelica}, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica. 
+
+Therefore, it was determined to make the model from scratch in Python using the Python open-source projects as inspiration for the model structure.
+
+\todo[inline]{
 The network will be represented by a graph structure that contains nodes and edges. The nodes are all the components within the network, except the pipes. 
 
 - edges en nodes
@@ -10,7 +17,7 @@ The network will be represented by a graph structure that contains nodes and edg
 - benoemen van de thermodynamische en hydraulische scheiding 
 - per stap uitleggen wat er bij komt.
 - En bij sommige stappen uitleggen hoe het wordt gevalideerd.
-- en het overflow mechanisme uitleggen
+- en het overflow mechanisme uitleggen}
 
 \section{Optimization}
 % \section{Data driven method?}

@@ -1,7 +1,30 @@
-%
-% A Real Chapter
 \chapter{System Modeling}\label{chap::sysmodel}
-static vs dynamic vs pseudo transient
+This section outlines the approaches to modeling the thermodynamic and hydraulic behavior of the decentralized solutions of the Cooltower. It begins with an overview of the overall structure of the model. Subsequently, the hydraulic and thermodynamic modeling of the individual components is discussed. With particular attention given to the overflow mechanism. Unlike the other elements, the overflow mechanism offers more flexibility within the optimization process, allowing exploration of alternative designs for further research. Afterwards, the peak and demand of the system are analyzed. Finally, a review of existing software tools for simulating district heating networks is presented. 
+
+\section{Preliminaries}
+Several general assumptions commonly used in District Heating Network literature are outlined below. These assumptions are also used throughout this chapter. Additional assumptions specific for particular methods are discussed in their dedicated sections.
+
+It is assumed that the hydraulics are in a steady state due to the high speed of sound in water (1481 m/s at 20 $^{\circ}\text{C}$ \cite{speedofsound}) causing the changes in flow rate and pressure to be within seconds in a small district heating network like a DCS. Whereas, the thermodynamic changes spread at a much lower speed with a maximum flow rate of around 3 m/s. Furthermore, it is assumed that the water is incompressible, has a constant density and heat capacity, and that frictional heat is negligible. Based on these assumptions, the hydraulic and thermodynamic systems can be assumed to be decoupled.
+
+% Andere aannames die mogelijk hier hier nog kunnen worden benoemd afhankelijk van hoe het gaat met de methods voor de pijpleiding:
+% - pipeline cylindrical
+% - constant heat transmission coefficient
+% - ambient temperature constant along the length of the pipeline
+% - spatially homogenous velocity and temperature in the cross-seciton
+% - heat diffusion in axial direction is neglected
+% deze hierboven komen allemaal van Maurer.
+% - turbulente flow? [Yvo Putter]
+% - fully developed? [Yvo]
+% - homogeneous mixing at pipe junctions
+
+\section{Model structure}
+In \cite{GUELPA2016586}\cite{KECEBAS2012339} the black box approach is applied, where the non-linear behavior of the entire DHN is put into one function which is determined using data-driven methods. Another approach is to solely look at physical laws and parameters to create a model, called a white box and is the more conventional option, used in many modeling articles. The grey box model is the combination of the two and can be found in \cite{grey1}\cite{grey2}. This literature survey focuses on the white box model.
+
+District heating networks are branched or looped based networks, making them perfectly suited for modeling with a graph approach. The graph consist of nodes, which are junctions in the system, connected by edges. An edge is a pipe, potentially equipped with a heat exchanger, pump, or a valve \cite{sibeijn2025economic}. On the edges producers can add heat and consumer can subtract it. To calculate the mass flows and pressure within the network, the Kirchhoff's two laws must uphold. The first law asserts that the total mass flow entering and leaving a node must be equal, ensuring mass conservation. The second law requires that the net pressure drop around any closed loop in the network must sum to zero, maintaining pressure balance. The pressure loss within the pipes depend quadratically on the flow, making it a network of non-linear equations.  
+
+To solve for this system of non-linear equations we assume that the demand and heat supply are known, leaving the pipe flows to be determined. This can be done making use of itrative methods like Hardy-Cross and Newton-Raphson. These make an initial guess of the flow and then iteratively adjust this guess until it converges. Where the Hardy-Cross method runs through each loop independently, the Newton–Raphson method runs through all loops simultaneously \cite{NewtonenHard}. In \cite{STEVANOVIC} the authors claim that they developed a method of square roots for solving the linearized system that outperforms the Hardy-Cross method in convergence time and validated it with real data. Where the aggregated models from \cite{LARSEN2002995} (also tested with real data) and the nodal model in \cite{BENONYSSON1995297} both convergence quicker and overcome some of the limitations of the Hardy-Cross method.
+\todo[inline]{Die laatste zin chicken hoe dit precise zit!}
+\todo[inline]{plaatje graph structure.}
 
 
 
@@ -14,42 +37,20 @@ static vs dynamic vs pseudo transient
 It is assumed that the fluid velocity is high enough to neglect heat conduction in the direction of the flow. Therefore only the heat convection of the fluids needs to be taken into account as well as the heat conduction of the plate material. Uo is the overall heat transfer coefficient between the two fluids. This heat transfer coefficient is the reciprocal of the overall heat transfer resistance (3-13). 
 \todo[inline]{van de literatuur studies Femke Jansen}
 \subsection{Heat Exchanger}
+LMTD, NTU
+over nadenken hoe je dit dan doet voor zo'n afleverset
 \subsection{Other components}
 \subsection{ATES}
 \section{Hydraulic modelling}
 \subsection{Pipes}
 \subsection{Heat Exchanger}
+\subsection{Pump}
 \subsection{Other components}
 \todo[inline]{Need to include district heating AND cooling}
 \section{Overflow mechanisms}
+
 \section{Simulation Software}
+- tabel voor alle mogelijke simulatie software die gebruiken van word
+- daarin verwijzen welke technologie ze gebruiken
+- cfd programmas ook naar gekeken maar te uitgebreid. 
 
-
-
-% This is real chapter for \ac{DCSC}, ok? We will use it as a demo for the different headings you can use to structure your text.
-
-
-% \section{First Section}
-
-% This is the section. Referring to equations, figures and tables can easily be done by the commands \verb"\eqnref{}", \verb"\figref{}" and \verb"\tabref{}".
-
-% \begin{equation}\label{eq:First}
-% 	H(s) = \frac{1}{s+2}
-% \end{equation}
-
-% You see? Refer to equations like this \eqnref{eq:First}.
-
-
-% \subsection{The first subsection}
-
-% Subsections are the last type of sectioning that is numbered. 
-
-
-% \subsubsection[Subsection Short Title]{The first sub-subsection with a very very very long title, but in the Table of Contents one can only see the short title}
-
-% Quick! Check the Table of Contents! Nice, ain't it?\index{Nice}
-
-
-% \paragraph{A paragraph title}
-
-% Subdividing your text in sections and paragraphs automatically makes it nice and structured.
