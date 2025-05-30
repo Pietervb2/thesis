@@ -1,10 +1,27 @@
 \chapter{System Modeling}\label{chap::sysmodel}
 This section outlines the approaches to modeling the thermodynamic and hydraulic behavior of the decentralized solutions of the Cooltower. It begins with an overview of the overall structure of the model. Subsequently, the hydraulic and thermodynamic modeling of the individual components is discussed. With particular attention given to the overflow mechanism. Unlike the other elements, the overflow mechanism offers more flexibility within the optimization process, allowing exploration of alternative designs for further research. Afterwards, the peak and demand of the system are analyzed. Finally, a review of existing software tools for simulating district heating networks is presented. 
 
-\section{Preliminaries}
-Several general assumptions commonly used in District Heating Network literature are outlined below. These assumptions are also used throughout this chapter. Additional assumptions specific for particular methods are discussed in their dedicated sections.
+\section{Preliminaries}\label{sec::preliminaries}
+\todo[inline]{Nalezen}
+Several general assumptions commonly used in District Heating Network literature and some dimesionless variables are outlined below. These assumptions are also used throughout this chapter. Additional assumptions specific for particular methods are discussed in their dedicated sections.
 
-It is assumed that the hydraulics are in a steady state due to the high speed of sound in water (1481 m/s at 20 $^{\circ}\text{C}$ \cite{speedofsound}) causing the changes in flow rate and pressure to be within seconds in a small district heating network like a DCS. Whereas, the thermodynamic changes spread at a much lower speed with a maximum flow rate of around 3 m/s. Furthermore, it is assumed that the water is incompressible, has a constant density and heat capacity, and that frictional heat is negligible. Based on these assumptions, the hydraulic and thermodynamic systems can be assumed to be decoupled.
+While this chapter focuses on modeling district heating networks, the same approach is applicable to district cooling systems, with modifications to account for the switch from heating to cooling.
+
+\subsection{Modeling assumptions}
+It is assumed that the hydraulics are in a steady state due to the high speed of sound in water (1481 m/s at 20 $^{\circ}\text{C}$ \cite{speedofsound}) causing the changes in flow rate and pressure to be within seconds in a small district heating network like a DCS. Whereas, the thermodynamic changes spread at a much lower speed with a maximum flow rate of around 3 m/s. Furthermore, it is assumed that the water is incompressible, has a constant density and heat capacity, and that frictional heat is negligible. Based on these assumptions, the hydraulic and thermodynamic systems can be assumed to be decoupled. In addition, it is assumed that the pipelines are cylindrical and completely filled with water. And that heat losses from friction are negligible. \todo{citaties naar waar de aannames ook gebruikt worden?}
+
+\subsection{Dimensionless Numbers}
+\textbf{The Reynolds Number (Re)} is a ratio between the internal and vicious forces within a fluid. And it is used as an indicator for a flow to be laminar or turbulent. 
+
+\begin{equation}\label{eq::Re}
+R e=\frac{\rho d V}{\mu}=\frac{4 \dot{q}}{\pi d \mu}
+\end{equation}
+
+\textbf{The Darcy friction factor (f)} is a term that can be found in the Darcy-Weisbach equation, which calculates the pressure flow drop through a pipe using the pipe flow. The coefficient can be determined using the Moody diagram, where $f$ is plotted against the Reynolds number for different relative roughness $\epsilon / d$. Or it can be determined analytically using the Colebrook-White equation \ref{eq:CoolbrookWhite}, which is the most popular method, for the transition region (2300 $\leq$ Re $\leq$ 4000) and the turbulent region (Re $\geq$ 4000) in smooth and rough pipes \cite{Darcyfrictionfactor}. This requires an iterative approach to determine $f$. There are also non-iterative methods, but they have a relative error to the Colebrook-White equation, however the of \cite{Darcyfrictionfactor} found that for certain correlations the error is neglibible.
+
+\begin{equation}\label{eq:CoolbrookWhite}
+\frac{1}{\sqrt{f}}=-2 \log \left(\frac{\epsilon}{3.7 D}+\frac{2.51}{\operatorname{Re} \sqrt{f}}\right)
+\end{equation}
 
 % Andere aannames die mogelijk hier hier nog kunnen worden benoemd afhankelijk van hoe het gaat met de methods voor de pijpleiding:
 % - pipeline cylindrical
@@ -18,36 +35,63 @@ It is assumed that the hydraulics are in a steady state due to the high speed of
 % - homogeneous mixing at pipe junctions
 
 \section{Model structure}
-In \cite{GUELPA2016586}\cite{KECEBAS2012339} the black box approach is applied, where the non-linear behavior of the entire DHN is put into one function which is determined using data-driven methods. Another approach is to solely look at physical laws and parameters to create a model, called a white box and is the more conventional option, used in many modeling articles. The grey box model is the combination of the two and can be found in \cite{grey1}\cite{grey2}. This literature survey focuses on the white box model.
+In \cite{GUELPA2016586}\cite{KECEBAS2012339} a black box approach is applied, where the non-linear behavior of the entire DHN is put into one function which is determined using data-driven methods. Another approach is to solely look at physical laws and parameters to create a model, called a white box and is the more conventional option used in majority of the DHN modeling articles. The grey box model is the combination of the two and can be found in \cite{grey1}\cite{grey2}. This literature survey focuses on the white box model.
 
-District heating networks are branched or looped based networks, making them perfectly suited for modeling with a graph approach. The graph consist of nodes, which are junctions in the system, connected by edges. An edge is a pipe, potentially equipped with a heat exchanger, pump, or a valve \cite{sibeijn2025economic}. On the edges producers can add heat and consumer can subtract it. To calculate the mass flows and pressure within the network, the Kirchhoff's two laws must uphold. The first law asserts that the total mass flow entering and leaving a node must be equal, ensuring mass conservation. The second law requires that the net pressure drop around any closed loop in the network must sum to zero, maintaining pressure balance. The pressure loss within the pipes depend quadratically on the flow, making it a network of non-linear equations.  
+District heating networks are branched or looped based networks, making them perfectly suited for modeling with a graph approach. The graph consists of nodes, which are junctions in the system, connected by edges. An edge is a pipe, potentially equipped with a heat exchanger, pump, or a valve \cite{sibeijn2025economic}. On the edges, producers can add heat and consumers can subtract it. The temperature at each node is determined by a weighted average of the incoming mass flows and their respective temperatures. All outgoing edges from the node are assigned the same temperature as the node itself. To calculate the mass flows and pressure within the network, Kirchhoff's two laws must be upheld. The first law asserts that the total mass flow entering and leaving a node must be equal, ensuring mass conservation. The second law requires that the net pressure drop around any closed loop in the network must be zero, maintaining pressure balance. The pressure loss within the pipes depends quadratically on the flow, making the hydraulics a system of non-linear equations. As we assume a decoupled system, the hydraulic problem is computed first, after which the obtained mass flow rates are used for the thermodynamic system. 
 
-To solve for this system of non-linear equations we assume that the demand and heat supply are known, leaving the pipe flows to be determined. This can be done making use of itrative methods like Hardy-Cross and Newton-Raphson. These make an initial guess of the flow and then iteratively adjust this guess until it converges. Where the Hardy-Cross method runs through each loop independently, the Newton–Raphson method runs through all loops simultaneously \cite{NewtonenHard}. In \cite{STEVANOVIC} the authors claim that they developed a method of square roots for solving the linearized system that outperforms the Hardy-Cross method in convergence time and validated it with real data. Where the aggregated models from \cite{LARSEN2002995} (also tested with real data) and the nodal model in \cite{BENONYSSON1995297} both convergence quicker and overcome some of the limitations of the Hardy-Cross method.
-\todo[inline]{Die laatste zin chicken hoe dit precise zit!}
-\todo[inline]{plaatje graph structure.}
+To solve this hydraulic system of non-linear equations we assume that the demand and heat supply are known, leaving the pipe flows to be determined. This can be done making use of iterative methods like Hardy-Cross \cite{HardyCross} and Newton-Raphson \cite{NewtonenHard}. These make an initial guess of the flow and then iteratively adjust this guess until it converges. Where the Hardy-Cross method runs through each loop independently, the Newton–Raphson method runs through all loops simultaneously \cite{NewtonenHard}. In \cite{STEVANOVIC} the authors claim that they developed a method of square roots for solving the linearized system that outperforms the Hardy-Cross method in convergence time and validated it with real data. Also the aggregated models from \cite{LARSEN2002995} (also tested with real data) convergence quicker (which is mainly interesting for the bigger district heating networks) and overcome some of the limitations of the Hardy-Cross method.
 
+The thermodynamic behavior of the edge in the system is described following a PDE. Different solutions for this equation are further discussed in more detail in Section \ref{sec::thermo}
 
+\section{Hydraulic modeling}
+According to Kirchoff's second law the total pressure difference over a loop needs to be zero. To comply with this law the pressure losses over all the components of the Decentralized Solution needs to be determined. 
+\begin{equation}
+    \Delta p_{tot} = \Delta p_{pipe} + \Delta p_{valve} + \Delta p_{hx} + \sum p_m
+\end{equation}
+\todo[inline]{verder uitwerken, waarom hier niet iets van head?}
 
-\section{Thermo-Dynamic modeling}
 \subsection{Pipes}
+An approximation of the 1-dimensional compressible Euler equations for cylindrical pipes is used to describe the dynamics within a pipe \cite{Krug2020}. The first two equations, the continuity equation and the 1d momentum equation, are needed for the calculation of the mass flows. They are stated down below.
+
+\begin{equation}
+\partial_t \rho+\partial_x\left(\rho v\right)=0
+\end{equation}
+\begin{equation}
+\partial_t (\rho v)+\partial_x(\rho v^2)+ \partial_x p+\rho g \hat{z}  +f \frac{\rho}{2 d}|v| v=0
+\end{equation}
+Where $\rho$ [kg/m$^3$] is the water density, the water velocity $v$ [m/s], the pressure in the pipe $p$ [Pa], $g$ the gravitational acceleration [m/s$^2$], the slope of the pipe $\hat{z}$ [-], friction coefficient $f$ [-] and the diameter of the pipe $d$ [m]. According to the assumptions stated in Section \ref{sec::preliminaries} the following holds: $\partial_x v = 0, \partial_t \rho = 0$, $\partial_x \rho = 0$ and $\partial_t v = 0$. Making the continuity equation obsolete and results in the approximation of the momentum equation below \cite{sibeijn2025economic}. 
+\begin{equation}\label{eq::mom}
+\partial_x p + \rho g \hat{z} +f \frac{\rho}{2 d}\left|v\right| v=0
+\end{equation}
+Substituting $v = \frac{4 q}{\pi d^2}$ into \eqref{eq::mom} and discretizing $\partial_x p = \frac{\Delta p}{L}$ gives:
+\begin{equation}
+    \Delta p = f \frac{8\rho L}{\pi^2 d^5}\left|q\right| q + \rho g \hat{z}
+\end{equation}
+With the mass flow $q$ [kg/m$^3$] and the length of the pipe $L$ [m]. The first term on the right side of the equation is equal to the Darcy-Weisbach equation. 
+\subsection{Pipes}
+\subsection{Pumps}
+\subsection{Valves}
+\subsubsection{Overflow mechanisms}
+\section{Thermo-Dynamic modeling}\label{sec::thermo}
 \subsubsection{Node Method}
 \subsubsection{Lagrangian approach}
 \subsubsection{other methods for pipes}
 \subsection{Thermal conductivity}
+\subsection{Heat Exchanger}
+\subsection{Other components}
+
 It is assumed that the fluid velocity is high enough to neglect heat conduction in the direction of the flow. Therefore only the heat convection of the fluids needs to be taken into account as well as the heat conduction of the plate material. Uo is the overall heat transfer coefficient between the two fluids. This heat transfer coefficient is the reciprocal of the overall heat transfer resistance (3-13). 
 \todo[inline]{van de literatuur studies Femke Jansen}
 \subsection{Heat Exchanger}
 LMTD, NTU
 over nadenken hoe je dit dan doet voor zo'n afleverset
 \subsection{Other components}
-\subsection{ATES}
-\section{Hydraulic modelling}
-\subsection{Pipes}
-\subsection{Heat Exchanger}
-\subsection{Pump}
-\subsection{Other components}
-\todo[inline]{Need to include district heating AND cooling}
-\section{Overflow mechanisms}
+
+\section{Head supply}
+CHP en ATES
+
+\section{Head demand}
+
 
 \section{Simulation Software}
 - tabel voor alle mogelijke simulatie software die gebruiken van word
