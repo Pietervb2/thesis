@@ -4,20 +4,24 @@ As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lo
 \section{Simulation Model}
 Extensive research has been conducted on modeling district heating networks (DHNs), resulting in a wide range of simulation tools. A recently published paper by Kuntuarova et al. contains an extensive review of the most popular modeling and simulation tools, comparing their modeling approaches, application scope, and functional capabilities \cite{KUNTUAROVA}. Using this review, the article from Brown et al. \cite{BROWN2022125060} and some independent searching, an overview was made of the possibly suitable simulation tools. However, many of the interesting tools require a paid license, which is not possible for this thesis. While several free tools exist, many lack dynamic simulation capabilities or are not well-suited for DCS modeling. For example, EnergyPLAN \cite{EnergyPlan} uses an hourly timestep, and EnergyPlus \cite{EnergyPlus} focuses on building thermal behavior without detailed network modeling. TESPy \cite{TESPy}, meanwhile, only supports steady-state simulations.
 
-Some open-source Python libraries, such as PyDHN \cite{PyDHN}, PandaPipes \cite{pandapipes}, and GridPinguin \cite{GridPenguin}, support dynamic simulation and were promising, especially since Eneco uses Python internally, making it easier to adapt into their working routine. However, these libraries need to be extended to model all the DCS components. Their complex coding structure and the lack of documentation complicated this and make debugging time-consuming. Whereas PyDHN was still a beta version. The most serious option was OpenModelica \cite{OpenModelica}, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica. 
+Some open-source Python libraries, such as PyDHN \cite{PyDHN}, PandaPipes \cite{pandapipes}, and GridPinguin \cite{GridPenguin}, support dynamic simulation and were promising, especially since Eneco uses Python internally, making it easier to adapt into their working routine. However, these libraries need to be extended to model all the DCS components. Their complex coding structure and the lack of documentation complicated this and make debugging time-consuming. Whereas PyDHN was still a beta version. The most serious option was OpenModelica \cite{OpenModelica}, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica. \todo{Pandapipes ook explicit benoemen want ziet er best goed uit, alleen het uitbreiden is toch lastiger. En kijken naar de models tabel} 
 
 Therefore, it was determined to make the model from scratch in Python using the Python open-source projects as inspiration for the model structure.
 
-\todo[inline]{
-The network will be represented by a graph structure that contains nodes and edges. The nodes are all the components within the network, except the pipes. 
 
-- edges en nodes
-- meerdere stappen.
-- van simple naar steeds uitgebreider
-- benoemen van de thermodynamische en hydraulische scheiding 
-- per stap uitleggen wat er bij komt.
-- En bij sommige stappen uitleggen hoe het wordt gevalideerd.
-- en het overflow mechanisme uitleggen}
+
+\todo[inline]{Dit uitwerken en ook benoemen wat nog lastig is te modelleren. Zoals regelsystemen in de afleverset (druk beveiliging en temperatuur aanvullen van de primaire set) En ook constant druk over her system houden}
+
+\begin{itemize}
+\item edges en nodes
+\item meerdere stappen.
+\item van simple naar steeds uitgebreider
+\item benoemen van de thermodynamische en hydraulische scheiding 
+\item per stap uitleggen wat er bij komt.
+\item En bij sommige stappen uitleggen hoe het wordt gevalideerd.
+\item en het overflow mechanisme uitleggen
+\end{itemize}
+
 
 \section{Optimization}
 % \section{Data driven method?}
