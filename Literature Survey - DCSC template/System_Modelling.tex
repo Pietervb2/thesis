@@ -34,8 +34,6 @@ Furthermore, these are the other assumptions applied in this chapter.
 % - fully developed? [Yvo]
 % - homogeneous mixing at pipe junctions
 % - one directional flow?
-
-
 \subsection{Dimensionless Numbers}
 \textbf{The Reynolds Number (Re)} is the primary parameter correlating the viscous behavior of all Newtonian fluids \cite{white2011fluid}. It is a ratio between the internal and viscous forces within a fluid. And it is used as an indicator for a flow to be laminar or turbulent. 
 
@@ -76,7 +74,7 @@ The pressure loss over the pipes is discussed in Section \ref{sec::pipes}. Where
     \Delta p_m = \frac{\rho V^2}{2g} \sum \zeta
 \end{equation}
 
-The fluid velocity $V$ [m/s] and the loss coefficient $\zeta$ [-]. This formula holds when all pipes have the same diameter, as if the diameter changes, it affects the fluid velocity. In that case, the losses need to be added separately. If adding minor losses for a large pipe system becomes too cumbersome, one might choose to apply an additional percentage (5 to 20\%) on pipe friction losses \cite{echtephdthesis}. The loss coefficient is often provided by the manufacturer. However, the term is not based on the Reynolds Number or the roughness of the pipe, but solely on its diameter and assuming a turbulent flow \cite{white2011fluid}. The pressure loss of the valves is discussed in more detail in Section \ref{sec::valves} to further discover the modeling possibilities for the overflow mechanism.
+The fluid velocity $V$ [m/s] and the loss coefficient $\zeta$ [-]. This formula holds that when all pipes have the same diameter, if the diameter changes, the fluid velocity will be affected. In that case, the losses need to be added separately. The manufacturer often provides the loss coefficients. However, the term is not based on the Reynolds Number or the roughness of the pipe, but solely on its diameter and assuming a turbulent flow \cite{white2011fluid}. If adding minor losses for a large pipe system becomes too cumbersome, one might choose to apply an additional percentage (5 to 20\%) on pipe friction losses \cite{echtephdthesis}. The pressure loss of the valves is discussed in more detail in Section \ref{sec::valves}.
 
 %% ## HEAD
 % In the literature, head (Equation \ref{eq::head}) is often used instead of pressure to describe hydraulic losses. 
@@ -131,37 +129,35 @@ Valves regulate the pressure or flow in a pipe system. The Cooltower's heat dist
 \begin{equation}\label{eq::realminorpres}
     \Delta p_{v} = \left( \frac{\dot{V}}{K_v} \right)^{2} \frac{\rho}{\rho_{ref}}    
 \end{equation}
-With the hydraulic conductivity parameter $K_v$  [m$^3$/h/$\sqrt{bar}$], $\dot{V}$ the liquid flow $\dot{V}$ [m$^3$/h], the actual fluid density during the simulations $\rho$, and the fluid density during the manufacturer's $K_v$ measurements (typically 1000 kg/m$^3$). The calculation of the valve characteristic $K_v$, which varies with the valve's opening position, depends on the valve type. 
+With the hydraulic conductivity parameter $K_v$  [m$^3$/h/$\sqrt{bar}$], the liquid flow $\dot{V}$ [m$^3$/h], the actual fluid density during the simulations $\rho$, and the fluid density during the manufacturer's $K_v$ measurements $\rho_{ref}$ (typically 1000 kg/m$^3$). The calculation of the valve characteristic $K_v$, which varies with the valve's opening position, depends on the valve type. It is important to mention that for small valve lifts, the $K_v$ value cannot be determined accurately because it exceeds the required tolerances of the basic shape of the valve. The valve's control range is determined up to a 10 percent deviation of the basic shape. When it goes outside of this control range, the valve becomes unpredictable. The manufacturer provides the control range \cite{echtephdthesis}.
 
 \subsubsection{2-Way Control Valves}
 At first, we have the 2-way control valves focused on controlling the flow. When this valve is a basic linear 2-way valve, $K_v$ can be determined using Equation \ref{eq::linear2valve}. Equation \ref{eq::equalpercentvalve} applies to an equal percentage valve. Both equations are in accordance with the VDI/VDE2173 standard \cite{VDI/VDE2713}. 
 
 \begin{equation}\label{eq::linear2valve}
-    \frac{K_v}{K_{vs}} = \left( 1 -\frac{K_{v,0}}{K_{vs}} \right) h_{lift} + \frac{K_{v,0}}{K_{vs}}
+    \frac{K_v}{K_{vs}} = \left( 1 -\frac{K_{v,0}}{K_{vs}} \right) \frac{h_{lift}}{h_{\infty}} + \frac{K_{v,0}}{K_{vs}}
 \end{equation}
 \begin{equation}\label{eq::equalpercentvalve}
-    \frac{K_v}{K_{vs}} = {\left(\frac{K_{vs}}{K_{v,0}} \right)}^{h_{lift} - 1}
+    \frac{K_v}{K_{vs}} = {\left(\frac{K_{vs}}{K_{v,0}} \right)}^{\frac{h_{lift}}{h_{\infty}} - 1}
 \end{equation}
 
-With the $K_v$ value for the completely opened value $K_{vs}$, the $K_v$ value at the points where the basic shape of the valve characteristic intersects with the y-axis $K_{v,0}$ and the dimensionless valve displacement $h_{lift}$ \cite{Artikelphdchris}.  
+With the $K_v$ value for the completely opened value $K_{vs}$, the $K_v$ value at the points where the basic shape of the valve characteristic intersects with the y-axis $K_{v,0}$ and the dimensionless valve displacement $\frac{h_{lift}}{h_{\infty}}$ which ranges from 0 to 1 \cite{Artikelphdchris}. The differential pressure control valve is a specialized type of control valve designed to maintain a predefined pressure difference across a pipe. Unlike the previously discussed control valves, it directly controls the pressure drop over the pipe, not its flow. However, in practical applications, the valve is not ideal. The actual pressure difference across it may deviate from the setpoint. The modeling of such non-ideal behavior is further elaborated in \cite{echtephdthesis}.
 
 \subsubsection{3-Way Control Valves}
 There are also 3-way valves within the system. For these valves the hydraulic resistance is defined over two valve entrance ports A and B.
-The valve characteristic pair can be complementary. In the case, it is a 3-way linear valve port A can be described using Equation \ref{eq::linear2valve} and port B using Equation \ref{eq::3way-valve}. Respectively, changing the valve characteristic formula into Equation \ref{eq::equalpercentvalve} results in a 3-way equal percentage valve.
+The valve characteristic pair can be complementary. In the case, it is a 3-way linear valve port A can be described using Equation \ref{eq::linear2valve} and port B using Equation \ref{eq::3way-valve}. Respectively, changing the valve characteristic formula into Equation \ref{eq::equalpercentvalve} results in a 3-way equal percentage valve. However, sometimes the ports contain two different valve characteristics. 
 
 \begin{equation}\label{eq::3way-valve}
     \frac{K_{v,B}}{K_{vs}} = 1 - \frac{K_{v,A}}{K_{vs}}
 \end{equation}
 
-\subsubsection{Differential Pressure Control Valve}
-\todo[inline]{lees verder op pagina 27 van het proefschrift}
-
-\subsubsection{6-Way Ball Valve}
-The heat interface units present in the Cooltower, the Arctic WKW-S 4P \cite{fortes_wkw_s_4p}, contain a 6-way ball valve. 
-\todo[inline]{nadenken over wat het belang is van deze te modelleren, this URL explains the valve: https://www.youtube.com/watch?v=lRN5jmCgQlE}
+The heat interface units present in the Cooltower, the Arctic WKW-S 4P \cite{fortes_wkw_s_4p}, contain a 6-way ball valve. This valve can be modeled as two interconnected 3-way valves with synchronized control logic. In this simplified model, each valve operates in a binary manner, either fully open or fully closed. Together, they determine whether the heat interface unit is in heating or cooling mode. Sometimes, the 6-way valve can also perform flow control, but not in our case.
 
 \subsubsection{Overflow Mechanism}
+\todo[inline]{Kan hier mogelijk nog wat zeggen over de square opening valve}
+\todo[inline]{find out what type of valve is really in the system.}
 
+Other more common valves present in hydraulic systems are 
 
 Modulating valve [DHN bijbel p 371]
 (three port) control valve -> the control valves 
@@ -170,7 +166,13 @@ throttling valves
 
 \subsection{Pumps}
 Pumps supply the pressure necessary for the fluid to flow through the network. Centrifugal pumps are the most
-common used pumps in district heating networks. The output of the pump characteristic 
+commonly used pumps in district heating networks. The pump can be described by the pump characteristic, in which the pump pressure or head is plotted against the flow rate. The plot is for multiple rotation pump rotation speeds. The system head curve is also plotted, the system operation points are where both curves intersect. 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{}
+    \caption{Caption}
+    \label{fig:enter-label}
+\end{figure}
 
 \section{Thermo-Dynamic modeling}\label{sec::thermo}
 \subsubsection{Node Method}
