@@ -264,33 +264,45 @@ The paper \cite{OPPELT2016336} presents an extension to the Node Method, trying 
 Another method, developed by Zheng et al. \cite{ZHENG2017682}, is known as the Function Method. This approach employs a Fourier series expansion to derive an analytical solution to the transient energy equation. The authors compared it with the Node Method using data from a district heating network in Changchun, China. The Function Method achieved a 37 \% decrease in computation time and notably improved accuracy relative to the Node Method. However, these benefits were observed only under the condition of a constant mass flow rate. 
 
 \subsection{Heat Exchanger}
-Heat exchangers are crucial components of the heat distribution system. They exchange thermal energy from the district heating network to the domestic heating system. The heat exchangers in the Cooltower's heat interface units are plate heat exchangers. They consist of a series of corrugated plates mounted in a frame, in between the plates the hot and cold fluids flow separately in a countercurrent fashion. The fluids experience a thermal exchange through the thin plate material.  
-
-\subsubsection{Logarithmic Mean Temperature Difference}
-
-The rate of heat transfer from the hot fluid ($\dot{Q_{h}}$, [J / s]) is assumed to be equal to the rate of heat transfer from the cold fluid ($\dot{Q_{c}}$). That means that we don't loose thermal energy. 
+Heat exchangers are crucial components of the heat distribution system. They exchange thermal energy between the district heating network and the domestic heating system. The Cooltower's heat interface units use plate heat exchangers, which consist of a series of corrugated plates mounted in a frame. Separated by the plates, the hot and cold fluids flow in counter-current or co-current fashion, where they experience a thermal exchange through the thin plate material. 
+For this section's modeling approaches it is assumed that the rate of heat transfer from the hot fluid ($\dot{Q_{h}}$, [J / s]) is equal to the rate of heat transfer from the cold fluid ($\dot{Q_{c}}$). That means that we don't lose thermal energy. 
 
 \begin{align}
     \dot{Q_h} &= \dot{m}_hc_h(T_{h,out} - T_{h,in}) = C_h (T_{h,out} - T_{h,in}) \\  
     \dot{Q_c} &= \dot{m}_cc_c(T_{c,out} - T_{c,in}) = C_c (T_{c,out} - T_{c,in})
 \end{align}
 
-% With the mass flow rates of the hot and cold fluid $\dot{m}_h$ and $\dot{m}_c$ [kg / s], the heat capacities of the hot and cold fluid $c_h$ and $c_c$ [J/(kg $\cdot$ K)], the inlet and outlet temperatures of the hot fluid as $T_{h,in}$ and $T_{h,out}$ [$^{\circ}\text{C}$], and those of the cold fluid as $T_{c,in}$ and $T_{c,out}$ [$^{\circ}\text{C}$], respectively. And the heat capacity rates of the cold and hold fluid $C_c$ and $C_h$ [J/($K \cdot s$)]. 
 With the mass flow rates of the hot and cold fluids denoted by \( \dot{m}_h \) and \( \dot{m}_c \) [kg/s], and the specific heat capacities by \( c_h \) and \( c_c \) [J/(kg·K)], the inlet and outlet temperatures of the hot fluid are given as \( T_{h,\text{in}} \) and \( T_{h,\text{out}} \) [\( ^\circ \)C], and those of the cold fluid as \( T_{c,\text{in}} \) and \( T_{c,\text{out}} \) [\( ^\circ \)C], respectively. The corresponding heat capacity rates are \( C_h \) and \( C_c \) [J/(K·s)] for the hot and cold fluids.
 
-
-\begin{figure}[h!]
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
     \centering
-    \includegraphics[width=0.4\linewidth]{Literature Survey - DCSC template/figuresLIT/heatexchangerTemperatureprofile.png}
-    \caption{Temperature profile along a counter flow heat exchanger.}
+    \includegraphics[width=\textwidth]{Literature Survey - DCSC template/figuresLIT/countercurrent.png}
+    \caption{Schematic overview of the counter-flow heat exchanger.}
+    \label{fig::counterhex}
+  \end{minipage}
+  % \hfill
+  \begin{minipage}[b]{0.4\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Literature Survey - DCSC template/figuresLIT/heatexchangerTemperatureprofile.png}
+    \caption{Temperature profile along the counter flow heat exchanger.}
     \label{fig::counterflowHEX}
+  \end{minipage}
 \end{figure}
- With a difference in heat capacity rates the temperature difference along the heat exchanger changes, which is illustrated in Figure \ref{fig::counterflowHEX} for a counter flow regime. To still determine the total heat transfer of the heat exchanger ($\dot{Q}$) the logarithmic mean temperature difference is used. 
 
-\begin{equation}
-    \dot{Q} =  U A_{s} \Delta T_{LM}
+\subsubsection{Logarithmic Mean Temperature Difference}
+
+Figure \ref{fig::counterhex} shows a basic counter-flow heat exchanger. When there is a difference in heat capacity rates, the temperature difference along the heat exchanger is not consistent, illustrated in Figure \ref{fig::counterflowHEX}. This requires the use of a mean temperature difference ($\Delta T_m$) to be able to use Newton's law of cooling, Equation \ref{eq::newtoncooling}. 
+The Logarithmic Mean Temperature Difference ($\Delta_{LM}$) is developed for this case. However, the formula depicted in Equation \ref{eq::LMTD} is determined for the basic counter-flow heat exchanger from Figure \ref{fig::counterhex}, where the plate heat exchanger uses a multi-pass arrangement. To account for this difference in design, a correction factor ($F$) is applied, which is usually around 0.95 for plate heat exchangers \cite{FemkeJanssenLit}. This factor depends on the flow arrangement and the number of transform units (NTU). 
+
+\begin{equation}\label{eq::newtoncooling}
+    \dot{Q} =  U A_{s} \Delta T_{m}
 \end{equation}
 \begin{equation}
+    \Delta T_m = F \Delta T_{LM}
+\end{equation}
+\begin{equation}\label{eq::LMTD}
 \Delta T_{\operatorname{lm}}=\frac{(T_{h,in} - T_{c,out}) - (T_{h,out} - T_{c,in})}{\ln \left(\frac{T_{h,in} - T_{c,out}}{T_{h,out} - T_{c,in}}\right)}
 \end{equation}
 With the overall heat transfer coefficient of the heat exchanger $U$ [J / ($m^2 \cdot K \cdot s$)] and the heat transfer surface area $A_{s}$ [m$^2$].
@@ -301,19 +313,41 @@ In case the outlet temperatures are unknown the Effectiveness-NTU ($\epsilon$-NT
 \begin{equation}\label{eq::epsilon}
     \epsilon = \frac{\dot{Q}}{\dot{Q}_{max}} = \frac{\dot{Q}}{{C}_{min}(T_{h,in} - T_{c,in})}
 \end{equation}
-With the thermodynamic maximum achievable power $\dot{Q}_{max}$. And the minimum heat capacity rate $C_{min} = \min(C_h, C_c)$.
-
-After performing an energy balance, these values are combined to calculate the heat exchanger effectiveness.
+\begin{equation}
+    C_{min} = \min(C_h, C_c)
+\end{equation}
+With the thermodynamic maximum achievable power $\dot{Q}_{max}$ [J/s], and the minimum heat capacity rate $C_{min}$ [J/ (K $\cdot$ s)]. After performing an energy balance, these values are combined to calculate the heat exchanger effectiveness \cite{cengel2025heat}.
 \begin{equation}
     \epsilon = \frac{1 - e^{-NTU \cdot (1 - C^*)}}{1 - C^* \cdot e^{-NTU \cdot (1 - C^*)}}
 \end{equation}
-The number of transfer units (NTU) is defined as \( NTU = \frac{U A_s}{C_{\min}} \), and the capacity rate ratio is given by \( C^{*} = \frac{C_{\min}}{C_{\max}} \) \cite{cengel2025heat}.
+\begin{equation}
+    NTU = \frac{U A_s}{C_{min}}
+\end{equation}
+\begin{equation}
+    C^{*} = \frac{C_{\min}}{C_{\max}}
+\end{equation}
 
-\todo[inline]{nalezen en vloeinder maken}
-\section{Head supply}
+\section{Heat supply}
 CHP en ATES
 
-\section{Head demand}
+\section{Heat demand}
+Heat demand prediction is based on heating demand profiles. These profiles can be tailored for a house, building, or a complete district heating network for various time intervals. The accurate prediction of these profiles influences the network's efficiency and its optimization procedure \cite{ORTIGA20071121}. According to Talebi et al. \cite{Talebi}, heating demand profiles largely consist of three parts: physical and environmental characteristics of the building, occupant behavior, and random factors taking uncertainties into account. They also distinguish three different types of modeling approaches, which are discussed below. 
+
+\subsubsection{Historical Methods}
+These methods use historical data from the system's supply and demand to create a demand profile. One approach is to use measurement data as the profile. However, this requires a complete and high-frequency dataset. Eneco collects measurements at the heat interface units of every apartment in the Cooltower. If the user permits sharing the data they can set the data frequency to quarter-hourly, hourly, daily, or monthly. This makes direct use of these measurements for the heat profile unlikely. They have also developed their own user heat demand profiles, which may be of interest depending on the system context and the time intervals \todo{hier achteraan gaan}. One could also use the Energy Transition Model of Quintel \cite{quintel} that generates the heat demand profile per geographical location based on collected datasets. However, the downside of using such a method is that it provides an average that doesn't take into account real-time parameter values.   
+
+Another method is the use of prototype or archetype buildings. They group buildings in subcategories based on their occupancy. Each category has a reference building from which the demand profiles for the buildings are derived. Lara et al. \cite{ARAMBULALARA2015160} implemented this method using a linear regression model. Other techniques are the Energy Use Intensity (EUI) \cite{sharp1996energy} in combination with the Load Factor (LF)\cite{DALLAROSA20116890}. Where EUI is the rate of energy use per unit area, and LF is the ratio of energy consumption over the maximum possible energy generation of the supply side.
+
+% \todo[inline]{hier aanvullen}
+% Heating Degree Day Method and Bin method are other historical methods, but their accuracy is limited due to not including human behavior \cite{ALHOMOUD2001421}.    
+
+\subsubsection{Deterministic Methods}
+Deterministic methods are physics-based models. Depending on the approach, the demand profile may be modeled with high detail of the physical behavior of the system or in a simplified form to reduce computational complexity. There are various energy simulation software that can model the thermal behavior of buildings, like Energy Plus \cite{EnergyPlus} and TRNSYS \cite{trnsys1975}. They produce accurate demand profiles, but they come with a big computational cost and require high input data quality \cite{GUADALFAJARA20141096}. Kim et al. \cite{KIM} applied a simplified method which considered the shape, orientation and occupancy of the building and linearized the dynamics. It achieved an accurate estimate of hourly peak loads with reduced computational time.
+ 
+\subsubsection{Predictive Time-Series Methods}
+These methods perform curve fitting to predict the thermal profile of users. One of the common methods types are ARMA models. In which previous values of demand are linearly combined with previous and current noise values \cite{GRossGaliana}. Depending on different assumptions relating the dynamics of the heat demand and the noise, other kinds of ARMA-type models can be used, such as the Box-Jenkins \cite{BoxJenkins}, the ARIMA \cite{ARINA} or SARINA \cite{SARINA}.
+
+A Finland based study proposed a day-ahead forecasting approach with a 1-hour interval for various building types, making use of a SVM \cite{SVMFinland}. Neural Networks are another machine learning technique widely used in prediction forecasting \cite{ZHANG199835,Hippert,FRISON2024132745}. The Neural Networks often outperform other simulation based methods due to their high adaptability. Although predictive methods achieve a high accuracy, there is a chance of over-fitting and the strong dependence on the quality of the training data \cite{Talebi}.
 
 
 \section{Simulation Software}
