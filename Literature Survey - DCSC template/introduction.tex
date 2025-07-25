@@ -2,7 +2,7 @@
 % Introduction
 \chapter{Introduction} \label{chap::intro}
 \section{Sustainable Heating}
-The Paris Agreement, adopted in 2015, aims to limit global warming to well below 2$^{\circ}\text{C}$, and preferably to 1.5$^{\circ}\text{C}$ above pre-industrial levels. Achieving this goal requires significant decarbonization across all sectors, including heating. Within the European Union in 2023, around 62.5 \% of household energy consumption is used for space heating. However, only 23.5 \% of that energy currently comes from renewable sources \cite{EUenergie}. While in the Netherlands 82 \% of homes was still heated by individual gas boilers in 2021 \cite{NLenergie}.
+The Paris Agreement, adopted in 2015, aims to limit global warming to well below 2$^{\circ}\text{C}$, and preferably to 1.5$^{\circ}\text{C}$ above pre-industrial levels. Achieving this goal requires significant decarbonization across all sectors, including heating. Within the European Union in 2023, around 62.5 \% of household energy consumption is used for space heating. However, only 23.5 \% of that energy currently comes from renewable sources \cite{EUenergie}. While in the Netherlands 82 \% of homes were still heated by individual gas boilers in 2021 \cite{NLenergie}.
 This share of renewable sources must increase substantially if we are to meet the goals set by the Paris Agreement. District Heating Networks (DHN) are considered a key solution in the decarbonization of the heating sector, as they enable the integration of local renewable heat sources, renewable electricity, and waste heat \cite{KUNTUAROVA}.
 % \todo[inline]{Here a story about the necessity of district heating networks for the problem of global warming. As a large part of the of the energy consumption of the Netherlands is heating. Where you can also mention the use for DHN in storing energy from the grid.} And then write about the fuel flexibility of district heating networks. And how big their part to play is in the future... afvalwarmte enzo, warmte opslag. Ook goed om kort het gebruik van individuele warmtepompen per huis te benoemen. 
 % \todo[inline]{tip van Max: Hier kun je evt gebruik maken van het boek van Werner en Heat Roadmap Europe van Paardekoper et al.}
@@ -18,7 +18,7 @@ In the first generation of district heating networks, heat was transported using
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.5\linewidth]{figuresLIT/GDH.jpg}
+    \includegraphics[width=\linewidth]{figuresLIT/GDH.jpg}
     \caption{The development of the district heating networks from the first up to the fourth generation \cite{4GDH5GDH}.}
     \label{fig:devDHN}
 \end{figure}
@@ -36,17 +36,17 @@ Eneco is the market leader in District Heating in the Netherlands, with 150.000 
 %     \caption{Caption}
 %     \label{fig:enter-label}
 % \end{figure}
-Decentralized Solutions are small local networks with up to 1,500 connections. These networks generate, store, and manage all their thermal energy near the consumer. They consist of consumers (households and larger users), one or more heat sources often including a heat pump, and heat and cold storage in the ground, and an underground pipeline network to connect them all. In some cases, the DCS is also connected to a larger nearby district heating system as a backup for the peak demand \cite{opdracht_eneco}.
+Decentralized Solutions are small local networks with up to 1,500 connections. These networks generate, store, and manage all their thermal energy near the consumer. They consist of consumers (households and larger users), one or more heat sources often including a heat pump, and heat and cold storage in the ground, and an underground pipeline network to connect them all. In some cases, the DCS is also connected to a larger nearby district heating system as a backup for the peak demand.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.5\linewidth]{figuresLIT/DCS.png}
+    \includegraphics[width=0.9\linewidth]{Literature Survey - DCSC template/figuresLIT/engelsDCSeneco.png}
     \caption{Depiction of Decentralized Solution. In this image, the DCS is not connected to a larger network for backup \cite{DCSeneco}.}
     \label{fig:DCS}
 \end{figure}
-The heat and cold underground storage is an Aquifer Thermal Energy Storage (ATES), in Dutch "Warmte Koude Opslag". The ATES generally consists of a heat pump and two wells. These wells are sandy layers underground where it simultaneously stores and extracts thermal energy by heating or cooling the groundwater. These are called hot or cold wells, respectively. The cold water used to cool the network is heated during the process and stored in the hot well. The same holds for the hot water that is stored in the cold well after being used for heating. When in summer the cold well is heated to above approximately 10 $^{\circ}\text{C}$, the heat pump is used as a backup cooling machine. In winter, the heat pump increases the temperature of the groundwater extracted from the hot well to 40 $^{\circ}\text{C}$ needed to heat the associated building. And during heating, the heat pump cools the used groundwater to 5-8 $^{\circ}\text{C}$ \cite{bloemendal2018hidden}. ATES addresses the seasonal mismatch between the availability and demand for heating and cooling in buildings. While it significantly reduces reliance on fossil fuels, the heat pump still requires a substantial amount of electricity to operate \cite{tudelft_ates_triplet}.
+The heat and cold underground storage is an Aquifer Thermal Energy Storage (ATES). The ATES generally consists of a heat pump and two wells. These wells are sandy layers underground where it simultaneously stores and extracts thermal energy by heating or cooling the groundwater. These are called hot or cold wells, respectively. The cold water used to cool the network is heated during the process and stored in the hot well. The same holds for the hot water that is stored in the cold well after being used for heating. When in summer the cold well is heated to above approximately 10 $^{\circ}\text{C}$, the heat pump is used as a backup cooling machine. In winter, the heat pump increases the temperature of the groundwater extracted from the hot well to 40 $^{\circ}\text{C}$ needed to heat the associated building. And during heating, the heat pump cools the used groundwater to 5-8 $^{\circ}\text{C}$ \cite{bloemendal2018hidden}. ATES addresses the seasonal mismatch between the availability and demand for heating and cooling in buildings. While it significantly reduces reliance on fossil fuels, the heat pump still requires a substantial amount of electricity to operate \cite{tudelft_ates_triplet}.
 
-\subsection{Problem Setup}
+\subsection{Use case description}
 During summer, the demand for heat decreases significantly, leading to increased return temperatures for the Decentralized Solutions. Return temperatures can reach up to 45-55 $^{\circ}\text{C}$, which is considered excessively high. Lowering the return temperature has certain benefits, which can be illustrated using the equation below. This relation shows how much thermal energy the water has lost (or gained) after it flows through the district heating network. 
 
 \begin{equation}\label{eq::overallheat}
@@ -71,25 +71,29 @@ The Cooltower was chosen for the use case. It is a 154-meter-tall flat in the ci
 \end{figure}
 
 The Cooltower contains a heating and cooling network that is connected to an ATES below the building. Its network is also connected to the city heating network ('Stadsverwarming' in Dutch), which serves as a backup during peak demand. The building's internal heating and cooling network is split into lower and upper sections to prevent heat interface units (HIUs) on lower floors from experiencing excessive pressures. The scope of the thesis will remain on the district heating system within the Cooltower, with a focus on the thermodynamics and hydraulics of the heat distribution system within the building. If time permits, the dynamics of the ATES or the city heat network may be addressed at a later stage.
-This research looks at two actuators in the model to reduce the return temperature: the supply temperature and the overflow mechanism within the building. The overflow mechanism is a valve located at the top of the building where the supply pipeline directly flows into the return pipeline. 
+This research looks at two actuators in the model to reduce the return temperature: the supply temperature and the overflow mechanism within the building. The overflow mechanism is a valve located at the top of the building where the supply pipeline directly flows into the return pipeline. To perform this optimization the use of Bayesion optimization will be investigated. \todo[inline]{Toegevoegd na feedback Tamas. Ga dit verder uitwerk als ik meer ben ingelezen op Bayesion optimization. }
 
 % \newpage 
 To conclude this section, the objective of this literature survey is formulated as following.
 
 {\centering
-\textbf{Investigate methods to dynamically model the thermodynamics and hydraulics of the heat distribution system within the Cooltower. And how to optimize the DCS to reduce the return temperature actuating over the supply temperature and the overflow mechanism.}\par
+\textbf{Develop a dynamic model of the thermodynamics and hydraulics of the heat distribution system within the Cooltower. How to optimize the DCS to reduce the return temperature actuating over the supply temperature and the overflow mechanism using this dynamic model?}\par
 }
-The research must be done with the following model requirements in mind:
+\todo{Deze vraag kan beter worden verwoord. Vooral het tweede deel. “How to optimize” zegt op zich niet zo veel en kan specifieker; bijv: “How to optimize for energy savings”, “How to minimize return temperatures”.
+
+Voorbeeld
+Using the developed dynamic simulation model, we aim to investigate the possibilities to minimize return temperatures of the DCS by determining optimal control policies for the supply temperature and the overflow mechanism through data-driven optimization techniques.
+The research must be done with the following model requirements in mind: (Max)}
 
 \begin{itemize}
-    \item The timestep must be on the order of 1 minute. 
+    \item The discrete simulation timestep must be on the order of 1 minute. 
     \item The model should not only simulate the return temperature but also capture the internal hydraulic and thermodynamic behavior of the DCS heat distribution system.
     \item The model should be scalable and extendable, allowing it to be applied to other DCS networks.
-    \item When the overflow mechanism turns out to be relatively simple and limits optimization performance, the optimization can additionally be performed by implementing a more advanced mechanism to evaluate its effects.
+    \item When the overflow mechanism turns out to be relatively simple and limits optimization performance, the optimization can additionally be performed by implementing a more advanced mechanism for the valve to evaluate its effects.
 \end{itemize}
 
 \section{Approach \& Outline}
-First, Section \ref{chap::sysmodel} discusses methods for dynamically modeling the components of the heat distribution network of the Decentralized Solution in the Cooltower, including the modeling of heat demand and supply, and the development of a system framework. Next, Section \ref{chap::optimization} explores various optimization approaches. Finally, Section \ref{chap::PoA} presents a proposed plan for conducting the thesis.
+First, Section \ref{chap::sysmodel} discusses methods for dynamically modeling the components of the heat distribution network of the Decentralized Solution in the Cooltower, including the modeling of heat demand and supply, and the development of a system framework. Next, Section \ref{chap::optimization} explores the optimization approaches used to reduce the return temperature, actuating the supply temperature, or an overflow mechanism. Finally, Section \ref{chap::PoA} presents a proposed plan for conducting the thesis.
 
 % \begin{itemize}
 %     \item Problem is too high return temperature in the summer
