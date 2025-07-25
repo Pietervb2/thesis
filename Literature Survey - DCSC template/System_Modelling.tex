@@ -156,16 +156,14 @@ At first, we have the 2-way control valves focused on controlling the flow. When
     \frac{K_v}{K_{vs}} = {\left(\frac{K_{vs}}{K_{v,0}} \right)}^{\frac{h_{lift}}{h_{\infty}} - 1}
 \end{equation}
 
-With the $K_v$ value for the completely opened valve $K_{vs}$, the $K_v$ value at the points where the basic shape of the valve characteristic intersects with the y-axis $K_{v,0}$ and the dimensionless valve displacement $\frac{h_{lift}}{h_{\infty}}$ which ranges from 0 to 1 \cite{Artikelphdchris}. The differential pressure control valve is a specialized type of control valve designed to maintain a predefined pressure difference across a pipe. Unlike the previously discussed control valves, it directly controls the pressure drop over the pipe, not its flow. However, in practical applications, the valve is not ideal. The actual pressure difference across it may deviate from the setpoint. Especially for small valve lifts, the shape of the actual $K_v$ value cannot be accurately defined anymore. Therefore, $K_{vr}$ is defined as the minimum $K_v$ value for which the deviation from the reference curve remains within 10\%. Below this threshold, the valve operates outside its controllable range, and its behavior becomes unreliable. The modeling of such non-ideal behavior is further elaborated in \cite{echtephdthesis}. In case the valve is closed, the valve leakage $K_{\text{v,leak}}$ is defined.  
+With the $K_v$ value for the completely opened valve $K_{vs}$, the $K_v$ value at the points where the basic shape of the valve characteristic intersects with the y-axis $K_{v,0}$ and the dimensionless valve displacement $\frac{h_{lift}}{h_{\infty}}$ which ranges from 0 to 1 \cite{Artikelphdchris}. The differential pressure control valve is a specialized type of control valve designed to maintain a predefined pressure difference across a pipe. Unlike the previously discussed control valves, it directly controls the pressure drop over the pipe, not its flow. However, in practical applications, the valve is not ideal. The actual pressure difference across it may deviate from the setpoint. Especially for small valve lifts, the shape of the actual $K_v$ value cannot be accurately defined anymore. Therefore, $K_{vr}$ is defined as the minimum $K_v$ value for which the deviation from the reference curve remains within 10\% and the $h_{\text{lift}}$ associated with it is called $h^{*}$. Below this threshold, the valve operates outside its controllable range, and its behavior becomes unreliable. The modeling of such non-ideal behavior is further elaborated in \cite{echtephdthesis}. In case the valve is closed, the valve leakage $K_{\text{v,leak}}$ is defined.  
 
-\begin{figure}
+\begin{figure}[h]
     \centering
-    \includegraphics[width=0.5\linewidth]{Kv}
-    \caption{Caption}
+    \includegraphics[width=0.75\linewidth]{Literature Survey - DCSC template/figuresLIT/Kvs_plot.png}
+    \caption{The characteristic of a linear valve, below the valve lift of $h^*$ the control is unstable. It was assumed that the $K_v$ value is linear is unstable region \cite{echtephdthesis}.}
     \label{fig:enter-label}
 \end{figure}
-
-\todo[inline]{Ik begrijp deze zin niet helemaal, wat bedoel je hiermee te zeggen? Een figuur zou kunnen helpen als je die hebt (Max) Over de toelichting van Kvs}
 
 \subsubsection{3-Way Control Valves}
 There are also 3-way valves within the system. For these valves, the hydraulic resistance is defined over two valve entrance ports A and B.
