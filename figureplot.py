@@ -25,15 +25,16 @@ plt.plot(x[:11], y2[:11], 'k--', color = 'black')
 plt.axvline(x=0.1, color='gray', linestyle=':', ymax=y1[10])
 plt.axhline(y=y1[10], color='gray', linestyle=':', xmax=0.1)
 
+font = 14
 # Remove intermediate valve ticks between 0 and 1 on both axes
-plt.xticks([0, 0.1, 1], ['$0$', '$h^*$', '$1$'])
-plt.yticks([0, y1[0], y1[10] - less_steep_slope*0.1, y1[10], 1], ['$0$', '$K_{v,\mathrm{leak}}$' , '$K_{v0}$','$K_{vr}$', '$K_{vs}$'])
+plt.xticks([0, 0.1, 1], ['$0$', '$h^*$', '$1$'], fontsize=font)
+plt.yticks([0, y1[0], y1[10] - less_steep_slope*0.1, y1[10], 1], ['$0$', '$K_{v,\mathrm{leak}}$' , '$K_{v0}$','$K_{vr}$', '$K_{vs}$'], fontsize=font)
 
 # Axis limits and labels
 plt.xlim(0, 1)
 plt.ylim(0, 1)
-plt.ylabel('$K_{vs} (m^3/h/\sqrt{bar})$')
-plt.xlabel('$h_{lift}$ (-)')
+plt.ylabel('$K_{vs} (m^3/h/\sqrt{bar})$', fontsize=font)
+plt.xlabel('$h_{lift}$ (-)', fontsize=font)
 plt.tight_layout()
 # plt.show()
 
