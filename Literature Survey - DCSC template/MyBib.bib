@@ -5,18 +5,18 @@
   year      = "2021",
   note      = "Literature Survey"
 }
-@misc{opdracht_eneco,
-    author = "P. van den Bergh",
-    title = "Eneco assignment setup",
-    year = "2024"}
 
-@inbook{bookMax,
-title = "District Heating and Cooling",
-author = "S. Werner",
-publisher = "Studentlitteratur",
-year = "2013",
-pages = "21,80"
+@book{bookMax,
+  title={District Heating and Cooling},
+  author={Frederiksen, S. and Werner, S.},
+  isbn={9789144085302},
+  year={2013},
+  publisher={Studentlitteratur AB},
+pages = {21,80},
+address = {Lund, Sweden},
+edition = {1st}
 }
+
 
 @online{WcWsite,
   author    = "Nationaal Programma Lokale Warmtetransitie",
@@ -74,7 +74,7 @@ pages = "120520",
 year = "2021",
 issn = "0360-5442",
 doi = "https://doi.org/10.1016/j.energy.2021.120520",
-author = "H. Lund and P.A. Østergaard and T.B. Nielsen and S. Werner et al."
+author = {H. Lund and P.A. Østergaard and T.B. Nielsen and S. Werner and J.E. Thorsen and O. Gudmundsson and A. Arabkoohsar and B.V. Mathiesen}
 }
 
 @online{tapwaterWet,
@@ -196,15 +196,14 @@ DOI = {10.3390/su12239899}
 }
 
 @article{OpenModelica,
-title={The OpenModelica Integrated Environment for Modeling, Simulation, and Model-Based Development},
-author={P. Fritzson and A. Pop and K. Abdelhak and A. Ashgar and B. Bachmann et al.},
-journal={Modeling, Identification and Control},
-volume={41},
-number={4},
-pages={241--295},
-year={2020},
-doi={10.4173/mic.2020.4.1},
-publisher = {Norwegian Society of Automatic Control}
+author = {Fritzson, P. and Pop, A. and Abdelhak, K. and Asghar, A. and Bachmann, B. and Braun, W. and Bouskela, D. and Braun, R. and Rogovchenko-Buffoni, L. and Casella, F. and Castro, R. and Franke, R. and Fritzson, D. and Gebremedhin, M. and Heuermann, A. and Lie, B. and Mengist, A. and Mikelsons, L. and Moudgalya, K. and Östlund, P.},
+year = {2020},
+month = {10},
+pages = {241-295},
+title = {The OpenModelica Integrated Environment for Modeling, Simulation, and Model-Based Development},
+volume = {41},
+journal = {Modeling, Identification and Control: A Norwegian Research Bulletin},
+doi = {10.4173/mic.2020.4.1}
 }
 
 @misc{Modelica,
@@ -241,7 +240,7 @@ year = {2016},
 issn = {0360-5442},
 doi = {https://doi.org/10.1016/j.energy.2016.02.058},
 url = {https://www.sciencedirect.com/science/article/pii/S0360544216301098},
-author = {E. Guelpa and C. Toro and A. Sciacovelli and R. Melli et al.},
+author = {E. Guelpa and C. Toro and A. Sciacovelli and R. Melli  E. Sciubba and V. Verda },
 }
 
 @article{KECEBAS2012339,
@@ -257,7 +256,7 @@ author = {A. Keçebaş and İ. Yabanova}
 }
 
 @ARTICLE{grey1,
-  author={ S. Lu and Z. Gao and Y. Sun and S. Zhang and B. Li et al.},
+  author={ S. Lu and Z. Gao and Y. Sun and S. Zhang and B. Li and C. Hao and Y. Xu and W. Gu},
   journal={IEEE Transactions on Sustainable Energy}, 
   title={Aggregate Model of District Heating Network for Integrated Energy Dispatch: A Physically Informed Data-Driven Approach}, 
   year={2024},
@@ -381,7 +380,7 @@ doi = {10.17678/beujst.90203}
   title        = {Distributed control design of the  HeatMatcher algorithm for district heating networks},
   school       = {Delft University of Technology},
   year         = {2018},
-  type         = {Literature Survey},
+  type         = {MSc Literature Survey},
   address      = {Delft, The Netherlands}
 }
 
@@ -843,7 +842,11 @@ author = {V. Rostampour and M. Bloemendal and T. Keviczky},
 year = {2017},
 month = {05},
 pages = {},
-title = {A Model Predictive Framework of Ground Source Heat Pump coupled with Aquifer Thermal Energy Storage System in Heating and Cooling Equipment of a Building}
+title = {A Model Predictive Framework of Ground Source Heat Pump coupled with Aquifer Thermal Energy Storage System in Heating and Cooling Equipment of a Building},
+booktitle = {12th
+IEA Heat Pump Conference},
+publisher = {Stichting HPC},
+address = {Rotterdam, The Netherlands}
 }
 
 @article{Salinas2022,
@@ -983,3 +986,24 @@ Facts \& Figures Collective Heat Supply Act
   howpublished = {\url{https://www.energie-nederland.nl/en/topics/energy-transition/facts-figures/}},
   note         = {[Accessed 11 July 2025]}
 }
+
+@ARTICLE{Simonssongraph,
+  author={Simonsson, J. and Atta, K.T. and Birk, W.},
+  journal={IEEE Transactions on Control Systems Technology}, 
+  title={A Graph Theoretical Approach to Modeling of District Energy Networks}, 
+  year={2024},
+  volume={32},
+  number={5},
+  pages={1616-1630},
+  doi={10.1109/TCST.2023.3345213}
+}
+
+@INPROCEEDINGS{MaxCourant,
+  author={Sibeijn, Max and Khosravi, Mohammad and Keviczky, Tamás},
+  booktitle={2024 IEEE 63rd Conference on Decision and Control (CDC)}, 
+  title={Mitigating short-sightedness of MPC for district heating networks using dual dynamic programming}, 
+  year={2024},
+  volume={},
+  number={},
+  pages={4608-4614},
+  doi={10.1109/CDC56724.2024.10886206}}

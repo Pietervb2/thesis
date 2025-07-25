@@ -1,0 +1,71 @@
+\chapter{Problem formulation and research plan}\label{chap::PoA}
+As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lower the return temperature of the decentralized solutions. To achieve this, a simulation model needs to be made that captures the thermodynamic and hydraulic behavior of these networks to predict the return temperature. It will be used to perform an optimization, actuating the overflow mechanism and the supply temperature, to lower the return temperature. This research focuses on the Cooltower as a use case, but preferably, the findings should also apply to other networks. This chapter presents the mathematical problem formulation and outlines the research plan, detailing the approach for building the model and the optimization of the overflow mechanism and supply temperature.
+
+\section{Problem Formulation} 
+
+\todo[inline]{mogelijk hier juist het stuk over het kiezen van de verschillende simulatie opties}
+The network structure was decided to be a strongly connected directed graph. The looped and branched nature of district heating networks makes them well suited for a graph, which is commonly used in the literature \cite{sibeijn2025economic, Krug2020,OPPELT2016336,Simonssongraph}. The strong connectedness indicates that no water leaves the system. The graph is defined as $\mathcal{G}=(\mathcal{N}, \mathcal{E})$, with a set of nodes $\mathcal{N}$ that represent the junctions in the network, notated as $\mathcal{N}:= \{1,2,....,|\mathcal{N}|\}$. In our model the nodes correspond to volumeless junctions. Nodes are connected by the edges $\mathcal{E} \subseteq \mathcal{N} \times \mathcal{N}$. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve. The node-to-node connections in the network are described by the adjacency matrix $\mathcal{D} \in \{0,1\}^{|\mathcal{N}| \times |\mathcal{N}|}$. For any $(i,j) \in \mathcal{N} \times \mathcal{N}$, we have
+
+\begin{equation}
+D_{i j}= \begin{cases}1, & \text { if }(i, j) \in \mathcal{E} \\ 0, & \text { otherwise }\end{cases}
+\end{equation}
+
+The incidence matrix $\mathcal{E} \subseteq \{-1,0,1\}^{|\mathcal{N}| \times |\mathcal{E}|}$ of $\mathcal{G}$ shows the connections between the edges and nodes. 
+For any $(i,k) \in \mathcal{N} \times \{1,2,...,|\mathcal{E}|\}$, we have
+
+\begin{equation}
+E_{i k}= \begin{cases}-1, & \text { if edge } k \text { exits node } i, \\ 1, & \text { if edge } k \text {enters node } i, \\ 0, & \text { otherwise. }\end{cases}
+\end{equation}
+
+Donderdag
+-------
+-Node verhoudingen, met homogeen mengen enzo, nodal constraints bla
+-fixing flow direction
+
+-zeggen welke hydraulische doorrekenen methode je gaat gebruiken.
+
+-daarna node method
+en het modelleren van de componenten benoemen
+-------
+
+Voor meeting met Max: 
+Hierover nadenken:
+- Vraag van Consument
+- Aanbod van energie icm met de ATES
+
+
+- formuleer optimalisatie probleem
+
+\cite{sibeijn2025economic}
+
+
+The edges are numbered through the 
+l outgoing edges from the node are assigned the same temperature as the node itself. To calculate the mass flows and pressure within the network, Kirchhoff's two laws must be upheld. The first law asserts that the total mass flow entering and leaving a node must be equal, ensuring mass conservation. The second law requires that the net pressure drop around any closed loop in the network must be zero, maintaining pressure balance. The pressure loss within the pipes depends quadratically on the flow, making the hydraulics a system of non-linear equations. As we assume a decoupled system, the hydraulic problem is computed first, after which the obtained mass flow rates are used for the thermodynamic system.
+
+
+\section{Research Plan}
+\subsection{Simulation Model}
+\todo[inline]{aanpassen adhv de tabel}
+Extensive research has been conducted on modeling district heating networks (DHNs), resulting in a wide range of simulation tools. A recently published paper by Kuntuarova et al. contains an extensive review of the most popular modeling and simulation tools, comparing their modeling approaches, application scope, and functional capabilities \cite{KUNTUAROVA}. Using this review, the article from Brown et al. \cite{BROWN2022125060} and some independent searching, an overview was made of the possibly suitable simulation tools. However, many of the interesting tools require a paid license, which is not possible for this thesis. While several free tools exist, many lack dynamic simulation capabilities or are not well-suited for DCS modeling. For example, EnergyPLAN \cite{EnergyPlan} uses an hourly timestep, and EnergyPlus \cite{EnergyPlus} focuses on building thermal behavior without detailed network modeling. TESPy \cite{TESPy}, meanwhile, only supports steady-state simulations.
+
+Some open-source Python libraries, such as PyDHN \cite{PyDHN}, PandaPipes \cite{pandapipes}, and GridPinguin \cite{GridPenguin}, support dynamic simulation and were promising, especially since Eneco uses Python internally, making it easier to adapt into their working routine. However, these libraries need to be extended to model all the DCS components. Their complex coding structure and the lack of documentation complicated this and make debugging time-consuming. Whereas PyDHN was still a beta version. The most serious option was OpenModelica \cite{OpenModelica}, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica. \todo[inline]{Pandapipes ook explicit benoemen want ziet er best goed uit, alleen het uitbreiden is toch lastiger. En kijken naar de models tabel} 
+
+Therefore, it was determined to make the model from scratch in Python using the Python open-source projects as inspiration for the model structure.
+
+\todo[inline]{Dit uitwerken en ook benoemen wat nog lastig is te modelleren. Zoals regelsystemen in de afleverset (druk beveiliging en temperatuur aanvullen van de primaire set) En ook constant druk over her system houden}
+
+\todo[inline]{opbouw van het model}
+\begin{itemize}
+\item edges en nodes
+\item meerdere stappen.
+\item van simple naar steeds uitgebreider
+\item benoemen van de thermodynamische en hydraulische scheiding 
+\item per stap uitleggen wat er bij komt.
+\item En bij sommige stappen uitleggen hoe het wordt gevalideerd.
+\item en het overflow mechanisme uitleggen
+\end{itemize}
+
+\todo[inline]{uitwerking van opstarten optimalisatie}
+
+\todo[inline]{iets over gelijktijdigheid}
+\todo[inline]{zoeken naar specifieke uitwerking van de legionella wetgeving en de constraints die er daardoor bij komen}
