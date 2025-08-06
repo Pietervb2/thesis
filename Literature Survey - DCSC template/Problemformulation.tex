@@ -76,14 +76,10 @@ The total heat production can be divided into two components: heat extracted fro
 with $q_A(t)$ [m$^3$/s] as the flow rate on the ATES side, $T_{s,A}$ and $T_{r,A}$ [$^{\circ}\text{C}$] respectively the supply and return temperature on the ATES side and $Q_e(t)$ [W] is the electric power delivered to the compressor. The temperatures $T_{r,A}$ and $T_{s,A}$ are assumed constant. In case the ATES cannot provide enough energy, the backup network fills the energy gap. The amount of heat delivered by the backup network is stated as $Q_{b}(t)$ [W].
 
 \subsection{Control problem}
-The conventional formulation of the control policy aiming to reduce the return temperature is given for the discrete timestep $k$ by
+The developed discrete model of the DCS for time instance $k$ is given by
 
 \begin{align}
-\min_{u(k)} \quad & \left(T_r(k) - \bar{T}_r\right)^2 \notag \\
-\text{s.t.} \quad  & T_r(k) = f(x(k), u(k)) \notag\\
-& E_1 x(k)  \leq g_1 \notag \\ 
-& E_2 u(k) \leq g_2 \notag\\
-\text{where,} & \\\
+& T_r(k) = f(x(k), u(k)) \notag \\
 & x(k) = 
 \left[\begin{array}{cc}
 T_{s,1}(k) & \dot{m}_1(k)  \\
@@ -91,20 +87,20 @@ T_{s,2}(k) & \dot{m}_2(k) \\
  \vdots  & \vdots \\
 T_{s,N_c}(k) & \dot{m}_{N_e - 1}(k) \\
 \varnothing & \dot{m}_{N_e}(k)  
-\end{array}\right], \notag\\
+\end{array}\right], \quad x(k) \in \mathcal{X\\
 &u(k) =  \left[\begin{array}{cccc}
 h_{\text{lift}}(k) & q_A(k) & Q_p(k) & Q_e(k) 
-\end{array}\right]. \notag 
+\end{array}\right], \quad u(k) \in \mathcal{U} \notag 
 \end{align}
-With $T_{s,n_c}$ [$^{\circ}\text{C}$] the supply temperature at delivery set $n_c$, and $\dot{m}_{e}$ the mass flow at edge $e \in \left\{1,2,...,N_e \right\}$. The constraints placed on the state variable $x(k)$ limit the mass flow and regulate the minimum water temperature based on the time required for the consumer to reach 65 $^{\circ}\text{C}$. Where the constraints on the input $u(k)$ limit the possible applicable input values. 
+With $T_{s,n_c}$ [$^{\circ}\text{C}$] the supply temperature at delivery set $n_c$, and $\dot{m}_{e}$ the mass flow at edge $e \in \left\{1,2,...,N_e \right\}$. When the model is used to generate the necessary data for the Bayesian Optimization, the input space $\mathcal{U}$ will be limited by the range of the input variables but also by the state space $\mathcal{X}$ as the mass flow and minimum water temperature are limited based on the time required for the delivery sets to reach a water temperature of 65 $^{\circ}\text{C}$. 
 
-However, the model has become computationally intensive. It is caused by the Node Method and the hydraulics being a system of nonlinear equations. As the Node Method is non-differentiable and contains integers, the optimization of the whole system becomes a Mixed Integer Non-Linear problem (MINLP), which is time-consuming to solve \cite{MAURER2021244}. Instead of choosing another method, such as describing the thermodynamic behavior of the pipes or simplifying the nonlinear hydraulic equations, which may decrease the model's accuracy, we choose to apply Bayesian Optimization. In this way, the accuracy of the simulation model is still guaranteed and can also be applied for optimization. The optimization formulation becomes more compact, as for the Bayesian Optimization, we assume we don't know the inner states of the model. 
+Bayesian Optimization is used because the model has become computationally intensive. It is caused by the Node Method and the hydraulics being a system of nonlinear equations. As the Node Method is non-differentiable and contains integers, the optimization of the whole system becomes a Mixed Integer Non-Linear problem (MINLP), which is time-consuming to solve \cite{MAURER2021244}. Instead of choosing another method, such as describing the thermodynamic behavior of the pipes or simplifying the nonlinear hydraulic equations, which may decrease the model's accuracy, we choose to apply Bayesian Optimization. In this way, the accuracy of the simulation model is still guaranteed and can also be applied for optimization. The resulting optimization formulation is stated by 
 
 \begin{align}
 \min_{u(k)} & \quad f(u(k)) \\
-\text{s.t.} & \quad E_2 u(k)  \leq g_2 \notag 
+\text{s.t.} & \quad E_1 u(k)  \leq g_1 \notag 
 \end{align}
-
+\todo[inline]{moet je hier x(k) ook vermelden}
 \section{Research Plan}
 This section outlines the research approach, discussing the use of simulation software, detailing the step-by-step development of the model, and the implementation of the optimization process.
 
