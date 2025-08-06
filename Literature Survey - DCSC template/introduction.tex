@@ -70,21 +70,17 @@ The Cooltower was chosen for the use case. It is a 154-meter-tall flat in the ci
     \label{fig:Cooltoren}
 \end{figure}
 
-The Cooltower contains a heating and cooling network that is connected to an ATES below the building. Its network is also connected to the city heating network ('Stadsverwarming' in Dutch), which serves as a backup during peak demand. The building's internal heating and cooling network is split into lower and upper sections to prevent heat interface units (HIUs) on lower floors from experiencing excessive pressures. The scope of the thesis will remain on the district heating system within the Cooltower, with a focus on the thermodynamics and hydraulics of the heat distribution system within the building. If time permits, the dynamics of the ATES or the city heat network may be addressed at a later stage.
+The Cooltower contains a heating and cooling network that is connected to an ATES below the building. Its network is also connected to the city heating network ('Stadsverwarming' in Dutch), which serves as a backup during peak demand. The building's internal heating and cooling network is split into lower and upper sections to prevent heat interface units (HIUs) on lower floors from experiencing excessive pressures. The scope of the thesis will remain on the district heating system within the Cooltower, with a focus on the thermodynamics and hydraulics of the heat distribution system within the building. If time permits, the dynamics of the ATES or the city heat network may be addressed at a later stage. Also the heat storage present in the system will not be taken into account as for now it is not being used.
 This research looks at two actuators in the model to reduce the return temperature: the supply temperature and the overflow mechanism within the building. The overflow mechanism is a valve located at the top of the building where the supply pipeline directly flows into the return pipeline. To perform this optimization the use of Bayesion optimization will be investigated. \todo[inline]{Toegevoegd na feedback Tamas. Ga dit verder uitwerk als ik meer ben ingelezen op Bayesion optimization. }
 
 % \newpage 
 To conclude this section, the objective of this literature survey is formulated as following.
 
 {\centering
-\textbf{Develop a dynamic model of the thermodynamics and hydraulics of the heat distribution system within the Cooltower. How to optimize the DCS to reduce the return temperature actuating over the supply temperature and the overflow mechanism using this dynamic model?}\par
+\textbf{\todo{Voor nu het voorbeeld van Max er in gezet} Using the developed dynamic simulation model, we aim to investigate the possibilities to minimize return temperatures of the DCS by determining optimal control policies for the supply temperature and the overflow mechanism through data-driven optimization techniques.}\par
 }
-\todo{Deze vraag kan beter worden verwoord. Vooral het tweede deel. “How to optimize” zegt op zich niet zo veel en kan specifieker; bijv: “How to optimize for energy savings”, “How to minimize return temperatures”.
 
-Voorbeeld
-Using the developed dynamic simulation model, we aim to investigate the possibilities to minimize return temperatures of the DCS by determining optimal control policies for the supply temperature and the overflow mechanism through data-driven optimization techniques.
-The research must be done with the following model requirements in mind: (Max)}
-
+The research must be done with the following model requirements in mind:
 \begin{itemize}
     \item The discrete simulation timestep must be on the order of 1 minute. 
     \item The model should not only simulate the return temperature but also capture the internal hydraulic and thermodynamic behavior of the DCS heat distribution system.

@@ -1,71 +1,145 @@
 \chapter{Problem formulation and research plan}\label{chap::PoA}
-As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lower the return temperature of the decentralized solutions. To achieve this, a simulation model needs to be made that captures the thermodynamic and hydraulic behavior of these networks to predict the return temperature. It will be used to perform an optimization, actuating the overflow mechanism and the supply temperature, to lower the return temperature. This research focuses on the Cooltower as a use case, but preferably, the findings should also apply to other networks. This chapter presents the mathematical problem formulation and outlines the research plan, detailing the approach for building the model and the optimization of the overflow mechanism and supply temperature.
+As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lower the return temperature of the decentralized solutions. To achieve this, a dynamic simulation model needs to be made that captures the thermodynamic and hydraulic behavior of these networks to predict the return temperature. It will be used to determine optimal control policies for the supply temperature and the overflow mechanism through data-driven optimization techniques to reduce the return temperature. This research focuses on the Cooltower as a use case, but preferably, the findings should also apply to other networks. This chapter presents the problem formulation and outlines the research plan, detailing the approach for building the model and performing the control policy. 
 
 \section{Problem Formulation} 
+\subsection{Graph}
+The overall model structure of the district heating network was decided to be a strongly connected directed graph. The looped and branched nature of district heating networks makes them well suited for a graph, which is commonly used in the literature \cite{sibeijn2025economic, Krug2020,OPPELT2016336,Simonssongraph}. The strong connectedness indicates that no water leaves the system. The graph is defined as $\mathcal{G}=(\mathcal{N}, \mathcal{E})$, with a set of nodes $\mathcal{N}$ that represent the junctions in the network. In our model, the nodes correspond to volumeless junctions. Nodes are connected by the edges $\mathcal{E} \subseteq \mathcal{N} \times \mathcal{N}$. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve. 
 
-\todo[inline]{mogelijk hier juist het stuk over het kiezen van de verschillende simulatie opties}
-The network structure was decided to be a strongly connected directed graph. The looped and branched nature of district heating networks makes them well suited for a graph, which is commonly used in the literature \cite{sibeijn2025economic, Krug2020,OPPELT2016336,Simonssongraph}. The strong connectedness indicates that no water leaves the system. The graph is defined as $\mathcal{G}=(\mathcal{N}, \mathcal{E})$, with a set of nodes $\mathcal{N}$ that represent the junctions in the network, notated as $\mathcal{N}:= \{1,2,....,|\mathcal{N}|\}$. In our model the nodes correspond to volumeless junctions. Nodes are connected by the edges $\mathcal{E} \subseteq \mathcal{N} \times \mathcal{N}$. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve. The node-to-node connections in the network are described by the adjacency matrix $\mathcal{D} \in \{0,1\}^{|\mathcal{N}| \times |\mathcal{N}|}$. For any $(i,j) \in \mathcal{N} \times \mathcal{N}$, we have
+\subsection{Edges}
+The dynamics of an edge ($e \in \mathcal{E}$) can be described with the two PDEs, derived in Sections \ref{sec::hydropipes} and \ref{sec::thermopipes}.
 
+\begin{equation}\label{eq::formom}
+\partial_x p_e + \rho_w g \hat{z} + f \frac{8\rho_w L}{\pi^2 D^5}\left|q_e\right|q_e =0
+\end{equation}
+\begin{equation}\label{eq::forsimpipePDE}
+\rho_w c_w A \frac{\partial T_e}{\partial t} + \dot{m}_e c_w \frac{\partial T_e}{\partial x}=\frac{\left(T_a-T_e\right)}{R'} + w_e
+\end{equation}
+The hydraulics relation can be  discretized $\partial_x p = \frac{\Delta p}{L}$ which leads to
+\begin{equation}\label{eq::thermopde}
+    \Delta p_e = f \frac{8\rho_w L}{\pi^2 D^5}\left|q_e\right|q_e + \rho_w g L \hat{z}.
+\end{equation}
+When a pump is connected to an edge, the pressure loss over the edge becomes
+% \begin{equation}
+%     \Delta p_e = R_{f}\,\dot{m_e}^2 + \rho_w g L \hat{z} - h_e(r_e) 
+% \end{equation}
 \begin{equation}
-D_{i j}= \begin{cases}1, & \text { if }(i, j) \in \mathcal{E} \\ 0, & \text { otherwise }\end{cases}
+    \Delta p_e = R_{f}\,\dot{m_e}^2 + \rho_w g L \hat{z} - \sum^{\text{n}}_{\text{i=1}} \left( c_i(\omega)  \rho \ \dot{V}^{i}_e \right)
 \end{equation}
 
-The incidence matrix $\mathcal{E} \subseteq \{-1,0,1\}^{|\mathcal{N}| \times |\mathcal{E}|}$ of $\mathcal{G}$ shows the connections between the edges and nodes. 
-For any $(i,k) \in \mathcal{N} \times \{1,2,...,|\mathcal{E}|\}$, we have
-
+% h_e(r) = c_er_e$ being the pressure increase applied by the pump, $c_e$ the maximum pumping power capacity, and $r_e \in [0,1]$ the pump frequency rate
+with $R_{f}$ a combined constant term representing the frictional resistance of the pipe \cite{sibeijn2025economic}. In case of the edge containing a valve the extra pressure drop over the edge changes accordingly to its definition from Section \ref{sec::valves}. The second Kirchhoff law states that the net pressure difference over a closed loop must be zero. A set of edges connected in a closed loop are defined as $\mathcal{E}_{\text{loop}} = \left\{e \in \mathcal{E} : e \ \text{in closed loop}\right\}$, formulating the relation as:
 \begin{equation}
-E_{i k}= \begin{cases}-1, & \text { if edge } k \text { exits node } i, \\ 1, & \text { if edge } k \text {enters node } i, \\ 0, & \text { otherwise. }\end{cases}
+    \sum_{e  \in \mathcal{E}_{\text{loop}}} \Delta p_e = 0.
+\end{equation}
+The use of the Kirchhoff laws leads to a system of non-linear equations. Hardy-Cross and the Newton-Raphson methods are often used to to solve such system \cite{KUNTUAROVA}. However, in the case of low flow rate these methods experience weak convergence. The method developed by Arsene et al. \cite{ARSENE} which can handle this and will be applied.  
+
+
+In the thermodynamic PDE, \ref{eq::thermopde}, the term $w$ [J/(m s)] is added, representing the power transfer per meter of pipe with a heat exchanger. The equation will be solved using the Node Method as it is the most widely applied approach in a dynamic district heating network setting. While other methods potentially offer greater accuracy of efficiency, they have not been extensively tested and validated using real-world data like the Node Method \cite{KUNTUAROVA}.
+
+\subsection{Nodes}
+The first Kirchhoff law states that the sum of flows entering a node equals the sum of flows exiting the node. Resulting in the conservation of mass over every node due to the assumed incompressibility of the water. For any node $n \in \mathcal{N}$, the edge sets $\mathcal{E}_{\rightarrow n} = \left\{ e \in \mathcal{E} : e \  \text{enters} \ n\right\}$ and $\mathcal{E}_{n\rightarrow } = \left\{ e \in \mathcal{E} : e \  \text{exits} \ n\right\}$ are respectively the entering and exiting sets of edges. The mass conservation is given by
+\begin{equation}
+    \sum_{e  \in \mathcal{E}_{\rightarrow n}} q_e(t) = \sum_{e  \in \mathcal{E}_{n \rightarrow}} q_e(t).
+\end{equation}
+Because frictional heat is neglected and heat capacity is assumed constant, the energy balance in every node can be used to define a mixing rule for the node's temperature based on the incoming water temperatures. For every $n \in \mathcal{N}$ it gives
+\begin{equation}
+    T_n(t) = \frac{\sum_{e  \in \mathcal{E}_{\rightarrow n}} q_e(t) T_e(t)}{\sum_{e  \in \mathcal{E}_{\rightarrow n}} q_e(t)},
+\end{equation}
+with the nodal temperature being the temperature of all the exiting edges \cite{Krug2020}. 
+\begin{equation}
+    T_n(t) = T_e(t), \quad \forall \ n \in \mathcal{N}, e \in \mathcal{E}_{n \rightarrow} 
 \end{equation}
 
-Donderdag
--------
--Node verhoudingen, met homogeen mengen enzo, nodal constraints bla
--fixing flow direction
+\subsection{Heat demand}
+The individual user heat demand profile is assumed to be deterministic and will be represented by a summation of sines approximating the user demand profile from \cite{Krug2020}. 
 
--zeggen welke hydraulische doorrekenen methode je gaat gebruiken.
+\begin{equation}
+Q_{d,n_c}(t)=A_1 \sin(\frac{2 \pi}{T_1} t + \phi_1) + A_2\sin(\frac{2 \pi}{T_2} t + \phi_2)
+\end{equation}
+with $Q_{d,n_c}(t)$ [W] as the heat demand for individual user $n_c \in \left\{1,2,...,N_c \right\}$ with $N_c$ as the total number of customers. The arrow of all the individual user profiles is called $Q_d(t)$, and contains a time shift variable $\tau_{n_c}$, introduced to create a difference between the individual user heat demand profiles.
 
--daarna node method
-en het modelleren van de componenten benoemen
--------
+\begin{equation}
+Q_d(k) = 
+\left[\begin{array}{c}
+Q_{d,1}(k-\tau_1) \\
+Q_{d,2}(k-\tau_2) \\
+\vdots \\
+Q_{d,N_c}(k - \tau_{N_c})
+\end{array}\right].
+\end{equation}
 
-Voor meeting met Max: 
-Hierover nadenken:
-- Vraag van Consument
-- Aanbod van energie icm met de ATES
+\subsection{Heat production}
+The total heat production can be divided into two components: heat extracted from the ATES and heat supplied by a larger district heating network acting as a backup. The working of the heat pump connected to the ATES in combination with the backup network is defined in the energy balance below:
+\begin{equation}
+    \rho_w c_w q_e(t) \left(T_s(t) - T_r(t)\right) = \rho_w c_w q_{A}(t)\left(T_{s,A} - T_{r,A}\right) + Q_e(t) + Q_{b}(t),
+\end{equation}
+with $q_A(t)$ [m$^3$/s] as the flow rate on the ATES side, $T_{s,A}$ and $T_{r,A}$ [$^{\circ}\text{C}$] respectively the supply and return temperature on the ATES side and $Q_e(t)$ [W] is the electric power delivered to the compressor. The temperatures $T_{r,A}$ and $T_{s,A}$ are assumed constant. In case the ATES cannot provide enough energy, the backup network fills the energy gap. The amount of heat delivered by the backup network is stated as $Q_{b}(t)$ [W].
 
+\subsection{Control problem}
+The conventional formulation of the control policy aiming to reduce the return temperature is given for the discrete timestep $k$ by
 
-- formuleer optimalisatie probleem
+\begin{align}
+\min_{u(k)} \quad & \left(T_r(k) - \bar{T}_r\right)^2 \notag \\
+\text{s.t.} \quad  & T_r(k) = f(x(k), u(k)) \notag\\
+& E_1 x(k)  \leq g_1 \notag \\ 
+& E_2 u(k) \leq g_2 \notag\\
+\text{where,} & \\\
+& x(k) = 
+\left[\begin{array}{cc}
+T_{s,1}(k) & \dot{m}_1(k)  \\
+T_{s,2}(k) & \dot{m}_2(k) \\
+ \vdots  & \vdots \\
+T_{s,N_c}(k) & \dot{m}_{N_e - 1}(k) \\
+\varnothing & \dot{m}_{N_e}(k)  
+\end{array}\right], \notag\\
+&u(k) =  \left[\begin{array}{cccc}
+h_{\text{lift}}(k) & q_A(k) & Q_p(k) & Q_e(k) 
+\end{array}\right]. \notag 
+\end{align}
+With $T_{s,n_c}$ [$^{\circ}\text{C}$] the supply temperature at delivery set $n_c$, and $\dot{m}_{e}$ the mass flow at edge $e \in \left\{1,2,...,N_e \right\}$. The constraints placed on the state variable $x(k)$ limit the mass flow and regulate the minimum water temperature based on the time required for the consumer to reach 65 $^{\circ}\text{C}$. Where the constraints on the input $u(k)$ limit the possible applicable input values. 
 
-\cite{sibeijn2025economic}
+However, the model has become computationally intensive. It is caused by the Node Method and the hydraulics being a system of nonlinear equations. As the Node Method is non-differentiable and contains integers, the optimization of the whole system becomes a Mixed Integer Non-Linear problem (MINLP), which is time-consuming to solve \cite{MAURER2021244}. Instead of choosing another method, such as describing the thermodynamic behavior of the pipes or simplifying the nonlinear hydraulic equations, which may decrease the model's accuracy, we choose to apply Bayesian Optimization. In this way, the accuracy of the simulation model is still guaranteed and can also be applied for optimization. The optimization formulation becomes more compact, as for the Bayesian Optimization, we assume we don't know the inner states of the model. 
 
-
-The edges are numbered through the 
-l outgoing edges from the node are assigned the same temperature as the node itself. To calculate the mass flows and pressure within the network, Kirchhoff's two laws must be upheld. The first law asserts that the total mass flow entering and leaving a node must be equal, ensuring mass conservation. The second law requires that the net pressure drop around any closed loop in the network must be zero, maintaining pressure balance. The pressure loss within the pipes depends quadratically on the flow, making the hydraulics a system of non-linear equations. As we assume a decoupled system, the hydraulic problem is computed first, after which the obtained mass flow rates are used for the thermodynamic system.
-
+\begin{align}
+\min_{u(k)} & \quad f(u(k)) \\
+\text{s.t.} & \quad E_2 u(k)  \leq g_2 \notag 
+\end{align}
 
 \section{Research Plan}
-\subsection{Simulation Model}
-\todo[inline]{aanpassen adhv de tabel}
-Extensive research has been conducted on modeling district heating networks (DHNs), resulting in a wide range of simulation tools. A recently published paper by Kuntuarova et al. contains an extensive review of the most popular modeling and simulation tools, comparing their modeling approaches, application scope, and functional capabilities \cite{KUNTUAROVA}. Using this review, the article from Brown et al. \cite{BROWN2022125060} and some independent searching, an overview was made of the possibly suitable simulation tools. However, many of the interesting tools require a paid license, which is not possible for this thesis. While several free tools exist, many lack dynamic simulation capabilities or are not well-suited for DCS modeling. For example, EnergyPLAN \cite{EnergyPlan} uses an hourly timestep, and EnergyPlus \cite{EnergyPlus} focuses on building thermal behavior without detailed network modeling. TESPy \cite{TESPy}, meanwhile, only supports steady-state simulations.
+This section outlines the research approach, discussing the use of simulation software, detailing the step-by-step development of the model, and the implementation of the optimization process.
 
-Some open-source Python libraries, such as PyDHN \cite{PyDHN}, PandaPipes \cite{pandapipes}, and GridPinguin \cite{GridPenguin}, support dynamic simulation and were promising, especially since Eneco uses Python internally, making it easier to adapt into their working routine. However, these libraries need to be extended to model all the DCS components. Their complex coding structure and the lack of documentation complicated this and make debugging time-consuming. Whereas PyDHN was still a beta version. The most serious option was OpenModelica \cite{OpenModelica}, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica. \todo[inline]{Pandapipes ook explicit benoemen want ziet er best goed uit, alleen het uitbreiden is toch lastiger. En kijken naar de models tabel} 
+\subsection{Simulation software}\label{sec::SimulationModel}
+An overview of possibly suitable simulation tools was presented in Table \ref{tab::simsoft}. The paid license tools IDA ICE and TRNSYS are potentially very interesting due to their dynamic modeling capability. However, it was decided to proceed with a non-commercial program due to the high cost and the drawback that these programs are not used at Eneco, making implementation more difficult. IDA ICE has a free educational license, but this won't be valid anymore after this thesis is completed. The second argument also holds for the programs EnergyPLAN and EnergyPlus. Besides the fact that EnergyPLAN uses an hourly timestep, and EnergyPlus focuses on building thermal behavior without detailed network modeling. The most serious option of the non-Python tools was OpenModelica, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica.
+
+Therefore, the focus was pointed towards Python-based open-source software. PyDHN and GridPenguin support dynamic simulation of the thermodynamics. Nevertheless, PyDHN is still a beta version, and GridPenguin's fixed timestep is 1 hour, making both tools unsuitable. Pandapipes offers a quasi-static approach without a fixed minimum timestep. While it is an interesting option, the time required to understand its coding structure and the potential time debugging would take was considered greater than developing our model from scratch
 
 Therefore, it was determined to make the model from scratch in Python using the Python open-source projects as inspiration for the model structure.
 
-\todo[inline]{Dit uitwerken en ook benoemen wat nog lastig is te modelleren. Zoals regelsystemen in de afleverset (druk beveiliging en temperatuur aanvullen van de primaire set) En ook constant druk over her system houden}
+\subsection{Model development}
+The construction of the model will be done in a stepwise manner, gradually increasing the level of complexity. Every step will be tested against a couple of base tests checking the conservation of mass in the nodes, the temperature development along the network, and how the pressure and temperature in the system change due to a variation in heat demand. Some steps include additional tests, which are described at each corresponding level. The model development procedure is outlined below
 
-\todo[inline]{opbouw van het model}
+\begin{enumerate}
+\item Develop a graph-based framework to represent the network topology.
+\item Implement the thermodynamic model for a pipeline.
 \begin{itemize}
-\item edges en nodes
-\item meerdere stappen.
-\item van simple naar steeds uitgebreider
-\item benoemen van de thermodynamische en hydraulische scheiding 
-\item per stap uitleggen wat er bij komt.
-\item En bij sommige stappen uitleggen hoe het wordt gevalideerd.
-\item en het overflow mechanisme uitleggen
+\item Validate the implementation by comparing it with the dynamic pipe model from the Standard Modelica Library and real pipeline data.
 \end{itemize}
+\item Construct a basic looped network configuration.
+\item Integrate producers, consumers, and heat exchangers into the network.
+\item Build a simplified network with two consumers and one producer. \label{networkstep}
+\item Incorporate pressure calculations and add components such as valves, pumps, and an overflow mechanism.
+\item Repeat step \ref{networkstep} with the updated hydraulic elements.
+\item Scale up the network to include 20 consumers and 2 producers.
+\begin{itemize}
+    \item Verify the model by creating different heat demand profiles through applying time shifts of the peaks. 
+\end{itemize}
+\item Reproduce the DCS (District Control System) of the Cooltower.
+\begin{itemize}
+\item Validate internal supply temperatures for each delivery set using available data. Additionally, use supply and demand data, along with return temperature measurements, to assess model accuracy.
+\end{itemize}
+\end{enumerate}
 
-\todo[inline]{uitwerking van opstarten optimalisatie}
+\subsection{Control Policy}
+Once the validated model is obtained, it will be used to generate data for implementing Bayesian Optimization. The correct acquisition function and covariance kernel need to be found to make it properly fit the model of the DCS. The performance of the Bayesian Optimization will then be evaluated across various combinations of control inputs and different model parameters. 
 
-\todo[inline]{iets over gelijktijdigheid}
-\todo[inline]{zoeken naar specifieke uitwerking van de legionella wetgeving en de constraints die er daardoor bij komen}
+
