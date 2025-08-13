@@ -33,7 +33,7 @@ plt.yticks([0, y1[0], y1[10] - less_steep_slope*0.1, y1[10], 1], ['$0$', '$K_{v,
 # Axis limits and labels
 plt.xlim(0, 1)
 plt.ylim(0, 1)
-plt.ylabel('$K_{vs} (m^3/h/\sqrt{bar})$', fontsize=font)
+plt.ylabel('$K_{v} (m^3/h/\sqrt{bar})$', fontsize=font)
 plt.xlabel('$h_{lift}$ (-)', fontsize=font)
 plt.tight_layout()
 # plt.show()
