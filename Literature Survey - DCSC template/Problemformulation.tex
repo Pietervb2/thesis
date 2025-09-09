@@ -1,5 +1,5 @@
 \chapter{Problem formulation and research plan}\label{chap::PoA}
-As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lower the return temperature of the decentralized solutions. To achieve this, a dynamic simulation model needs to be made that captures the thermodynamic and hydraulic behavior of these networks to predict the return temperature. It will be used to determine optimal control policies for the supply temperature and the overflow mechanism through data-driven optimization techniques to reduce the return temperature. This research focuses on the Cooltower as a use case, but preferably, the findings should also apply to other networks. This chapter presents the problem formulation and outlines the research plan, detailing the approach for building the model and performing the control policy. 
+As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lower the return temperature of the decentralized solutions. To achieve this, a dynamic simulation model needs to be developed that captures the thermodynamic and hydraulic behavior of these networks to predict the return temperature. The model will be used to determine optimal control policies for the supply temperature and the overflow mechanism through data-driven optimization techniques to reduce the return temperature. This research focuses on the Cooltower as a use case, however, the findings should also apply to other networks. This chapter presents the problem formulation and outlines the research plan, detailing the approach for building the model and performing the control policy. 
 
 \section{Problem Formulation} 
 \subsection{Graph}
@@ -27,17 +27,17 @@ When a pump is connected to an edge, the pressure loss over the edge becomes
 \end{equation}
 
 % h_e(r) = c_er_e$ being the pressure increase applied by the pump, $c_e$ the maximum pumping power capacity, and $r_e \in [0,1]$ the pump frequency rate
-with $R_{f}$ a combined constant term representing the frictional resistance of the pipe \cite{sibeijn2025economic}. In case of the edge containing a valve the extra pressure drop over the edge changes accordingly to its definition from Section \ref{sec::valves}. The second Kirchhoff law states that the net pressure difference over a closed loop must be zero. A set of edges connected in a closed loop are defined as $\mathcal{E}_{\text{loop}} = \left\{e \in \mathcal{E} : e \ \text{in closed loop}\right\}$, formulating the relation as:
+with $R_{f}$ a combined constant term representing the frictional resistance of the pipe \cite{sibeijn2025economic}. In case of the edge containing a valve, the extra pressure drop over the edge changes accordingly to its definition from Section \ref{sec::valves}. The second Kirchhoff law states that the net pressure difference over a closed loop must be zero. A set of edges connected in a closed loop is defined as $\mathcal{E}_{\text{loop}} = \left\{e \in \mathcal{E}: e \ \text{in closed loop}\right\}$, formulating the relation as:
 \begin{equation}
     \sum_{e  \in \mathcal{E}_{\text{loop}}} \Delta p_e = 0.
 \end{equation}
-The use of the Kirchhoff laws leads to a system of non-linear equations. Hardy-Cross and the Newton-Raphson methods are often used to to solve such system \cite{KUNTUAROVA}. However, in the case of low flow rate these methods experience weak convergence. The method developed by Arsene et al. \cite{ARSENE} which can handle this and will be applied.  
+The use of the Kirchhoff laws leads to a system of non-linear equations. Hardy-Cross and the Newton-Raphson methods are often used to solve such systems \cite{KUNTUAROVA}. However, in the case of low flow rate, these methods experience weak convergence. The method developed by Arsene et al. \cite{ARSENE}, which can handle lower flow rates and will therefore be used within the simulation models created in this study.
 
 
-In the thermodynamic PDE, \ref{eq::thermopde}, the term $w$ [J/(m s)] is added, representing the power transfer per meter of pipe with a heat exchanger. The equation will be solved using the Node Method as it is the most widely applied approach in a dynamic district heating network setting. While other methods potentially offer greater accuracy of efficiency, they have not been extensively tested and validated using real-world data like the Node Method \cite{KUNTUAROVA}.
+In the thermodynamic PDE, \ref{eq::thermopde}, the term $w$ [J/(m s)] is added, representing the power transfer per meter of pipe with a heat exchanger. The equation will be solved using the Node Method as it is the most widely applied approach in a dynamic district heating network setting. Although alternative methods show promise for improved accuracy or efficiency, they suffer from various limitations such as computational constraints, implementation complexity, or restrictive operating conditions, while lacking the extensive real-world validation that supports the Node Method \cite{KUNTUAROVA}.
 
 \subsection{Nodes}
-The first Kirchhoff law states that the sum of flows entering a node equals the sum of flows exiting the node. Resulting in the conservation of mass over every node due to the assumed incompressibility of the water. For any node $n \in \mathcal{N}$, the edge sets $\mathcal{E}_{\rightarrow n} = \left\{ e \in \mathcal{E} : e \  \text{enters} \ n\right\}$ and $\mathcal{E}_{n\rightarrow } = \left\{ e \in \mathcal{E} : e \  \text{exits} \ n\right\}$ are respectively the entering and exiting sets of edges. The mass conservation is given by
+The first Kirchhoff law states that the sum of flows entering a node equals the sum of flows exiting the node. This results in the conservation of mass over every node due to the assumed incompressibility of the water. For any node $n \in \mathcal{N}$, the edge sets $\mathcal{E}_{\rightarrow n} = \left\{ e \in \mathcal{E} : e \  \text{enters} \ n\right\}$ and $\mathcal{E}_{n\rightarrow } = \left\{ e \in \mathcal{E} : e \  \text{exits} \ n\right\}$ are respectively the entering and exiting sets of edges. The mass conservation is given by
 \begin{equation}
     \sum_{e  \in \mathcal{E}_{\rightarrow n}} q_e(t) = \sum_{e  \in \mathcal{E}_{n \rightarrow}} q_e(t).
 \end{equation}
@@ -54,9 +54,9 @@ with the nodal temperature being the temperature of all the exiting edges \cite{
 The individual user heat demand profile is assumed to be deterministic and will be represented by a summation of sines approximating the user demand profile from \cite{Krug2020}. 
 
 \begin{equation}
-Q_{d,n_c}(t)=A_1 \sin(\frac{2 \pi}{T_1} t + \phi_1) + A_2\sin(\frac{2 \pi}{T_2} t + \phi_2)
+Q_{d,n_c}(t)=A_1(n_c) \sin(\frac{2 \pi}{T_1(n_c)} t + \phi_1(n_c)) + A_2(n_c)\sin(\frac{2 \pi}{T_2(n_c)} t + \phi_2(n_c))
 \end{equation}
-with $Q_{d,n_c}(t)$ [W] as the heat demand for individual user $n_c \in \left\{1,2,...,N_c \right\}$ with $N_c$ as the total number of customers. The arrow of all the individual user profiles is called $Q_d(t)$, and contains a time shift variable $\tau_{n_c}$, introduced to create a difference between the individual user heat demand profiles.
+with $Q_{d,n_c}(t)$ [W] as the heat demand for individual user $n_c \in \left\{1,2,...,N_c \right\}$ and $N_c$ as the total number of customers. The array of all the individual user profiles is called $Q_d(t)$, and all entries contain a time shift variable $\tau_{n_c}$, introduced to create a difference in timing between the individual user heat demand profiles.
 
 \begin{equation}
 Q_d(k) = 
@@ -69,43 +69,47 @@ Q_{d,N_c}(k - \tau_{N_c})
 \end{equation}
 
 \subsection{Heat production}
-The total heat production can be divided into two components: heat extracted from the ATES and heat supplied by a larger district heating network acting as a backup. The working of the heat pump connected to the ATES in combination with the backup network is defined in the energy balance below:
+The total heat production can be divided into two components: heat extracted from the ATES and backup heat supplied by a larger district heating network. The relation of the heat pump connected to the ATES in combination with the backup network is defined in the energy balance below.
 \begin{equation}
     \rho_w c_w q_e(t) \left(T_s(t) - T_r(t)\right) = \rho_w c_w q_{A}(t)\left(T_{s,A} - T_{r,A}\right) + Q_e(t) + Q_{b}(t),
 \end{equation}
-with $q_A(t)$ [m$^3$/s] as the flow rate on the ATES side, $T_{s,A}$ and $T_{r,A}$ [$^{\circ}\text{C}$] respectively the supply and return temperature on the ATES side and $Q_e(t)$ [W] is the electric power delivered to the compressor. The temperatures $T_{r,A}$ and $T_{s,A}$ are assumed constant. In case the ATES cannot provide enough energy, the backup network fills the energy gap. The amount of heat delivered by the backup network is stated as $Q_{b}(t)$ [W].
+with the flow rate on the ATES side $q_A(t)$ [m$^3$/s], the supply and return temperature on the ATES side respectively $T_{s,A}$ and $T_{r,A}$ [K] and the electric power delivered to the compressor $Q_e(t)$ [W]. The temperatures $T_{r,A}$ and $T_{s,A}$ are assumed constant. In case the ATES cannot provide enough energy, the backup network fills the energy gap. The amount of heat delivered by the backup network is stated as $Q_{b}(t)$ [W].
 
 \subsection{Control problem}
-The developed discrete model of the DCS for time instance $k$ is given by
+The developed discrete model for the return temperature of the Cooltower's DCS for time instance $k$ is given by
 
 \begin{align}
 & T_r(k) = f(x(k), u(k)) \notag \\
 & x(k) = 
-\left[\begin{array}{cc}
-T_{s,1}(k) & \dot{m}_1(k)  \\
-T_{s,2}(k) & \dot{m}_2(k) \\
- \vdots  & \vdots \\
-T_{s,N_c}(k) & \dot{m}_{N_e - 1}(k) \\
-\varnothing & \dot{m}_{N_e}(k)  
+\left[\begin{array}{c}
+T_{s,1}(k) \\
+T_{s,2}(k) \\
+ \vdots  \\
+T_{s,N_c}(k) \\
+\dot{m}_1(k)  \\
+\dot{m}_2(k) \\
+\vdots \\
+\dot{m}_{N_e - 1}(k) \\
+\dot{m}_{N_e}(k)  \\
 \end{array}\right], \quad x(k) \in \mathcal{X}\\
 &u(k) =  \left[\begin{array}{cccc}
-h_{\text{lift}}(k) & q_A(k) & Q_p(k) & Q_e(k) 
+T_{\text{set}}(k) & q_A(k) & Q_b(k) & Q_e(k) 
 \end{array}\right], \quad u(k) \in \mathcal{U} \notag 
 \end{align}
-With $T_{s,n_c}$ [$^{\circ}\text{C}$] the supply temperature at delivery set $n_c$, and $\dot{m}_{e}$ the mass flow at edge $e \in \left\{1,2,...,N_e \right\}$. When the model is used to generate the necessary data for the Bayesian Optimization, the input space $\mathcal{U}$ will be limited by the range of the input variables but also by the state space $\mathcal{X}$ as the mass flow and minimum water temperature are limited based on the time required for the delivery sets to reach a water temperature of 65 $^{\circ}\text{C}$. 
+With the supply temperature at delivery set $n_c$ denoted by $T_{s,n_c}$ [K], and the mass flow at edge $e \in \left\{1,2,...,N_e \right\}$ denoted by $\dot{m}_{e}$ [kg/s]. The input space $\mathcal{U}$ is limited by the range of the input variables but also by the state space $\mathcal{X}$ as the mass flow and minimum water temperature are limited based on the time required for the delivery sets to reach a desired temperature. 
 
-Bayesian Optimization is used because the model has become computationally intensive. It is caused by the Node Method and the hydraulics being a system of nonlinear equations. As the Node Method is non-differentiable and contains integers, the optimization of the whole system becomes a Mixed Integer Non-Linear problem (MINLP), which is time-consuming to solve \cite{MAURER2021244}. Instead of choosing another method, such as describing the thermodynamic behavior of the pipes or simplifying the nonlinear hydraulic equations, which may decrease the model's accuracy, we choose to apply Bayesian Optimization. In this way, the accuracy of the simulation model is still guaranteed and can also be applied for optimization. The resulting optimization formulation is stated by 
+This research employs a Bayesian Optimization approach. One of the main reasons for this choice is that standard white-box optimization methods become too computationally intensive when applied to this model. This computational burden stems from the nonlinearity of both the Node Method and the hydraulic system equations. Since the Node Method is non-differentiable and contains integer variables, standard optimization approaches must treat the complete system as a Mixed Integer Non-Linear Problem (MINLP), which is time-consuming to solve [19]. Rather than compromising model accuracy by adopting less computationally intensive thermodynamic methods or simplifying the nonlinear hydraulic equations, Bayesian Optimization circumvents these computational challenges by treating the model as a black box, allowing us to maintain the simulation model's accuracy while enabling efficient optimization. The resulting optimization formulation is stated by 
 
 \begin{align}
 \min_{u(k)} & \quad f(u(k)) \\
-\text{s.t.} & \quad E_1 u(k)  \leq g_1 \notag 
+\text{s.t.} & \quad g_i(u(k)) \leq 0 \quad \forall i =1 ,...,w. \notag \\
+\notag
 \end{align}
-\todo[inline]{moet je hier x(k) ook vermelden}
 \section{Research Plan}
-This section outlines the research approach, discussing the use of simulation software, detailing the step-by-step development of the model, and the implementation of the optimization process.
+This section outlines the research approach, discussing the use of simulation software, detailing the step-by-step development of the model, and the implementation of the optimization policy.
 
 \subsection{Simulation software}\label{sec::SimulationModel}
-An overview of possibly suitable simulation tools was presented in Table \ref{tab::simsoft}. The paid license tools IDA ICE and TRNSYS are potentially very interesting due to their dynamic modeling capability. However, it was decided to proceed with a non-commercial program due to the high cost and the drawback that these programs are not used at Eneco, making implementation more difficult. IDA ICE has a free educational license, but this won't be valid anymore after this thesis is completed. The second argument also holds for the programs EnergyPLAN and EnergyPlus. Besides the fact that EnergyPLAN uses an hourly timestep, and EnergyPlus focuses on building thermal behavior without detailed network modeling. The most serious option of the non-Python tools was OpenModelica, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica.
+An overview of possibly suitable simulation tools was presented in Table \ref{tab::simsoft}. The paid license tools IDA ICE and TRNSYS could have been of high interest due to their dynamic modeling capability. However, it was decided to proceed with a non-commercial program due to the high cost and the drawback that these programs are not used at Eneco, making implementation more difficult. IDA ICE offers a free educational license, but it will no longer be valid once this thesis is completed. The second argument also holds for the programs EnergyPLAN and EnergyPlus. Besides the fact that EnergyPLAN uses an hourly timestep, and EnergyPlus focuses on building thermal behavior without detailed network modeling. The most serious option of the non-Python tools was OpenModelica, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica.
 
 Therefore, the focus was pointed towards Python-based open-source software. PyDHN and GridPenguin support dynamic simulation of the thermodynamics. Nevertheless, PyDHN is still a beta version, and GridPenguin's fixed timestep is 1 hour, making both tools unsuitable. Pandapipes offers a quasi-static approach without a fixed minimum timestep. While it is an interesting option, the time required to understand its coding structure and the potential time debugging would take was considered greater than developing our model from scratch
 
@@ -136,6 +140,37 @@ The construction of the model will be done in a stepwise manner, gradually incre
 \end{enumerate}
 
 \subsection{Control Policy}
-Once the validated model is obtained, it will be used to generate data for implementing Bayesian Optimization. The correct acquisition function and covariance kernel need to be found to make it properly fit the model of the DCS. The performance of the Bayesian Optimization will then be evaluated across various combinations of control inputs and different model parameters. 
+Once the validated model is obtained, it will be used to generate data to implement Bayesian Optimization. The appropriate acquisition function and covariance kernel must be identified to ensure the accurately representation of the DCS model. The performance of the Bayesian Optimization will then be evaluated across various combinations of control inputs and different model parameters. 
 
+\subsection{Research Questions}
+\todo[inline]{dit met Max bespreken, want ik geef al been samenvatting van het problem in de sectie hier na}
+The problem formulation and research plan were deduced based on the following research questions.
 
+\begin{itemize}
+    \item \textbf{Q1: How accurately can mathematical models of thermal dynamics in small-scale heating networks predict return temperatures, using the Cooltower decentralized system as a case study?}
+    \item \textbf{Q2: How can the simulation model of the heating network in the Cooltower be validated?}
+    \item \textbf{Q3: How can Bayesian Optimization be applied to lower the return temperature?}
+    
+\end{itemize}
+
+\subsection{Timeline}
+The desired timeline for the project is shown below:
+
+\begin{table}[h]
+\center
+\begin{tabular}{l|l}
+Task           & Week of completion \\ \hline
+Model step 1   & Week 39\footnotemark[1]           \\
+Model step 2   & Week 39\footnotemark[1]            \\
+Model step 3   & Week 40            \\
+Model step 4   & Week 40            \\
+Model step 5   & Week 41            \\
+Model step 6   & Week 42            \\
+Model step 7   & Week 43            \\
+Model step 8   & Week 44            \\
+Model step 9   & Week 46            \\
+Control policy & Week 50           \\
+First report draft & Week 4 (2026)
+\end{tabular}
+\end{table}
+\footnotetext[1]{During the literature survey, work on these tasks had already been initiated.}

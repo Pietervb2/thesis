@@ -52,7 +52,7 @@ During summer, the demand for heat decreases significantly, leading to increased
 \begin{equation}\label{eq::overallheat}
     \dot{Q} = \dot{m} c_p (T_s - T_r)
 \end{equation}
-$\dot{Q}$ [J/s] is the change in thermal energy of the water, $\dot{m}$ [kg/s] is the mass flow of the water, $c_p$ [J/(kg K)] is its specific heat capacity and $T_s$ and $T_r$ [$^{\circ}\text{C}$] are respectively the supply and return temperatures. 
+$\dot{Q}$ [J/s] is the change in thermal energy of the water, $\dot{m}$ [kg/s] is the mass flow of the water, $c_p$ [J/(kg K)] is its specific heat capacity and $T_s$ and $T_r$ [K] are respectively the supply and return temperatures. 
 
 If the supply temperature remains constant, the temperature difference will increase as the return temperature is reduced. This makes it possible to lower the flow rate of the water while still delivering the required heat. The pump will need less electricity, and the used pipes can be made smaller, saving on operational and initial costs. Also, the ATES heat pump will operate more efficiently because the required temperature drop for storing in the cold well is reduced.
 
@@ -71,13 +71,13 @@ The Cooltower was chosen for the use case. It is a 154-meter-tall flat in the ci
 \end{figure}
 
 The Cooltower contains a heating and cooling network that is connected to an ATES below the building. Its network is also connected to the city heating network ('Stadsverwarming' in Dutch), which serves as a backup during peak demand. The building's internal heating and cooling network is split into lower and upper sections to prevent heat interface units (HIUs) on lower floors from experiencing excessive pressures. The scope of the thesis will remain on the district heating system within the Cooltower, with a focus on the thermodynamics and hydraulics of the heat distribution system within the building. If time permits, the dynamics of the ATES or the city heat network may be addressed at a later stage. Also the heat storage present in the system will not be taken into account as for now it is not being used.
-This research looks at two actuators in the model to reduce the return temperature: the supply temperature and the overflow mechanism within the building. The overflow mechanism is a valve located at the top of the building where the supply pipeline directly flows into the return pipeline. To perform this optimization the use of Bayesion optimization will be investigated. \todo[inline]{Toegevoegd na feedback Tamas. Ga dit verder uitwerk als ik meer ben ingelezen op Bayesion optimization. }
+This research looks at two actuators in the model to reduce the return temperature: the supply temperature and the overflow mechanism within the building. The overflow mechanism is a valve located at the top of the building where the supply pipeline directly flows into the return pipeline. To perform this optimization, the use of the data-driven method of Bayesian optimization will be investigated. The required accuracy of the simulation model introduces a computationally intensive optimization problem using this model. The thesis tries to overcome this problem by applying Bayesian Optimization.  
 
-% \newpage 
-To conclude this section, the objective of this literature survey is formulated as following.
+\newpage 
+To conclude this section, the objective of this literature survey is formulated as follows.
 
 {\centering
-\textbf{\todo{Voor nu het voorbeeld van Max er in gezet} Using the developed dynamic simulation model, we aim to investigate the possibilities to minimize return temperatures of the DCS by determining optimal control policies for the supply temperature and the overflow mechanism through data-driven optimization techniques.}\par
+\textbf{Using the developed dynamic simulation model, we aim to investigate the possibilities to minimize return temperatures of the DCS by determining optimal control policies for the supply temperature and the overflow mechanism through data-driven Bayesian Optimization.}\par
 }
 
 The research must be done with the following model requirements in mind:
