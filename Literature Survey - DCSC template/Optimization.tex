@@ -1,10 +1,27 @@
-\chapter{Optimization}\label{chap::optimization}
-\todo[inline]{Hier kijken naar optimalisatie manieren met valves}
-\todo[inline]{Valve actuator, pagina 54 phd thesis}
-\todo[inline]{Valve authority, kijk op pagina 111 van phd thesis}
-\todo[inline]{kijken naar simulation results en daar vind je ook de effecte nvan de valve authority}
-\todo[inline]{kijken naar verwerken van regelsystemen afleverset}
-\todo[inline]{Dynamic pressure control valve}
-\todo[inline]{Bayesian optimisation}
+\chapter{Control Methods}\label{chap::optimization}
+This section outlines the control methods used to lower the return temperature in district heating networks actuating over the overflow mechanisms and the supply temperature. Afterwards the application of Bayesian Optimization will be discussed. 
 
+\section{Bypass Flow Control}
+The overflow mechanism is also named a bypass valve. These valves are used to redirect supply water to the return network to prevent a drop in the supply water temperature during a period of low heat demand. However, the flow redirected by the bypass valve should also be limited as it increases the return temperature, therefore causing a higher overall energy loss in the network and a decrease in efficiency of the heat pump. As mentioned in Section \ref{sec::overflowmech}, the bypass valves found in the Cooltower are thermostatic bypass valves. 
+
+Articles revolving the control of thermostatic bypasses in district heating networks are scarcely present in the literature. Even though proper control of the bypasses can play an important role in lowering the return temperature \cite{app15062982,VANDERMEULEN201845}. In \cite{VANDERMEULEN201845}, the authors propose a theoretical benchmark for the performance of bypass controllers and compare it with a thermostatic bypass valve. Where Li et al. \cite{DTUlibrary} show the impact of varying thermostatic bypass flows (installed at the branch ends) on the return temperature for different heat loads, but they do not perform an optimization. Brand et al. \cite{BRAND2014256} also investigated the effect of thermostatic bypass valves, comparing them with different bypass valve configurations linked to bathroom floor heating to improve energy efficiency. They came to the conclusion that the thermostatic bypass cannot be completely replaced by the floor heating as the flow was limited. The authors of \cite{BENAKOPOULOS2021120928} do optimize thermostatic regulation valves to achieve a better return temperature, but these are connected to the radiators on the customer site. Rong et al. \cite{RONG2025116197} created an optimization model to maximize the heat storage capacity and economic efficiency of the DHN by selectively placing bypasses and controlling the flow through these bypasses using valves. 
+
+\section{Supply Temperature Control}
+Supply temperature control maintains the network temperature at the required level by injecting or extracting the appropriate amount of heat. Traditional supply temperature control is often done via a weather compensation technique, which adjusts the supply temperature based on outdoor conditions. The weather compensation curves can vary significantly depending on the research, and in case of wrong commissioning of the curves, they can perform worse than constant supply temperatures, resulting in higher return temperatures \cite{app15062982, LIAO200555}. The adaptive control method proposed by Liao et al. \cite{LIAO200555} relies on real-time measurements of space heat load to adjust the supply temperature. It results in better meeting the heat demand. Tol et al. \cite{TOL2021105} also make use of real-time data. They present a novel demand-responsive control strategy that reacts to changes in the return supply temperature difference at substations. This doesn't necessarily lead to a lower return temperature compared to the weather compensation curves, but it reduces electricity use. The authors of \cite{papaKonstantikou} made a controller that determines the lowest supply temperature based on heat demand predictions and network time-delay calculations. 
+
+
+\section{Bayesian Optimization}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{}
+    \caption{Caption}
+    \label{fig:placeholder}
+\end{figure}
+
+\todo[inline]{uitleg van bayesian optimization}
+\todo[inline]{waar het wordt gebruikt voor mijn toepassing}
+
+
+\todo[inline]{dit verhaal over de mogelijke inputs en hoe dat wordt gedaan bij bayesian optimization}
 Several options might be suitable to achieve both functions. A distinction can be made between passive and active control valves. The simplest passive valve would be a flow control valve that does not change its opening. The opening is found through an optimization. Another passive control would be to make use of the already present valve and optimize its temperature set point. Danfoss also supplies Pressure Indepenent Control Valves (PICV), which can guarantee a constant flow rate regardless of pressure fluctuations in the system while still maintaining the same pressure loss over the valve. Active control can also take place with the flow control valve and the PICV where the position of the valve can be remotely controlled. Creating the possibility of applying real time control.  
