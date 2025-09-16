@@ -71,13 +71,13 @@ The Cooltower was chosen for the use case. It is a 154-meter-tall flat in the ci
 \end{figure}
 
 The Cooltower contains a heating and cooling network that is connected to an ATES below the building. Its network is also connected to the city heating network ('Stadsverwarming' in Dutch), which serves as a backup during peak demand. The building's internal heating and cooling network is split into lower and upper sections to prevent heat interface units (HIUs) on lower floors from experiencing excessive pressures. The scope of the thesis will remain on the district heating system within the Cooltower, with a focus on the thermodynamics and hydraulics of the heat distribution system within the building. If time permits, the dynamics of the ATES or the city heat network may be addressed at a later stage. Also the heat storage present in the system will not be taken into account as for now it is not being used.
-This research looks at two actuators in the model to reduce the return temperature: the supply temperature and the overflow mechanism within the building. The overflow mechanism is a valve located at the top of the building where the supply pipeline directly flows into the return pipeline. To perform this optimization, the use of the data-driven method of Bayesian optimization will be investigated. The required accuracy of the simulation model introduces a computationally intensive optimization problem using this model. The thesis tries to overcome this problem by applying Bayesian Optimization.  
+This research looks at two actuators in the model to reduce the return temperature: the supply temperature and the bypass control valve within the building. The bypass control valve is located at the top of the building where the supply pipeline directly flows into the return pipeline. To perform this optimization, the use of the data-driven method of Bayesian optimization will be investigated. The required accuracy of the simulation model introduces a computationally intensive optimization problem using this model. The thesis tries to overcome this problem by applying Bayesian Optimization.  
 
 \newpage 
 To conclude this section, the objective of this literature survey is formulated as follows.
 
 {\centering
-\textbf{Using the developed dynamic simulation model, we aim to investigate the possibilities to minimize return temperatures of the DCS by determining optimal control policies for the supply temperature and the overflow mechanism through data-driven Bayesian Optimization.}\par
+\textbf{Using the developed dynamic simulation model, we aim to investigate the possibilities to minimize return temperatures of the DCS by determining optimal control policies for the supply temperature and the bypass control valve through data-driven Bayesian Optimization.}\par
 }
 
 The research must be done with the following model requirements in mind:
@@ -85,11 +85,11 @@ The research must be done with the following model requirements in mind:
     \item The discrete simulation timestep must be on the order of 1 minute. 
     \item The model should not only simulate the return temperature but also capture the internal hydraulic and thermodynamic behavior of the DCS heat distribution system.
     \item The model should be scalable and extendable, allowing it to be applied to other DCS networks.
-    \item When the overflow mechanism turns out to be relatively simple and limits optimization performance, the optimization can additionally be performed by implementing a more advanced mechanism for the valve to evaluate its effects.
+    \item When the design of the bypass valve turns out to be relatively simple and limits optimization performance, the optimization can additionally be performed by implementing a more advanced mechanism for the valve to evaluate its effects.
 \end{itemize}
 
 \section{Approach \& Outline}
-First, Section \ref{chap::sysmodel} discusses methods for dynamically modeling the components of the heat distribution network of the Decentralized Solution in the Cooltower, including the modeling of heat demand and supply, and the development of a system framework. Next, Section \ref{chap::optimization} explores the optimization approaches used to reduce the return temperature, actuating the supply temperature, or an overflow mechanism. Finally, Section \ref{chap::PoA} presents a proposed plan for conducting the thesis.
+First, Section \ref{chap::sysmodel} discusses methods for dynamically modeling the components of the heat distribution network of the Decentralized Solution in the Cooltower, including the modeling of heat demand and supply, and the development of a system framework. Next, Section \ref{chap::optimization} explores the control methods used to reduce the return temperature, actuating over the supply temperature and the bypass control valve.  Afterwards the Bayesian Optimization approach is discussed. Finally, Section \ref{chap::PoA} proposes a plan for conducting the thesis.
 
 % \begin{itemize}
 %     \item Problem is too high return temperature in the summer

@@ -1276,8 +1276,7 @@
     & Prof.\ dr.\ ir.\ T.\ Keviczky, & TU Delft \\
     & Ir.\ M.\ W.\ Sibeijn & TU Delft \\
         & Ir.\ R.\ C.\ A.\ Smit & Eneco \\
-        & Ir.\ P.\ M.\ van den Bergh & Eneco
-\end{tabular}
+    \end{tabular}
 \end{center}
     \begin{center}
         Faculty of \mscfaculty\ $\cdot$ Delft University of Technology
