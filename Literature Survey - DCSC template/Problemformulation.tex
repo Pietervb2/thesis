@@ -1,5 +1,5 @@
 \chapter{Problem formulation and research plan}\label{chap::PoA}
-As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lower the return temperature of the decentralized solutions. To achieve this, a dynamic simulation model needs to be developed that captures the thermodynamic and hydraulic behavior of these networks to predict the return temperature. The model will be used to determine optimal control policies for the supply temperature and the bypass control valve through data-driven optimization techniques to reduce the return temperature. This research focuses on the Cooltower as a use case, however, the findings should also apply to other networks. This chapter presents the problem formulation and outlines the research plan, detailing the approach for building the model and performing the control policy. 
+As mentioned in Section \ref{chap::intro}, the objective of this thesis is to lower the return temperature of the decentralized solutions. To achieve this, a dynamic simulation model needs to be developed that captures the thermodynamic and hydraulic behavior of these networks to predict the return temperature. The model will be used to determine optimal control policies for the supply temperature and the bypass control valve through data-driven optimization techniques to reduce the return temperature. This research focuses on the Cooltower as a use case, however, the findings should also apply to other networks. This chapter presents the problem formulation and outlines the research plan, detailing the approach for building the model and performing the control policy. At the end it presents the research questions for thesis research and a corresponding timeline for the project. 
 
 \section{Problem Formulation} 
 \subsection{Graph}
@@ -140,17 +140,28 @@ The construction of the model will be done in a stepwise manner, gradually incre
 \end{enumerate}
 
 \subsection{Control Policy}
-Once the validated model is obtained, it will be used to generate data to implement Bayesian Optimization. The appropriate acquisition function and covariance kernel must be identified to ensure the accurately representation of the DCS model. The performance of the Bayesian Optimization will then be evaluated across various combinations of the control parameters and different model parameters. 
+Once the validated model is obtained, it will be used to generate data to implement Bayesian Optimization. The appropriate acquisition function and covariance kernel must be identified to ensure the accurately representation of the DCS model. BO will be carried out following different control strategies for the bypass flow. The different options for the flow control in order to lower the return temperature are listed down below.
+
+\begin{itemize} 
+    \item A constant opening of the bypass pipe, with an optimized surface area of the opening. 
+    \item The use of a pressure independent flow control valve, set to an optimized constant flow rate. 
+    \item The application of a thermostatic bypass valve, where the temperature setpoint is optimized. 
+    \item A pressure independent flow control valve, which can be actuated in real-time. 
+\end{itemize}
+
+These options will be combined with the supply temperature and their performance will be evaluated under different model parameters. 
+
+% Several options might be suitable to achieve both functions. A distinction can be made between passive and active control valves. The simplest passive valve would be a flow control valve that does not change its opening. The opening is found through an optimization. Another passive control would be to make use of the already present valve and optimize its temperature set point. Danfoss also supplies Pressure Indepenent Control Valves (PICV), which can guarantee a constant flow rate regardless of pressure fluctuations in the system while still maintaining the same pressure loss over the valve. Active control can also take place with the flow control valve and the PICV where the position of the valve can be remotely controlled. Creating the possibility of applying real time control.  
 
 \subsection{Research Questions}
-This thesis project focuses on the high return temperature from the decentralized solutions during periods of low heat demand. The high temperature leads to efficiency decrease and sometimes even malfunction of the heat pump in between the heat distribution system and the ATES. A dynamical model of the thermodynamics and hydraulics within the heat distribution network will be developed to obtain insights in the inner workings of the system. The same model will also be used to perform an optimization actuating the supply temperature and the bypass valve in order to lower the return temperature. Due to the potential high computational intensity of the model it was decided to apply Bayesian optimization. The following research questions were formulated for the project.  
+This thesis project focuses on the high return temperature from the decentralized solutions during periods of low heat demand. The high temperature leads to efficiency decrease and sometimes even malfunction of the heat pump in between the heat distribution system and the ATES. A dynamical model of the thermodynamics and hydraulics within the heat distribution network will be developed to obtain insights in the inner workings of the system. The same model will also be used to perform an optimization actuating the supply temperature and the bypass valve in order to lower the return temperature. Due to the potential high computational intensity of the model it was decided to apply Bayesian Optimization. The following research questions were formulated for the project.  
 
 \begin{itemize}
   \renewcommand\labelitemi{} % removes the bullet
-    \item \textbf{Q1: How accurately can mathematical models of thermal dynamics and hydraulics in small-scale heating networks predict return temperatures, using the Cooltower decentralized system as a case study?}
+    \item \textbf{Q1: How accurately can mathematical models of the thermal dynamics and hydraulics in small-scale heating networks predict return temperatures, using the Cooltower decentralized system as a case study?}
     \item \textbf{Q2: How can the simulation model of the heating network in the Cooltower be validated?}
     \item \textbf{Q3: How can Bayesian Optimization be applied to lower the return temperature?}
-    \item \textbf{Q4: Are the supply temperature and bypass control valve suited actuators to lower the return temperature?}  
+    \item \textbf{Q4: What is the best flow control strategy of the bypass control valve in combination with the supply temperature control to lower the return temperature?}  
     
 \end{itemize}
 

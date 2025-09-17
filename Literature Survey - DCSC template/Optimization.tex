@@ -11,14 +11,14 @@ Supply temperature control maintains the network temperature at the required lev
 
 
 \section{Bayesian Optimization Overview}
-All the information in this section is drawn from the tutorial on Bayesian optimization written by Brochu, Cora, and de Freitas \cite{bo_tutorial}. The citations from this section are also drawn from them. 
+All the information in this section is drawn from the tutorial on Bayesian Optimization (BO) written by Brochu, Cora, and de Freitas \cite{bo_tutorial}. The citations from this section are also drawn from them. 
 
-Bayesian optimization is used to find the extrema of objective functions in cases where evaluating them is expensive. It can be applied in situations where there is no closed-form expression of the objective function, but it is possible to gather some data points of the function. Bayesian optimization techniques are highly efficient considering the number of samples needed to find an extreme. This is largely due to incorporating a prior belief about the problem into the data sampling and the balance between exploration (sampling x at high uncertainty of the objective function) and exploitation (sampling x where the objective function is likely to be high) of the search space. The technique revolves around Bayes' Theorem, stated below, hence its name. 
+Bayesian Optimization is used to find the extrema of objective functions in cases where evaluating them is expensive. It can be applied in situations where there is no closed-form expression of the objective function, but it is possible to gather some data points of the function. BO techniques are highly efficient considering the number of samples needed to find an extreme. This is largely due to incorporating a prior belief about the problem into the data sampling and the balance between exploration (sampling x at high uncertainty of the objective function) and exploitation (sampling x where the objective function is likely to be high) of the search space. The technique revolves around Bayes' Theorem, stated below, hence its name. 
 
 \begin{equation}
 P(f \mid \mathcal{D}_{1:t}) \propto P(\mathcal{D}_{1:t}\mid f) P(f) .
 \end{equation}
-With $x_i$ as the ith sample, $f(x_i)$ as the observation of the objective function at $x_i$ and $\mathcal{D}_{1:t} = \{x_{1:t},f(x_{1:t})\}$. The prior $P(f)$ represents our belief of the space of possible objective functions. Where the posterior captures the information we have of the objective function. After every iteration, the prior of the objective function is updated with the obtained posterior of the previous iteration \todo{klopt dit?}. Bayesian optimization uses Gaussian Processes (GP) to define the prior of the function. A Gaussian Process is a distribution over Gaussian functions, completely specified by its mean function $m$ and the covariance function $k$ \cite{bo_tutorial}. 
+With $x_i$ as the ith sample, $f(x_i)$ as the observation of the objective function at $x_i$ and $\mathcal{D}_{1:t} = \{x_{1:t},f(x_{1:t})\}$. The prior $P(f)$ represents our belief of the space of possible objective functions. Where the posterior captures the information we have of the objective function. After each iteration, new observations are incorporated into the posterior, which refines our belief about the objective function. Bayesian Optimization generally uses Gaussian Processes (GP) to define the prior of the function. A Gaussian Process is a distribution over Gaussian functions, completely specified by its mean function $m$ and the covariance function $k$ \cite{bo_tutorial}. 
 
 \begin{equation}
     f(x) \sim \mathcal{GP}(m(x), k(x,x'))
@@ -30,12 +30,7 @@ k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2 \theta^2}\left\|
 \begin{equation}\label{eq::anistropic}
 k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2}\left(\mathrm{x}_i-\mathrm{x}_j\right)^T \operatorname{diag}(\theta)^{-2}\left(\mathrm{x}-\mathrm{x}^{\prime}\right)\right).
 \end{equation}
-The values of the hyperparameters are usually defined by seeding with a few random samples and maximizing the log likelihood of the evidence given $\theta$ \cite{rasmussen2006gaussian, santner2003design}. The kernel choice is typically done using hierarchical Bayesian model selection \cite{mackay1992practical} or cross-validation. 
-
-The next sample location $x_{t+1}$ is determined using an acquisition function. These functions are defined in a way that they yield high values for potentially high (or low, depending on the extreme of interest) values of the objective functions. This can be due to a high predicted value, large uncertainty, or a combination of both. Maximizing the acquisition function results in the next sample location. A proper trade-off between exploration and exploitation within this process is essential to Bayesian optimization, as it allows the method to efficiently scan the search space for potential extrema. 
-Močkus et al. \cite{Mockus1978} proposed to maximize the expected improvement with respect to the best value known thus far. Lizotte \cite{Lizotte2008} introduces an extra parameter to improve the trade-off. Cox and John \cite{CoxJohn1997} present an algorithm that selects evaluation points based on the lower confidence bound of the prediction site. 
-
-Figure \ref{fig::BO} shows three iterative steps of the Bayesian optimization technique. At each step the next sampling point is chosen based on the maximum of the acquisition function. This information is then used to update the prior, as one can clearly see as the uncertainty changes. 
+The values of the hyperparameters are usually defined by starting with random guesses of a few random samples and maximizing the log likelihood of the evidence given $\theta$ \cite{rasmussen2006gaussian, santner2003design}. The kernel choice is typically done using hierarchical Bayesian model selection \cite{mackay1992practical} or cross-validation. 
 
 \begin{figure}[h]
     \centering
@@ -44,12 +39,12 @@ Figure \ref{fig::BO} shows three iterative steps of the Bayesian optimization te
     \label{fig::BO}
 \end{figure}
 
-\section{Bayesian Optimization Application}
-- paar algemene toepassingen
-- kijken naar onderzoeken die zich richten op meerdere inputs
+The next sample location $x_{t+1}$ is determined using an acquisition function. These functions are defined in a way that they yield high values for potentially high (or low, depending on the extreme of interest) values of the objective functions. This can be due to a high predicted value, large uncertainty, or a combination of both. Maximizing the acquisition function results in the next sample location. A proper trade-off between exploration and exploitation within this process is essential to BO, as it allows the method to efficiently scan the search space for potential extrema. 
+Močkus et al. \cite{Mockus1978} proposed to maximize the expected improvement with respect to the best value known thus far. Lizotte \cite{Lizotte2008} introduces an extra parameter to improve the trade-off. Cox and John \cite{CoxJohn1997} present an algorithm that selects evaluation points based on the lower confidence bound of the prediction site. 
 
-\todo[inline]{waar het wordt gebruikt voor mijn toepassing en wat voor kernel en hyperaparemeters ze daar hadden gebruikt}
+Figure \ref{fig::BO} shows three iterative steps of the BO technique. On the x-axis the optimized feature is plotted and on the y-axis its performance. The black dotted line is the objective function and the black line is the posterior mean. Around the posterior mean, the light purple region shows the upper and lower bounds of the posterior uncertainty. At each step the next sampling point is chosen based on the maximum of the acquisition function. This information is then used to update the posterior, as one can clearly see as its uncertainty changes.
 
 
-\todo[inline]{dit verhaal over de mogelijke inputs en hoe dat wordt gedaan bij bayesian optimization}
-Several options might be suitable to achieve both functions. A distinction can be made between passive and active control valves. The simplest passive valve would be a flow control valve that does not change its opening. The opening is found through an optimization. Another passive control would be to make use of the already present valve and optimize its temperature set point. Danfoss also supplies Pressure Indepenent Control Valves (PICV), which can guarantee a constant flow rate regardless of pressure fluctuations in the system while still maintaining the same pressure loss over the valve. Active control can also take place with the flow control valve and the PICV where the position of the valve can be remotely controlled. Creating the possibility of applying real time control.  
+\section{Bayesian Optimization In Literature}
+The literature on Bayesian Optimization used in the context of district heating networks is scarce. The few articles applying the technique use it to find the hyperparameters for an artificial neural network (ANN). Li et al. \cite{LIbayesian} use it to optimize their LSTM for short-term heating load forecasting and Abokersh et al. \cite{ABOKERSH2020403} develops an ANN model based on BO to find an alternative for the computationally expensive heuristic optimization models used for solar district heating systems. The master's thesis from de Koning \cite{deKoning2020} uses BO to determine the hyperparameters of a LSTM model that accurately simulates large district heating networks which generally tend to experience high computational costs. The developed LSTM was not able to achieve a lower cost. Aslan et al. \cite{Aslan06062025} use BO to improve the hyperparameters of boiler efficiency degradation models present in district heating and cooling substations.   
+
