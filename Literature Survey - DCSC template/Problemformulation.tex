@@ -109,7 +109,7 @@ This research employs a Bayesian Optimization approach. One of the main reasons 
 This section outlines the research approach, discussing the use of simulation software, detailing the step-by-step development of the model, and the implementation of the optimization policy.
 
 \subsection{Simulation software}\label{sec::SimulationModel}
-An overview of possibly suitable simulation tools was presented in Table \ref{tab::simsoft}. The paid license tools IDA ICE and TRNSYS could have been of high interest due to their dynamic modeling capability. However, it was decided to proceed with a non-commercial program due to the high cost and the drawback that these programs are not used at Eneco, making implementation more difficult. IDA ICE offers a free educational license, but it will no longer be valid once this thesis is completed. The second argument also holds for the programs EnergyPLAN and EnergyPlus. Besides the fact that EnergyPLAN uses an hourly timestep, and EnergyPlus focuses on building thermal behavior without detailed network modeling. The most serious option of the non-Python tools was OpenModelica, which is an open-source software tool that supports the Modelica language \cite{Modelica}. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica.
+An overview of possibly suitable simulation tools was presented in Table \ref{tab::simsoft}. The paid license tools IDA ICE and TRNSYS could have been of high interest due to their dynamic modeling capability. However, it was decided to proceed with a non-commercial program due to the high cost and the drawback that these programs are not used at Eneco, making implementation more difficult. IDA ICE offers a free educational license, but it will no longer be valid once this thesis is completed. The second argument also holds for the programs EnergyPLAN and EnergyPlus. Besides the fact that EnergyPLAN uses an hourly timestep, and EnergyPlus focuses on building thermal behavior without detailed network modeling. The most serious option of the non-Python tools was OpenModelica, which is an open-source software tool that supports the Modelica language. Although the Modelica language is commonly used for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging more difficult. Since using it would also require Eneco employees to learn a new modeling language, we decided not to proceed with OpenModelica.
 
 Therefore, the focus was pointed towards Python-based open-source software. PyDHN and GridPenguin support dynamic simulation of the thermodynamics. Nevertheless, PyDHN is still a beta version, and GridPenguin's fixed timestep is 1 hour, making both tools unsuitable. Pandapipes offers a quasi-static approach without a fixed minimum timestep. While it is an interesting option, the time required to understand its coding structure and the potential time debugging would take was considered greater than developing our model from scratch
 
@@ -140,32 +140,33 @@ The construction of the model will be done in a stepwise manner, gradually incre
 \end{enumerate}
 
 \subsection{Control Policy}
-Once the validated model is obtained, it will be used to generate data to implement Bayesian Optimization. The appropriate acquisition function and covariance kernel must be identified to ensure the accurately representation of the DCS model. BO will be carried out following different control strategies for the bypass flow. The different options for the flow control in order to lower the return temperature are listed down below.
+The simulation model of the DCS will be used to generate data to implement Bayesian Optimization. The appropriate acquisition function and covariance kernel must be identified to ensure the accurate representation of the DCS model. BO will be carried out following different bypass valve configurations. The different options are listed below.
 
 \begin{itemize} 
     \item A constant opening of the bypass pipe, with an optimized surface area of the opening. 
-    \item The use of a pressure independent flow control valve, set to an optimized constant flow rate. 
+    \item The use of a pressure-independent flow control valve, set to an optimized constant flow rate. 
     \item The application of a thermostatic bypass valve, where the temperature setpoint is optimized. 
-    \item A pressure independent flow control valve, which can be actuated in real-time. 
+    \item The use of a pressure-independent flow control valve, which can be actuated in real-time to an optimized flow rate.
 \end{itemize}
 
-These options will be combined with the supply temperature and their performance will be evaluated under different model parameters. 
+These options will be combined with the supply temperature control and their performance will be evaluated under different model parameters. 
 
 % Several options might be suitable to achieve both functions. A distinction can be made between passive and active control valves. The simplest passive valve would be a flow control valve that does not change its opening. The opening is found through an optimization. Another passive control would be to make use of the already present valve and optimize its temperature set point. Danfoss also supplies Pressure Indepenent Control Valves (PICV), which can guarantee a constant flow rate regardless of pressure fluctuations in the system while still maintaining the same pressure loss over the valve. Active control can also take place with the flow control valve and the PICV where the position of the valve can be remotely controlled. Creating the possibility of applying real time control.  
 
+\newpage
 \subsection{Research Questions}
-This thesis project focuses on the high return temperature from the decentralized solutions during periods of low heat demand. The high temperature leads to efficiency decrease and sometimes even malfunction of the heat pump in between the heat distribution system and the ATES. A dynamical model of the thermodynamics and hydraulics within the heat distribution network will be developed to obtain insights in the inner workings of the system. The same model will also be used to perform an optimization actuating the supply temperature and the bypass valve in order to lower the return temperature. Due to the potential high computational intensity of the model it was decided to apply Bayesian Optimization. The following research questions were formulated for the project.  
+This thesis project focuses on the high return temperature from the decentralized solutions during periods of low heat demand. The high temperature leads to efficiency decrease and sometimes even a malfunction of the heat pump located between the heat distribution system and the ATES. A dynamical model of the thermodynamics and hydraulics within the district heating network will be developed to obtain insights in the inner workings of the system. The same model will also be used to perform an optimization actuating the supply temperature and the bypass valve in order to lower the return temperature. Due to the potential high computational intensity of the model, it was decided to apply Bayesian Optimization. The following research questions were formulated for the project.  
 
 \begin{itemize}
   \renewcommand\labelitemi{} % removes the bullet
-    \item \textbf{Q1: How accurately can mathematical models of the thermal dynamics and hydraulics in small-scale heating networks predict return temperatures, using the Cooltower decentralized system as a case study?}
+    \item \textbf{Q1: How accurately can a mathematical model of the thermal dynamics and hydraulics in small-scale heating networks predict return temperatures, using the Cooltower decentralized system as a case study?}
     \item \textbf{Q2: How can the simulation model of the heating network in the Cooltower be validated?}
-    \item \textbf{Q3: How can Bayesian Optimization be applied to lower the return temperature?}
-    \item \textbf{Q4: What is the best flow control strategy of the bypass control valve in combination with the supply temperature control to lower the return temperature?}  
+    \item \textbf{Q3: How can Bayesian Optimization be applied to lower the return temperature of the decentralized solutions?}
+    \item \textbf{Q4: What is the best control strategy of the bypass control valve in combination with the supply temperature control to lower the return temperature?}  
     
 \end{itemize}
 
-\newpage
+
 
 \subsection{Timeline}
 The desired timeline for the project is shown below:
