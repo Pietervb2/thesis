@@ -59,15 +59,15 @@ class Network:
         self.pipes[pipe_id] = {
             'from': from_node,
             'to': to_node,
-            'pipe_class': pipe
+            'pipe_instance': pipe
         }
 
         # adding the pipes to the nodes
         out_node = self.nodes[from_node]
-        out_node.add_pipe(pipe_id, pipe, 'outgoing') 
+        out_node.connect_pipe_to_node(pipe_id, pipe, 'outgoing') 
 
         in_node = self.nodes[to_node]
-        in_node.add_pipe(pipe_id, pipe, 'incoming') 
+        in_node.connect_pipe_to_node(pipe_id, pipe, 'incoming') 
 
         # self._next_pipe_id += 1
     
@@ -130,8 +130,8 @@ class Network:
                            dt : float, 
                            num_steps : int, 
                            v_init_array : np.ndarray[Union[float]], 
-                           T_init_array : np.ndarray[Union[float]],
-                           T_ambt : float):
+                           T_in : np.ndarray[Union[float]],
+                           T_init : float):
         """
         Initialize the temperature in the network
 
@@ -139,12 +139,10 @@ class Network:
         """
 
         for node in self.nodes.values():
-            node.initialize_node(num_steps, T_init_array[0])
+            node.initialize_node(num_steps, T_in[0])
 
         for pipe in self.pipes.values():
-            T_init = T_ambt # NOTE: check this.
-            # T_init = T_init_array[0]
-            pipe['pipe_class'].bnode_init(dt, num_steps, v_init_array, T_init_array, T_init)
+            pipe['pipe_instance'].bnode_init(dt, num_steps, v_init_array, T_in, T_init)
 
     def set_T_and_flow_network(self, T_ambt : float, v_inflow: float, T_in: float, N : int):
             
@@ -152,7 +150,7 @@ class Network:
             # Done by hand as no inflow pipe connected to node
             self.nodes['Node 1'].T[N] = T_in
 
-            pipe1 = self.pipes['Pipe 1']['pipe_class']
+            pipe1 = self.pipes['Pipe 1']['pipe_instance']
 
             pipe1.set_T_in(T_in, N)
             pipe1.bnode_method(T_ambt, N)
@@ -197,7 +195,7 @@ class Network:
         self.pipes_finished = []
 
         # Initialize the first pipe as it does not inheret the values from the previous pipes
-        pipe1 = self.pipes["Pipe 1"]['pipe_class']
+        pipe1 = self.pipes["Pipe 1"]['pipe_instance']
         pipe1.set_T_in(T_in, v_inflow, N)
 
         self.pipes_finished.append("Pipe 1")

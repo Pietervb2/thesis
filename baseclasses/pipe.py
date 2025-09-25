@@ -41,7 +41,10 @@ class Pipe:
 
         self.rho_pipe_mat = rho_pipe_mat #  [kg/m3]
         self.cp_pipe_mat = cp_pipe_mat # [J/kg K] specific heat capacity of steel
-        self.Cp_pipe_mat = np.pi * (self.radius_outer ** 2 - self.radius_inner ** 2) * self.rho_pipe_mat * self.cp_pipe_mat * self.L # [J/K] total heat capacity pipe
+
+        self.inner_cs = np.pi * self.radius_inner ** 2 # inner cross section area
+        self.outer_cs = np.pi * self.radius_outer ** 2 # outer cross section area
+        self.Cp_pipe_mat = (self.outer_cs - self.inner_cs) * self.rho_pipe_mat * self.cp_pipe_mat * self.L # [J/K] total heat capacity pipe
 
         self.rho_insu = rho_insu
         self.cp_insu = cp_insu 
@@ -49,8 +52,7 @@ class Pipe:
 
         self.Cp_whole_pipe = self.Cp_pipe_mat + self.Cp_insu
         # self.Cp_whole_pipe = self.Cp_pipe_mat
-        self.inner_cs = np.pi * self.radius_inner ** 2 # inner cross section area
-        self.outer_cs = np.pi * self.radius_outer ** 2 # outer cross section area
+
 
 
     def bnode_init(self, 
@@ -85,36 +87,35 @@ class Pipe:
         # Initialize velocity and temperature of water 
         self.v_history = np.ones(self.hist_len) * v_flow_array[0]
         self.T_history = np.ones(self.hist_len) * T_init
-        # self.T_history = np.ones(self.hist_len) * 20 #### HARD CODED NEED TO CHANGE debug
 
-        # Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
+        #debug Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
         self.m_flow_extended = np.concatenate([self.v_history, v_flow_array]) * self.inner_cs * self.rho_water
         self.T_in_extended = np.concatenate([self.T_history, T_inlet_array])
 
-        # initialize temperature arrays
+        # initialize temperature arrays  #debug, verander later naar één array
         self.T_lossless = np.ones(self.num_steps) # water temperature at the pipe output without heat loss or capacity of the pipe # debug
         self.T_cap = np.ones(self.num_steps) # water temperature at the pipe output with heat loss  # debug
         self.T = np.ones(self.num_steps)  # real water temperature at the pipe output
 
-        # Initialize flow array without history
+        # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.m_flow = np.ones(self.num_steps)
-
         self.T_pipe = np.ones(self.num_steps) * T_init  # temperature of the pipe NOTE: maybe use a different initialization, but for now it is good. It is longer than it should be but it works better with actual_N
 
         self.t_stay_array = np.ones(self.num_steps) # debug 
 
     def bnode_method(self,
                      T_ambt : float,
-                     N : int):
+                     N : int,
+                     no_cap = False):
         """
         Implementation of b-node method for temperature dynamics in pipes
         based on Benonysson (1991)
         
         Args:
-        v: array of flow velocities at each time step k (including history)
-        T_k: array of temperatures at inflow end at each time step k (including history)
-        N: current time step number
         T_ambt: ambient temperature [C]
+        N: current time step number
+        no_cap : if True, ignore the heat capacity of the pipe (for testing purposes)
+
         
         Returns:
         T_N: Temperature of water flowing from the pipe at time step N
@@ -173,10 +174,11 @@ class Pipe:
 
         self.t_stay_array[N] = t_stay
 
-        # print(f't_stay {t_stay}') #debug 
-
-        # self.T[N] = self.T_ambt + (self.T_cap[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
-        self.T[N] = self.T_ambt + (self.T_lossless[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+        if no_cap:
+            self.T[N] = self.T_ambt + (self.T_lossless[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+        else:
+            self.T[N] = self.T_ambt + (self.T_cap[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+        
 
         # print(f' temperature {self.T[N]}, {self.pipe_id}') # debug
        

@@ -32,7 +32,7 @@ class Node:
         self.T[0] = T_init
 
 
-    def add_pipe(self, pipe_id, pipe, direction):
+    def connect_pipe_to_node(self, pipe_id, pipe, direction):
         """
         Function that adds an pipe to the node.
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
 
     node1 = Node(1,1,1, 'Node 1')
     pipe1 = Pipe(10, 0.1, 0.08, 100, 'Pipe 1')
-    node1.add_pipe('pipe1', pipe1, 'outgoing')
+    node1.connect_pipe_to_node('pipe1', pipe1, 'outgoing')
     
     node1.set_m_flow(0)
     node1.set_T(0)
