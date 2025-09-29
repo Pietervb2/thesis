@@ -13,7 +13,7 @@ from network import Network
 
 class Simulation:
 
-    def __init__(self, dt, total_time, net_id, temp_type, flow_type, T_ambt, no_cap = False):
+    def __init__(self, dt, total_time, net_id, T_ambt, temp_type = None, flow_type = None, file = None, no_cap = False):
 
         self.dt = dt
         self.total_time = total_time
@@ -27,17 +27,16 @@ class Simulation:
             total_time_str = str(total_time - 1) 
 
         # Create simulation-specific subfolder
-
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.folder = os.path.join(base_dir,
-                                   'figures',
-                                   'simulation', 
-                                   'network=' + net_id + "_" +
-                                   'dt=' + str(dt) + '_' + 
-                                   'total_time=' + total_time_str + "_" +
-                                    'Tin=' + temp_type + "_" +
-                                    'mflow=' + flow_type + '_' +
-                                    'Tambt=' + str(T_ambt))
+        if file:
+            sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
+        else:
+            sim_name = (
+                f"network={net_id}_dt={dt}_total_time={total_time_str}_"
+                f"Tin={temp_type}_mflow={flow_type}_Tambt={T_ambt}"
+            )
+
+        self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
                    
         if no_cap:
             self.folder = self.folder + "_no_cap" 
@@ -45,49 +44,11 @@ class Simulation:
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
 
-  
-    def simulate_pipe_temperature(self,
-                                pipe: Pipe,
-                                T_ambt : float,
-                                T_in : np.ndarray[Union[float]],
-                                v_flow : np.ndarray[Union[float]],
-                                plot_network = False,
-                                plot_nodes_T = False,
-                                plot_pipes_T = False,
-                                plot_pipes_m_flow = False,
-                                plot_nodes_dT = False):
-        """
-        Simulate temperature dynamics for a pipe section
-                
-        Args:
-        T_in: array of inlet temperatures
-        v_flow: array of flow velocities
-        num_steps: number of simulation steps
-        
-        """
-
-        # Initialize history
-        pipe.bnode_init(self.dt, self.num_steps, v_flow, T_in, T_ambt) # NOTE: maybe use the minimum velocity as initial velocity
-               
-        # Run simulation with the extended arrays
-        for N in range(self.num_steps):
-            pipe.bnode_method(T_ambt, N)           
-      
-
-        # Plot outcome and save figure
-        self.plot_network(net, plot = plot_network)
-        self.plot_node_temperature_network(net, T_in, plot = plot_nodes_T)
-        self.plot_pipe_temperature_network(net, T_in, plot = plot_pipes_T)
-        self.plot_pipe_m_flow_network(net, v_flow, plot = plot_pipes_m_flow)
-        self.plot_node_difference_temperature_network(net, plot = plot_nodes_dT)
-        self.save_data(net, T_in, v_flow) 
-
-        plt.show()  
-
     def simulate_network(self, 
                          network : Network, 
                          T_in : np.ndarray[Union[float]],
                          v_inflow : np.ndarray[Union[float]],
+                         T_init : float,
                          T_ambt: float,
                          plot_network = False,
                          plot_nodes_T = False,
@@ -100,15 +61,19 @@ class Simulation:
         Args:
         network: the network to be simulated
         T_in: array of inlet temperatures at the first node
-        v_inflow: array of flow velocities at the first node    
+        v_inflow: array of flow velocities at the first node   
+        T_init: initial temperature in the network 
         T_ambt: ambient temperature
         """
 
-        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_ambt)
+        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init)
 
         for N in range(self.num_steps):
-            print(f'N = {N}')
+            if N == 70:
+                pass
             network.set_T_and_flow_network(self.T_ambt, v_inflow[N], T_in[N], N)
+        
+        print('Simulation finished')
 
         # Plot outcome and save figure
         self.plot_network(network, plot = plot_network)
@@ -382,51 +347,5 @@ class Simulation:
         df_pipes.to_csv(os.path.join(self.folder, 'pipe_data.csv'), index=False)
         
 
-
-# Example test case
 if __name__ == "__main__":
-
-    # Pipe parameters
-    pipe_radius_outer = 0.1 # m DUMMY
-    pipe_radius_inner = 0.08 # m DUMMY
-    K = 100 # heat transmission coefficient DUMMY zie ik staan in book van Max pagina 77
-    pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
-      
-    # Create network
-    net = Network('test_id')
-    net.add_node("Node 1", 0.0, 0.0, 0.0)
-    net.add_node("Node 2", 1.0, 2.0, 30.0)
-    net.add_pipe("Pipe 1", "Node 1", "Node 2", pipe_data)
-   
-    # Ambient temperature
-    T_ambt = 15 # [C]
-
-    # Time parameters
-    dt = 1  # time step
-    total_time = 300 # sec
-
-    # Create simulation object
-    sim = Simulation(dt, total_time)
-
-    # Inlet temperature
-    T_in = 80 + 5 * np.sin(np.linspace(0, 2*np.pi, sim.num_steps))   # Oscillating inlet temperature
-    # T_in = np.ones(sim.num_steps) * 80                          # Constant
-    # T_in = 80 + 1* square(2 * np.pi * sim.time / 20)                 # Square wave with a period of 20 steps
-    
-    # Flow velocity
-    v_flow = 2+0.8*np.cos(np.linspace(0, 2*np.pi, sim.num_steps)) # Oscillating flow velocity
-    # v_flow = np.ones(sim.num_steps) * 2                           # Constant
-    # v_flow = 1.5 + 0.5 * square(2 * np.pi * sim.time / 50)        # Square wave flow velocity, 50 is the period
-
-    pipe = (net.pipes['Pipe 1'])['pipe_instance']
-    sim.simulate_pipe_temperature(pipe, T_ambt, T_in, v_flow)
-     
-    # Plot results
-    sim.plot_results_single_pipe_simulation(T_in, pipe, v_flow)
-
-    # net.nodes['Node 2'].set_T() # For now it points to a whole array not to one single timestep. 
-    # print(net.nodes['Node 2'].get_T())
-    
-    # Start interactive session
-    # import code
-    # code.interact(local=locals())
+    pass 

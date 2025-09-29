@@ -86,7 +86,7 @@ class Node:
 
         For now divide the mass flow based on the diameter of the pipes. 
 
-        # TODO: put in a ratio for the mass flow, to decide how it will be divided. 
+        # TODO: put in a ratio for the mass flow, to decide how it will be divided. If pipes have different diameters
         """         
 
         sum_m_flow = 0
@@ -97,7 +97,13 @@ class Node:
         
         try:    
             # Set the node mass outflow and temperature per pipe
+
+            if len(self.pipes_out) == 0:
+                return
+            
             m_pipe_flow = sum_m_flow / len(self.pipes_out)
+
+            
             for pipe_id, pipe in self.pipes_out.items():
                 pipe.set_m_flow_m(m_pipe_flow, N)
 

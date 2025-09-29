@@ -82,7 +82,7 @@ class Test:
 
         T_in, v_flow = Test.generate_input(temp_type, flow_type, sim.num_steps, sim.time)
 
-        sim = Simulation(dt, total_time, net.net_id, temp_type, flow_type, T_ambt)
+        sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type)
         sim.simulate_network(net, T_in, v_flow, T_ambt, 
                                 plot_network = plot_network, 
                                 plot_nodes_T = plot_nodes_T, 
@@ -131,21 +131,7 @@ class Test:
         net.add_pipe('Pipe 11','Node 9','Node 10',pipe_data)
 
         sim = Simulation(dt, total_time, net.net_id, temp_type, flow_type, T_ambt)
-
-        if temp_type == "constant":
-            T_in = np.ones(sim.num_steps) * 80                                 # Constant
-        elif temp_type == "oscillation":
-            T_in = 80 + 5 * np.sin(np.linspace(0, 2*np.pi, sim.num_steps))   # Oscillating inlet temperature
-        elif temp_type == "square":
-            T_in = 80 + 1* square(2 * np.pi * sim.time / 20)                 # Square wave with a period of 20 steps
-        
-        if flow_type == "constant":
-            v_flow = np.ones(sim.num_steps) * 2                           # Constant
-        elif flow_type == "oscillation":
-            v_flow = 2+0.8*np.cos(np.linspace(0, 2*np.pi, sim.num_steps)) # Oscillating flow velocity
-        elif flow_type == "square":
-            v_flow = 1.5 + 0.5 * square(2 * np.pi * sim.time / 50)        # Square wave flow velocity, 50 is the period
-
+        T_in, v_flow = Test.generate_input(temp_type, flow_type, total_time, dt)
         sim.simulate_network(net, T_in, v_flow, T_ambt, 
                                 plot_network = plot_network, 
                                 plot_nodes_T = plot_nodes_T, 
@@ -254,43 +240,13 @@ class Test:
         plt.grid(True)
         plt.show()
 
-    def test_one_pipe(number_of_nodes,
-                    temp_type,
-                    flow_type,
-                    dt,
-                    total_time,
-                    total_length,
-                    pipe_data_set,
-                    plot_nodes_T = False, 
-                    plot_pipes_T = False, 
-                    plot_pipes_m_flow = False, 
-                    plot_network = False,
-                    plot_nodes_dT = False,
-                    no_cap = False):
-        
-        pipe_data, total_length, T_ambt = Test.read_pipe_data(pipe_data_set)
-        pipe_length = total_length / (number_of_nodes -1)
-
-        net = Network("One_pipe_#nodes_" + str(number_of_nodes) + "_length=" + str(total_length))
-
-        for node in range(1, number_of_nodes + 1):
-            net.add_node('Node ' + str(node), 0, (node - 1)*pipe_length, 0)
-        
-        for node in range(1, number_of_nodes):
-            net.add_pipe('Pipe ' + str(node), 'Node ' + str(node), 'Node ' + str(node + 1), pipe_data) 
-
-        sim = Simulation(dt, total_time, net.net_id, temp_type, flow_type, T_ambt, no_cap)
-
-        T_in, v_flow = Test.generate_input(temp_type, flow_type, sim.num_steps, sim.time)
-
-        sim.simulate_network(net, T_in, v_flow, T_ambt, 
-                                plot_network = plot_network, 
-                                plot_nodes_T = plot_nodes_T, 
-                                plot_pipes_T = plot_pipes_T, 
-                                plot_pipes_m_flow = plot_pipes_m_flow, 
-                                plot_nodes_dT = plot_nodes_dT)
-
-    def test_real_input_data(pipe_data_set,
+    def simulate_network(network,
+                        T_ambt,
+                        dt,
+                        total_time = None,
+                        file = None, 
+                        temp_type = None,
+                        flow_type = None,
                         plot_nodes_T = False, 
                         plot_pipes_T = False, 
                         plot_pipes_m_flow = False, 
@@ -298,50 +254,179 @@ class Test:
                         plot_nodes_dT = False,
                         no_cap = False):
         
-        pipe_data, total_length, T_ambt = Test.read_pipe_data(pipe_data_set)
+
+        # In case of real data
+        if file != None:
+            
+            # Load data
+            basedir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+            data_csv = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', 'experiment', file + '_interpolated.csv'))
+            T_in = data_csv['InletWaterTemp'].values
+            m_flow = data_csv['MassFlowRate'].values
+            T_init = data_csv['OutletWaterTemp'].values[0] # initial temperature in the network
+
+
+            total_time = len(T_in)
+            
+            # Step through data to create smaller vectors at dt intervals
+            T_in = T_in[::dt]
+            m_flow = m_flow[::dt]
+
+            pipe1 = network.pipes['Pipe 1']['pipe_instance']
+            v_flow = m_flow / pipe1.rho_water / pipe1.inner_cs       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
+            sim = Simulation(dt, total_time, network.net_id, T_ambt, file = file, no_cap = no_cap)      
+
+        else:
+            # In case of synthetic data
+            T_in, v_flow = Test.generate_input(temp_type, flow_type, total_time, dt)
+            sim = Simulation(dt, total_time, network.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type, no_cap = no_cap)
+            T_init = T_ambt      
+
+        sim.simulate_network(network, T_in, v_flow, T_init, T_ambt, 
+                                plot_network = plot_network, 
+                                plot_nodes_T = plot_nodes_T, 
+                                plot_pipes_T = plot_pipes_T, 
+                                plot_pipes_m_flow = plot_pipes_m_flow, 
+                                plot_nodes_dT = plot_nodes_dT)
+
+    def compare_simulations(network,
+                            T_ambt,
+                            dt,
+                            total_time = None,
+                            file = None,
+                            temp_type = None,
+                            flow_type = None,
+                            no_cap = False):
+     
+        """
+        #TODO: aanvullen
+        # total_time: only necessary when non experimental values. 
+        """
+
+        base_dir =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        data_dict = {}
+        
+        # Perform the simulation
+        Test.simulate_network(network,T_ambt, dt, total_time, file, temp_type, flow_type, no_cap = no_cap)
+
+        if file:
+
+            # To set correct folder
+            exp_csv = pd.read_csv(os.path.join(base_dir, 'data', 'pipe_validation', 'experiment', file + '_interpolated.csv'))
+            total_time = len(exp_csv['MassFlowRate']) - 1 #because file starts at 0
+            temp_type = flow_type = file
+
+            T_out_exp = exp_csv['OutletWaterTemp'].values
+            m_flow_exp = exp_csv['MassFlowRate'].values
+            
+            data_dict['Exp temp'] = T_out_exp[::dt]
+
+            sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
+            mo_name = f"{file}_dt={dt}_Tambt={T_ambt}_mo_clean.csv"
+            
+        
+        else:
+            sim_name = (f"network={network.net_id}_dt={dt}_total_time={total_time}_"
+                f"Tin={temp_type}_mflow={flow_type}_Tambt={T_ambt}")
+            
+            mo_name = (f"{total_length}m_dt={dt}_Tin={temp_type}_mflow={flow_type}_"
+                    f"Tambt={T_ambt}_mo_clean.csv")
+
+        if no_cap:
+            sim_name += "_no_cap" 
+            print("Rembemer: heat capacity in modelica still activated!")
+        
+        # Path names
+        sim_folder = os.path.join(base_dir,'figures','simulation',sim_name)                               
+        sim_file = os.path.join(sim_folder, 'simulation_data.csv')
+        mo_file = os.path.join(base_dir, "data", "pipe_validation", "modelica", mo_name)
+
+              
+        # Simulation and modelica data
+        sim_data = pd.read_csv(sim_file)
+        sim_temp = sim_data[f"T_Node {len(network.nodes)}"]
+
+        mo_data = pd.read_csv(mo_file, delimiter=",")
+
+        # Experimental data is all saved at 1 sec, when synthetic data is used, it is saved at dt sec
+        if file:
+            mo_temp = mo_data['T_sensor2.T'][::dt]
+            mo_Tin = mo_data['T_sensor1.T'][::dt]
+            mo_time = mo_data['time'][::dt]          
+
+        else:            
+        # The original modelica data is saved in a fishy manner, where you have a lot of duplicates and not always at the correct dt.
+        # Therefore to still make the modelica values appear at correct time, I use the modelica time and subtract the last value.
+            mo_temp = mo_data['T_sensor2.T'][:-1]
+            mo_Tin = mo_data['T_sensor1.T'][:-1]
+            mo_time = mo_data['time'][:-1]
+        
+        plots_folder = os.path.join(
+                            base_dir,
+                            "figures",
+                            "validation",
+                            "exp_simulation_modelica" if file else "simulation_modelica",
+                            sim_name,
+                        )
+        
+        if not os.path.exists(plots_folder):
+            os.makedirs(plots_folder)
+
+        plt.figure()
+        if file:
+            plt.plot(T_out_exp, label = "Experimental data")
+            plt.title(f"Temperature comparison {file} ")
+        else:
+            plt.title(f"Temperature comparison Tin: {temp_type}, mass flow: {flow_type} ")
+        plt.plot(mo_time, mo_temp, label = 'Modelica')
+        plt.plot(sim_data['time'], sim_temp, label = 'Simulation')
+        plt.plot(sim_data['time'], sim_data['T_Node 1'].values, label = 'Simulation inlet temp', linestyle='--')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Temperature (°C)')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(plots_folder, 'temperature_comparison.png'))
+        plt.close()
+        
+        plt.figure()
+        plt.title("Input mass flow rate")
+        plt.plot(sim_data['time'], sim_data['m_flow Pipe 1'])
+        plt.xlabel('Time (s)')
+        plt.ylabel('Mass Flow (kg/s)')
+        plt.grid(True)
+        plt.savefig(os.path.join(plots_folder, 'inlet_mass_flow.png'))
+        plt.close()
+
+        # Save data
+        data_dict.update({
+            "Simulation temp": sim_temp.values,
+            "Modelica temp": mo_temp.values,
+            "Mass flow": sim_data["m_flow Pipe 1"].values,
+            "Input temp simulation": sim_data["T_Node 1"].values,
+            "Input temp modelica": mo_Tin.values,
+        })
+
+        pd.DataFrame(data_dict).to_csv(os.path.join(plots_folder, "comparison_data.csv"), index=False)
+
+###########################################################
+# Help functions for the tests
+###########################################################
+
+    def network_builder_one_pipe(pipe_data_set,
+                        number_of_nodes, total_length):
+        
+        pipe_data, T_ambt = Test.read_pipe_data(pipe_data_set)
         number_of_nodes = 2
         pipe_length = total_length / (number_of_nodes -1)
 
-        files = ['PipeDataULg151202', 'PipeDataULg160118_1', 'PipeDataULg151204_4', 'PipeDataULg160104_2']
-        dt = [1,1,1,30] # [s], delta time for every file 
-
         net = Network("One_pipe_#nodes_" + str(number_of_nodes) + "_length=" + str(total_length))
-
         for node in range(1, number_of_nodes + 1):
             net.add_node('Node ' + str(node), 0, (node - 1)*pipe_length, 0)
         
         for node in range(1, number_of_nodes):
             net.add_pipe('Pipe ' + str(node), 'Node ' + str(node), 'Node ' + str(node + 1), pipe_data) 
-
-        for i, file in enumerate(files):
-  
-            # For the real data
-            basedir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-            T_in = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', file + '_interpolated.csv'))['InletWaterTemp'].values
-            m_flow = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', file + '_interpolated.csv'))['MassFlowRate'].values
-
-            total_time = len(T_in)
-            
-            # Step through data to create smaller vectors at dt intervals
-            T_in = T_in[::dt[i]]
-            m_flow = m_flow[::dt[i]]
-
-            pipe1 = net.pipes['Pipe 1']['pipe_instance']
-            v_flow = m_flow / pipe1.rho_water / pipe1.inner_cs       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
-
-            sim = Simulation(dt[i], total_time, net.net_id, file, file, T_ambt, no_cap)      
-            sim.simulate_network(net, T_in, v_flow, T_ambt, 
-                                 plot_network = plot_network, 
-                                 plot_nodes_T = plot_nodes_T, 
-                                 plot_pipes_T = plot_pipes_T, 
-                                 plot_pipes_m_flow = plot_pipes_m_flow, 
-                                 plot_nodes_dT = plot_nodes_dT)
-
-########################################################### 
-# Help functions for the tests
-###########################################################
+        return net
 
     def read_pipe_data(pipe_data_set):
 
@@ -359,39 +444,54 @@ class Test:
         rho_insu = constants[pipe_data_set]['rho_insu']
         cp_insu = constants[pipe_data_set]['cp_insu']
         insu_thickness = constants[pipe_data_set]['insu_thickness']
-        total_length = constants[pipe_data_set]['Length']
         T_ambt = constants[pipe_data_set]['T_ambt']
 
         pipe_data = [radius_outer, radius_inner, K, cp_pipe_mat, rho_pipe_mat, cp_insu, rho_insu, insu_thickness]
 
-        return pipe_data, total_length, T_ambt
+        return pipe_data, T_ambt
     
-    def generate_input(temp_type, flow_type, num_steps, time):
+    def generate_input(temp_type, flow_type, total_time, dt):
+
+        num_steps = int(total_time / dt) + 1
         
         if temp_type == "constant":
             T_in = np.ones(num_steps) * 65                                 # Constant
         elif temp_type == "oscillation":
             T_in = 65 + 5 * np.sin(np.linspace(0, 8*np.pi, num_steps))   # Oscillating inlet temperature
         elif temp_type == "square":
-            T_in = 80 + 1* square(2 * np.pi * time / 20)       
+            T_in = 80 + 1* square(2 * np.pi * total_time / 20)       
 
         if flow_type == "constant":
             v_flow = np.ones(num_steps) * 2                           # Constant
         elif flow_type == "oscillation":
             v_flow = 1.5 + 0.8*np.cos(np.linspace(0, 2*np.pi, num_steps)) # Oscillating flow velocity
         elif flow_type == "square":
-            v_flow = 1.5 + 0.5 * square(2 * np.pi * time / 50)        # Square wave flow velocity, 50 is the period
+            v_flow = 1.5 + 0.5 * square(2 * np.pi * total_time / 50)        # Square wave flow velocity, 50 is the period
 
         return T_in, v_flow
     
 if __name__ == "__main__":
 
+    files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
+    dt_array = [1,1,1,30] # [s], delta time for every file
+
     number_of_nodes = 2
-    dt = 30 # [s]
+    T_ambt = 20 # [°C] Staat nu nog ook in de file van van der Heijden!
     total_time = 8000 # [s]
-    total_length = 2000 # [m]
+    total_length = 39 # [m]
 
-    # Test.test_one_pipe(number_of_nodes, 'constant', 'constant', dt, total_time, total_length, "Pipe of District Heating and Cooling Book", plot_nodes_T = True, no_cap = True)
+    network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
+    Test.compare_simulations(network_exp, T_ambt, dt_array[3], file = files[3])
+    # for k in range(len(files)):
+    #     Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k])
 
-    Test.test_real_input_data("Pipe of experiment van der Heijden", no_cap = False) # 20 T ambient
- 
+    # dt = 30 # [s]
+    # total_length = 2000
+    # network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
+
+    # Test.compare_simulations(network_synt, T_ambt, dt, total_time, temp_type = 'constant', flow_type = 'constant', no_cap = True)
+    # Test.compare_simulations(network_synt, T_ambt, dt, total_time, temp_type = 'constant', flow_type = 'constant', no_cap = False)
+    # Test.compare_simulations(network_synt, T_ambt, dt, total_time, temp_type = 'oscillation', flow_type = 'constant', no_cap = True)
+    # Test.compare_simulations(network_synt, T_ambt, dt, total_time, temp_type = 'oscillation', flow_type = 'constant', no_cap = False)
+
+    # Test.simulate_network(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'constant', flow_type = 'constant')

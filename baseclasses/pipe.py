@@ -131,8 +131,6 @@ class Pipe:
         m_flow_ex = self.m_flow_extended
         T_k = self.T_in_extended
         
-        self.T_ambt = T_ambt 
-
         # Find smallest integer n and corresponding R
         n = 0
         while True:
@@ -175,9 +173,9 @@ class Pipe:
         self.t_stay_array[N] = t_stay
 
         if no_cap:
-            self.T[N] = self.T_ambt + (self.T_lossless[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+            self.T[N] = T_ambt + (self.T_lossless[N] - T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
         else:
-            self.T[N] = self.T_ambt + (self.T_cap[N] - self.T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+            self.T[N] = T_ambt + (self.T_cap[N] - T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
         
 
         # print(f' temperature {self.T[N]}, {self.pipe_id}') # debug

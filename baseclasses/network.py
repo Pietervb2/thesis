@@ -139,7 +139,7 @@ class Network:
         """
 
         for node in self.nodes.values():
-            node.initialize_node(num_steps, T_in[0])
+            node.initialize_node(num_steps, T_init)
 
         for pipe in self.pipes.values():
             pipe['pipe_instance'].bnode_init(dt, num_steps, v_init_array, T_in, T_init)
@@ -187,7 +187,7 @@ class Network:
 
     def set_T_network(self, T_ambt : float, v_inflow: float, T_in: float, N : int):
         """
-        Function that determines the the mass flow for the whole network. 
+        Function that determines the mass flow for the whole network. 
 
         TODO: T and m flow functions are split as eventually when the implementation will become more ellaborated the determination of the mass flow will be done in a different approach to the system. 
         """
@@ -240,34 +240,7 @@ class Network:
            
 if __name__ == "__main__":
     pass 
-    # Start interactive session
-    # import code
-    # code.interact(local=locals())
-
-#     pipe_radius_outer = 0.1 # [m] DUMMY
-#     pipe_radius_inner = 0.08 # [m] DUMMY
-#     K = 1 # heat transmission coefficient DUMMY zie ik staan in book van Max pagina 77
-#     pipe_data = [pipe_radius_outer, pipe_radius_inner, K]
-
-#     net = Network()
-#     net.add_node('Node 1',0,0,0)
-#     net.add_node('Node 2',0,5,0)
-#     net.add_node('Node 3',-100,5,0)
-#     net.add_node('Node 4',-100,10,0)
-#     net.add_node('Node 5',0,10,0)
-#     net.add_node('Node 6',0,100,0)
-#     net.add_node('Node 7',50,100,0)
-
-
-#     net.add_pipe('Pipe 1','Node 1','Node 2', pipe_data)
-#     net.add_pipe('Pipe 2','Node 2','Node 3', pipe_data)	
-#     net.add_pipe('Pipe 3','Node 3','Node 4', pipe_data)	
-#     net.add_pipe('Pipe 4','Node 4','Node 5', pipe_data)	
-#     net.add_pipe('Pipe 5','Node 2','Node 5', pipe_data)	
-#     net.add_pipe('Pipe 6','Node 5','Node 6', pipe_data)	
-#     net.add_pipe('Pipe 7','Node 6','Node 7', pipe_data)	
-
-#     net.plot_network()
+    
 
 
 
@@ -284,27 +257,3 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-#    # NOTE: Functions written bij copilot. Maybe useful later on. 
-
-#     # def remove_node(self, node_id):
-#     #     """Remove a node and all its connected edges."""
-#     #     if node_id in self.nodes:
-#     #         # Remove all edges connected to this node
-#     #         edges_to_remove = [
-#     #             edge_id for edge_id, edge in self.edges.items()
-#     #             if edge['from'] == node_id or edge['to'] == node_id
-#     #         ]
-#     #         for edge_id in edges_to_remove:
-#     #             del self.edges[edge_id]
-            
-#     #         # Remove the node
-#     #         del self.nodes[node_id]
-
-#     # def remove_edge(self, edge_id):
-#     #     """Remove an edge from the network."""
-#     #     if edge_id in self.edges:
-#     #         del self.edges[edge_id]

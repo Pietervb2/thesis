@@ -59,8 +59,6 @@
         "comment_thickness": "Thickness of the insulation layer [m]",
         "insu_thickness": 0.013,
         "comment_T_ambt": "Ambient temperature [°C]",
-        "T_ambt": 20,
-        "comment_length": "Length of the pipe [m]",
-        "Length": 39
+        "T_ambt": 20
     }
 }
