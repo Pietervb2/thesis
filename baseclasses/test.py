@@ -264,8 +264,8 @@ class Test:
             data_csv = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', 'experiment', file + '_interpolated.csv'))
             T_in = data_csv['InletWaterTemp'].values
             m_flow = data_csv['MassFlowRate'].values
-            T_init = data_csv['OutletWaterTemp'].values[0] # initial temperature in the network
-
+            T_init_water = data_csv['OutletWaterTemp'].values[0] # initial water temperature in the network
+            T_init_pipe = data_csv['OutletPipeTemp'].values[0] # initial pipe temperature in the network
 
             total_time = len(T_in)
             
@@ -274,16 +274,16 @@ class Test:
             m_flow = m_flow[::dt]
 
             pipe1 = network.pipes['Pipe 1']['pipe_instance']
-            v_flow = m_flow / pipe1.rho_water / pipe1.inner_cs       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
+            v_flow = np.round(m_flow / pipe1.rho_water / pipe1.inner_cs, 4)       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
             sim = Simulation(dt, total_time, network.net_id, T_ambt, file = file, no_cap = no_cap)      
 
         else:
             # In case of synthetic data
             T_in, v_flow = Test.generate_input(temp_type, flow_type, total_time, dt)
             sim = Simulation(dt, total_time, network.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type, no_cap = no_cap)
-            T_init = T_ambt      
+            T_init_water = T_init_pipe = T_ambt      
 
-        sim.simulate_network(network, T_in, v_flow, T_init, T_ambt, 
+        sim.simulate_network(network, T_in, v_flow, T_init_water, T_init_pipe, T_ambt, 
                                 plot_network = plot_network, 
                                 plot_nodes_T = plot_nodes_T, 
                                 plot_pipes_T = plot_pipes_T, 

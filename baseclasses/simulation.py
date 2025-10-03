@@ -48,7 +48,8 @@ class Simulation:
                          network : Network, 
                          T_in : np.ndarray[Union[float]],
                          v_inflow : np.ndarray[Union[float]],
-                         T_init : float,
+                         T_init_water : float,
+                         T_init_pipe : float,
                          T_ambt: float,
                          plot_network = False,
                          plot_nodes_T = False,
@@ -66,9 +67,10 @@ class Simulation:
         T_ambt: ambient temperature
         """
 
-        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init)
+        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
 
-        for N in range(self.num_steps):
+        # Substract 1 as the bnode method calculates the temperature at N+1
+        for N in range(self.num_steps-1):
             if N == 70:
                 pass
             network.set_T_and_flow_network(self.T_ambt, v_inflow[N], T_in[N], N)
