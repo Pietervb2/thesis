@@ -67,13 +67,13 @@ class Simulation:
         T_ambt: ambient temperature
         """
 
+        # T_in and v_inflow are saved in the network class
         network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
 
-        # Substract 1 as the bnode method calculates the temperature at N+1
-        for N in range(self.num_steps-1):
-            if N == 70:
-                pass
-            network.set_T_and_flow_network(self.T_ambt, v_inflow[N], T_in[N], N)
+        for N in range(1,self.num_steps):
+ 
+            network.set_T_and_flow_network(self.T_ambt, N)
+
         
         print('Simulation finished')
 

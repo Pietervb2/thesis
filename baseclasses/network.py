@@ -139,25 +139,25 @@ class Network:
         # NOTE: for now just visit all nodes and pipes. They are all given the initial temperature of the first node. 
         """
 
-        for node in self.nodes.values():
-            node.initialize_node(num_steps, T_init_pipe)
+        for i, node in enumerate(self.nodes.values()):
+            
+            if i == 0:
+                self.nodes['Node 1'].T = T_in
+            else:
+                node.initialize_node(num_steps, T_init_water)
 
         for pipe in self.pipes.values():
             pipe['pipe_instance'].bnode_init(dt, num_steps, v_init_array, T_in, T_init_water, T_init_pipe)
 
-    def set_T_and_flow_network(self, T_ambt : float, v_inflow: float, T_in: float, N : int):
+    def set_T_and_flow_network(self, T_ambt : float, N : int):
             
             self.pipes_finished = []
 
             # Done by hand as no inflow pipe connected to node
-            self.nodes['Node 1'].T[N] = T_in
-
             pipe1 = self.pipes['Pipe 1']['pipe_instance']
-            pipe1.set_T_in(T_in, N)
             pipe1.bnode_method(T_ambt, N)
             
             self.pipes_finished.append("Pipe 1")
-
             next_node_id = self.pipes["Pipe 1"]['to']
             next_node = self.nodes[next_node_id]
             next_node.set_T(N)

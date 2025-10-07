@@ -1,6 +1,7 @@
 from network import Network 
 from simulation import Simulation
 from scipy.signal import square
+from sklearn.metrics import root_mean_squared_error
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -265,7 +266,8 @@ class Test:
             T_in = data_csv['InletWaterTemp'].values
             m_flow = data_csv['MassFlowRate'].values
             T_init_water = data_csv['OutletWaterTemp'].values[0] # initial water temperature in the network
-            T_init_pipe = data_csv['OutletPipeTemp'].values[0] # initial pipe temperature in the network
+            # T_init_pipe = data_csv['OutletPipeTemp'].values[0] # initial pipe temperature in the network
+            T_init_pipe = T_init_water
 
             total_time = len(T_in)
             
@@ -274,7 +276,7 @@ class Test:
             m_flow = m_flow[::dt]
 
             pipe1 = network.pipes['Pipe 1']['pipe_instance']
-            v_flow = np.round(m_flow / pipe1.rho_water / pipe1.inner_cs, 4)       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
+            v_flow = np.round(m_flow / pipe1.rho_water / pipe1.inner_cs, 3)       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
             sim = Simulation(dt, total_time, network.net_id, T_ambt, file = file, no_cap = no_cap)      
 
         else:
@@ -376,12 +378,14 @@ class Test:
         plt.figure()
         if file:
             plt.plot(T_out_exp, label = "Experimental data")
-            plt.title(f"Temperature comparison {file} ")
+            plt.plot(mo_time, mo_temp, label = f'Modelica RMSE {round(root_mean_squared_error(T_out_exp[::dt],mo_temp),2)}')
+            plt.plot(sim_data['time'], sim_temp, label = f'Simulation RMSE {round(root_mean_squared_error(T_out_exp[::dt], sim_temp),2)}')
+            plt.title(f"Temperature comparison: Experiment {file[-1]} ")
         else:
             plt.title(f"Temperature comparison Tin: {temp_type}, mass flow: {flow_type} ")
-        plt.plot(mo_time, mo_temp, label = 'Modelica')
-        plt.plot(sim_data['time'], sim_temp, label = 'Simulation')
-        plt.plot(sim_data['time'], sim_data['T_Node 1'].values, label = 'Simulation inlet temp', linestyle='--')
+            plt.plot(mo_time, mo_temp, label = 'Modelica')
+            plt.plot(sim_data['time'], sim_temp, label = f'Simulation RMSE {round(root_mean_squared_error(mo_temp, sim_temp),2)}')
+        # plt.plot(sim_data['time'], sim_data['T_Node 1'].values, label = 'Inlet temp', linestyle='--')
         plt.xlabel('Time (s)')
         plt.ylabel('Temperature (°C)')
         plt.legend()
@@ -400,6 +404,7 @@ class Test:
 
         # Save data
         data_dict.update({
+            "Time": sim_data['time'],
             "Simulation temp": sim_temp.values,
             "Modelica temp": mo_temp.values,
             "Mass flow": sim_data["m_flow Pipe 1"].values,
@@ -407,7 +412,10 @@ class Test:
             "Input temp modelica": mo_Tin.values,
         })
 
-        pd.DataFrame(data_dict).to_csv(os.path.join(plots_folder, "comparison_data.csv"), index=False)
+        df = pd.DataFrame(data_dict)
+        cols = ["Time"] + [col for col in df.columns if col != "Time"]
+        df = df[cols]
+        df.to_csv(os.path.join(plots_folder, "comparison_data.csv"), index=False)
 
 ###########################################################
 # Help functions for the tests
@@ -416,7 +424,7 @@ class Test:
     def network_builder_one_pipe(pipe_data_set,
                         number_of_nodes, total_length):
         
-        pipe_data, T_ambt = Test.read_pipe_data(pipe_data_set)
+        pipe_data = Test.read_pipe_data(pipe_data_set)
         number_of_nodes = 2
         pipe_length = total_length / (number_of_nodes -1)
 
@@ -438,17 +446,30 @@ class Test:
 
         radius_outer = constants[pipe_data_set]['radius_outer']
         radius_inner = constants[pipe_data_set]['radius_inner'] 
-        K = constants[pipe_data_set]['K']
+        # K = constants[pipe_data_set]['K']
         rho_pipe_mat = constants[pipe_data_set]['rho_pipe_mat']
         cp_pipe_mat = constants[pipe_data_set]['cp_pipe_mat']
         rho_insu = constants[pipe_data_set]['rho_insu']
         cp_insu = constants[pipe_data_set]['cp_insu']
         insu_thickness = constants[pipe_data_set]['insu_thickness']
-        T_ambt = constants[pipe_data_set]['T_ambt']
 
-        pipe_data = [radius_outer, radius_inner, K, cp_pipe_mat, rho_pipe_mat, cp_insu, rho_insu, insu_thickness]
+        k_pipe_mat = constants[pipe_data_set]['k_pipe_mat'] #thermal conductivity pipe
+        k_insu = constants[pipe_data_set]['k_insu'] #thermal conductivity insulation
+        h_pipe_air = constants[pipe_data_set]['h_pipe_air'] # natural convection from pipe to surrounding air
 
-        return pipe_data, T_ambt
+        R = (
+                np.log(radius_outer/radius_inner)/(2*np.pi*k_pipe_mat) 
+                + np.log((radius_outer + insu_thickness)/radius_outer)/(2*np.pi*k_insu)
+                + 1/(2*np.pi*h_pipe_air)
+            )
+
+        K = 1/R # total heat transmission coefficient
+
+        K = 0.3
+
+        pipe_data = [radius_inner, radius_outer, cp_pipe_mat, rho_pipe_mat, cp_insu, rho_insu, insu_thickness, K]
+
+        return pipe_data
     
     def generate_input(temp_type, flow_type, total_time, dt):
 
@@ -476,14 +497,14 @@ if __name__ == "__main__":
     dt_array = [1,1,1,30] # [s], delta time for every file
 
     number_of_nodes = 2
-    T_ambt = 20 # [°C] Staat nu nog ook in de file van van der Heijden!
+    T_ambt = 20 # [°C] Staat nu nog ook in de file van van der Heijden! MOET NAAR 18, MAAR EERST DAARVOOR MODELICA RUNNEN
     total_time = 8000 # [s]
     total_length = 39 # [m]
 
     network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    Test.compare_simulations(network_exp, T_ambt, dt_array[3], file = files[3])
-    # for k in range(len(files)):
-    #     Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k])
+    # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
+    for k in range(len(files)):
+        Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
 
     # dt = 30 # [s]
     # total_length = 2000
@@ -495,3 +516,17 @@ if __name__ == "__main__":
     # Test.compare_simulations(network_synt, T_ambt, dt, total_time, temp_type = 'oscillation', flow_type = 'constant', no_cap = False)
 
     # Test.simulate_network(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'constant', flow_type = 'constant')
+
+
+    # pipe_data = Test.read_pipe_data('Pipe of experiment van der Heijden') 
+
+
+    # ra = pipe_data[1]
+    # rb = pipe_data[0]
+    # rc = rb + 0.013
+    # kab = 14.9
+    # kbc = 0.04
+    # h = 4
+
+    # R = np.log(rb/ra)/(2*np.pi*kab) + np.log(rc/rb)/(2*np.pi*kbc) + 
+    # print(1/R)
