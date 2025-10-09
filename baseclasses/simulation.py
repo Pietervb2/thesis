@@ -21,7 +21,7 @@ class Simulation:
         self.num_steps = len(self.time) 
         self.T_ambt = T_ambt
 
-        if flow_type == 'oscillating' or flow_type == 'square' or flow_type == 'constant':
+        if flow_type == 'oscillation' or flow_type == 'square' or flow_type == 'constant':
             total_time_str = str(total_time)
         else:
             total_time_str = str(total_time - 1) 
