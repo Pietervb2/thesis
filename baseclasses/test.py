@@ -268,9 +268,6 @@ class Test:
             T_init_water = data_csv['OutletWaterTemp'].values[0] # initial water temperature in the network
             # T_init_pipe = data_csv['OutletPipeTemp'].values[0] # initial pipe temperature in the network
             T_init_pipe = T_init_water
-
-            if pipe_temp:
-                T_pipe = data_csv['OutletPipeTemp'].values[::dt]
            
             # Step through data to create smaller vectors at dt intervals
             T_in = T_in[::dt]
@@ -312,7 +309,7 @@ class Test:
         data_dict = {}
         
         # Perform the simulation
-        Test.simulate_network(network,T_ambt, dt, total_time, file, temp_type, flow_type, no_cap = no_cap, pipe_temp = pipe_temp)
+        Test.simulate_network(network,T_ambt, dt, total_time, file, temp_type, flow_type, no_cap = no_cap)
 
         if file:
 
@@ -494,7 +491,8 @@ class Test:
     
 if __name__ == "__main__":
 
-    files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
+    files = ['ExperimentA', 'ExperimentB', 'ExperimentC']
+            #  , 'ExperimentD']
     dt_array = [1,1,1,30] # [s], delta time for every file
 
     number_of_nodes = 2
@@ -503,9 +501,9 @@ if __name__ == "__main__":
     total_length = 39 # [m]
 
     network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0], pipe_temp = True)
-    # for k in range(len(files)):
-    #     Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
+    # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
+    for k in range(len(files)):
+        Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
 
     # dt = 30 # [s]
     # total_L = 2000
