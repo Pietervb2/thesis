@@ -7,10 +7,10 @@ class Pipe:
             self, 
             pipe_id : str, 
             pipe_length : float, 
-            pipe_radius_inner : float,
-            pipe_radius_outer : float,
-            cp_pipe_mat : float,
-            rho_pipe_mat : float,
+            pipe_r_inner : float,
+            pipe_r_outer : float,
+            cp_pipe : float,
+            rho_pipe : float,
             cp_insu : float,
             rho_insu : float,
             insu_thickness : float,
@@ -21,8 +21,8 @@ class Pipe:
 
         Args: 
         pipe_length [m],
-        pipe_radius_outer [m],
-        pipe_radius_inner [m],
+        pipe_r_outer [m],
+        pipe_r_inner [m],
         K: overall heat transmission coefficient [W/m2K]
 
         #TODO: update
@@ -30,8 +30,8 @@ class Pipe:
         self.pipe_id = pipe_id 
 
         self.L = pipe_length
-        self.radius_outer = pipe_radius_outer 
-        self.radius_inner = pipe_radius_inner
+        self.r_outer = pipe_r_outer 
+        self.r_inner = pipe_r_inner
         self.K = K
         self.insu_thickness = insu_thickness
 
@@ -39,18 +39,18 @@ class Pipe:
         self.rho_water = 1e3 # [kg/m3] NOTE: maybe later make a constant file. When there are too many constants.
         self.c_water = 4.18e3 # [J/kg K] specific heat capacity
 
-        self.rho_pipe_mat = rho_pipe_mat #  [kg/m3]
-        self.cp_pipe_mat = cp_pipe_mat # [J/kg K] specific heat capacity of steel
+        self.rho_pipe = rho_pipe #  [kg/m3]
+        self.cp_pipe = cp_pipe # [J/kg K] specific heat capacity of steel
 
-        self.inner_cs = np.pi * self.radius_inner ** 2 # inner cross section area
-        self.outer_cs = np.pi * self.radius_outer ** 2 # outer cross section area
-        self.Cp_pipe_mat = (self.outer_cs - self.inner_cs) * self.rho_pipe_mat * self.cp_pipe_mat * self.L # [J/K] total heat capacity pipe
+        self.inner_cs = np.pi * self.r_inner ** 2 # inner cross section area
+        self.outer_cs = np.pi * self.r_outer ** 2 # outer cross section area
+        self.Cp_pipe = (self.outer_cs - self.inner_cs) * self.rho_pipe * self.cp_pipe * self.L # [J/K] total heat capacity pipe
 
         self.rho_insu = rho_insu
         self.cp_insu = cp_insu 
-        self.Cp_insu = np.pi * ((self.radius_outer + self.insu_thickness) ** 2 - self.radius_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
+        self.Cp_insu = np.pi * ((self.r_outer + self.insu_thickness) ** 2 - self.r_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
 
-        self.Cp_whole_pipe = self.Cp_pipe_mat + self.Cp_insu
+        self.Cp_whole_pipe = self.Cp_pipe + self.Cp_insu
 
     def bnode_init(self, 
             dt : float,

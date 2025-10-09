@@ -334,12 +334,12 @@ class Simulation:
         Network_data['#pipes'] = len(network.pipes)
 
         pipe = network.pipes['Pipe 1']['pipe_instance']
-        Network_data['pipe_radius_outer'] = pipe.radius_outer
-        Network_data['pipe_radius_inner'] = pipe.radius_inner
+        Network_data['pipe_r_outer'] = pipe.r_outer
+        Network_data['pipe_r_inner'] = pipe.r_inner
         Network_data['K'] = pipe.K
-        Network_data["rho_pipe_mat"] = pipe.rho_pipe_mat
+        Network_data["rho_pipe"] = pipe.rho_pipe
         Network_data["rho_insu"] = pipe.rho_insu 
-        Network_data["cp_pipe_mat"] = pipe.cp_pipe_mat
+        Network_data["cp_pipe"] = pipe.cp_pipe
         Network_data["cp_insu"] = pipe.cp_insu
         Network_data["insu_thickness"] = pipe.insu_thickness
 

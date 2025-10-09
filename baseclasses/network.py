@@ -186,7 +186,12 @@ class Network:
 
                 self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N)
 
-              
+    def get_total_network_length(self):
+        """
+        Returns the sum of all pipe lengths in the network.
+        Assumes each pipe instance has an attribute 'L' for length.
+        """
+        return sum(pipe_data['pipe_instance'].L for pipe_data in self.pipes.values())  
 if __name__ == "__main__":
     pass 
     
