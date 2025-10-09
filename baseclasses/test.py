@@ -270,9 +270,10 @@ class Test:
             T_init_pipe = T_init_water
            
             # Step through data to create smaller vectors at dt intervals
+            total_time = len(T_in)
             T_in = T_in[::dt]
             m_flow = m_flow[::dt]
-            total_time = len(T_in)
+            
 
             pipe1 = network.pipes['Pipe 1']['pipe_instance']
             v_flow = np.round(m_flow / pipe1.rho_water / pipe1.inner_cs, 3)       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
@@ -491,8 +492,7 @@ class Test:
     
 if __name__ == "__main__":
 
-    files = ['ExperimentA', 'ExperimentB', 'ExperimentC']
-            #  , 'ExperimentD']
+    files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
     dt_array = [1,1,1,30] # [s], delta time for every file
 
     number_of_nodes = 2
@@ -501,7 +501,7 @@ if __name__ == "__main__":
     total_length = 39 # [m]
 
     network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
+    # Test.compare_simulations(network_exp, T_ambt, dt_array[3], file = files[3])
     for k in range(len(files)):
         Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
 

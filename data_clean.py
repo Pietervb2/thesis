@@ -135,7 +135,7 @@ def clean_mo_csv(dt, T_ambt, file = None, temp_type = None, flow_type = None, le
         
 if __name__ == "__main__":
     T_ambt = 18
-    files = ['A', 'B', 'C']
+    files = ['A', 'B', 'C', 'D']
     dt_array = [1,1,1,30] # [s], delta time for every file
     for i in range(len(files)):
         temp_type = files[i]
