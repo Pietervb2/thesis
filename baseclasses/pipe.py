@@ -111,7 +111,7 @@ class Pipe:
 
         data_csv = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', 'experiment', file + '_interpolated.csv'))
         self.T_pipe = data_csv['OutletPipeTemp'].values
-        # self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
+        self.T_pipe_node = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
 
         # Save average time delay in pipe
         self.t_stay_array = np.ones(self.num_steps) 
@@ -174,9 +174,18 @@ class Pipe:
             + self.Cp_whole_pipe * prev_Tpipe
             ) / (self.Cp_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
 
-        # Update temperature pipe wall, not necessary in this branch
-        # self.T_pipe[N] = self.T_cap[N] 
 
+        # For comparison purposes
+        prev_Tpipe_node = self.T_pipe_node[N-1] if N > 0 else self.T_pipe_node[N]
+        self.T_cap_node = (
+            m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
+            + self.Cp_whole_pipe * prev_Tpipe_node
+            ) / (self.Cp_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+        # Update temperature pipe wall, not necessary in this branch
+        self.T_pipe_node[N] = self.T_cap_node 
+
+        if N == 370:
+            pass
         # Determine average delay in the pipe
         t_stay = self.average_delay_bnode(n,m,R,S,m_flow_ex,N_hist)
         self.t_stay_array[N] = t_stay

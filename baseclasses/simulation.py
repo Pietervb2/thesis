@@ -73,6 +73,7 @@ class Simulation:
         self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
         self.plot_pipe_m_flow_network(network, v_inflow, plot = plot_pipes_m_flow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
+        self.plot_pipe_temp(network)
         self.save_data(network, T_in, v_inflow) 
 
         plt.show()  
@@ -277,6 +278,23 @@ class Simulation:
 
         if not plot:
             plt.close(fig)
+
+    def plot_pipe_temp(self, network: Network):
+
+        # Get the last pipe in the network
+        last_pipe_id = list(network.pipes.keys())[-1]
+        last_pipe = network.pipes[last_pipe_id]['pipe_instance']
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.time, last_pipe.T_pipe_node, label='T_pipe node')
+        plt.plot(self.time, last_pipe.T, label='T_pipe data')
+        plt.xlabel(f'Time (s), dt = {self.dt}')
+        plt.ylabel('Temperature (°C)')
+        plt.title(f'Pipe Temperatures: {last_pipe_id}')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(self.folder + f'/last_pipe_temperatures.png')
+        plt.close()
 
     def save_data(self, network: Network, T_in, v_flow):
         """

@@ -462,6 +462,7 @@ class Test:
     
 if __name__ == "__main__":
 
+    # didn't include experiment A as it does not have the pipe data
     files = ['ExperimentB', 'ExperimentC', 'ExperimentD']
     dt_array = [1,1,30] # [s], delta time for every file
 
