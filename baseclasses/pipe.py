@@ -1,5 +1,7 @@
 import numpy as np
 from typing import Union
+import os
+import pandas as pd
 
 class Pipe:
 
@@ -58,7 +60,8 @@ class Pipe:
             v_flow_array : np.ndarray[Union[float]],
             T_inlet_array : np.ndarray[Union[float]],
             T_init_water: float,
-            T_init_pipe: float
+            T_init_pipe: float, 
+            file: str
             ):
         """
         Initialize history of velocities and temperatures to ensure valid solutions.
@@ -101,7 +104,14 @@ class Pipe:
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.m_flow = np.ones(self.num_steps)
         self.m_flow[0] = self.m_flow_extended[self.hist_len]
-        self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
+
+        # reading pipe temperature
+
+        basedir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        data_csv = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', 'experiment', file + '_interpolated.csv'))
+        self.T_pipe = data_csv['OutletPipeTemp'].values
+        # self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
 
         # Save average time delay in pipe
         self.t_stay_array = np.ones(self.num_steps) 
@@ -164,8 +174,8 @@ class Pipe:
             + self.Cp_whole_pipe * prev_Tpipe
             ) / (self.Cp_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
 
-        # Update temperature pipe wall
-        self.T_pipe[N] = self.T_cap[N] 
+        # Update temperature pipe wall, not necessary in this branch
+        # self.T_pipe[N] = self.T_cap[N] 
 
         # Determine average delay in the pipe
         t_stay = self.average_delay_bnode(n,m,R,S,m_flow_ex,N_hist)

@@ -20,21 +20,11 @@ class Simulation:
         self.time = np.arange(0, total_time, dt) # time array
         self.num_steps = len(self.time) 
         self.T_ambt = T_ambt
-
-        if flow_type == 'oscillating' or flow_type == 'square' or flow_type == 'constant':
-            total_time_str = str(total_time)
-        else:
-            total_time_str = str(total_time - 1) 
+        self.file = file
 
         # Create simulation-specific subfolder
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        if file:
-            sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
-        else:
-            sim_name = (
-                f"network={net_id}_dt={dt}_total_time={total_time_str}_"
-                f"Tin={temp_type}_mflow={flow_type}_Tambt={T_ambt}"
-            )
+        sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
 
         self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
                    
@@ -68,7 +58,7 @@ class Simulation:
         """
 
         # T_in and v_inflow are saved in the network class
-        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
+        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe, self.file)
 
         for N in range(1,self.num_steps):
  
