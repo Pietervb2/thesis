@@ -497,25 +497,25 @@ class Test:
     
 if __name__ == "__main__":
 
-    # files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
-    # dt_array = [1,1,1,30] # [s], delta time for every file
+    files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
+    dt_array = [1,1,1,30] # [s], delta time for every file
 
     number_of_nodes = 2
-    T_ambt = 20 # [°C] Staat nu nog ook in de file van van der Heijden! MOET NAAR 18, MAAR EERST DAARVOOR MODELICA RUNNEN
-    # total_time = 8000 # [s]
-    # total_length = 39 # [m]
+    T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! MOET NAAR 18, MAAR EERST DAARVOOR MODELICA RUNNEN
+    total_time = 8000 # [s]
+    total_length = 39 # [m]
 
-    # network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    # # Test.compare_simulations(network_exp, T_ambt, dt_array[3], file = files[3])
-    # for k in range(len(files)):
-    #     Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
+    network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
+    # Test.compare_simulations(network_exp, T_ambt, dt_array[3], file = files[3])
+    for k in range(len(files)):
+        Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
 
     dt = 30 # [s]
     total_L = 2000
     network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_L)
 
     # With oscillation T, constant Flow
-    Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
+    # Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
 
     # Constant T, oscillation Flow
     # Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'constant', flow_type = 'oscillation')
