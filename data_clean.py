@@ -110,14 +110,22 @@ def change_csv_file_layout_realdata():
             text_file.write(f"#1 \ndouble tab{total_time,number_of_colums} \n")  # Add header line
             text_file.write(content)
 
-def clean_mo_csv(length, dt, temp_type, flow_type, T_ambt):
+def clean_mo_csv(dt, T_ambt, file = None, temp_type = None, flow_type = None, length = None, no_cap = False):
     """
     Function to put the modelica data into a 1 sec timestep
     """
 
     # Read the modelica data
     val_dir =  os.path.dirname(os.path.abspath(__file__))
-    mo_file = str(length) + 'm' + '_dt=' + str(dt) + '_Tin=' + temp_type + '_mflow=' + flow_type + '_Tambt=' + str(T_ambt) + '_mo.csv'
+    if file:
+        mo_file = f'{file}_dt={dt}_Tambt={T_ambt}_mo.csv'
+    else:
+    
+        if no_cap:        
+            mo_file = str(length) + 'm' + '_dt=' + str(dt) + '_Tin=' + temp_type + '_mflow=' + flow_type + '_Tambt=' + str(T_ambt) + '_mo_no_cap.csv'
+        else:
+            mo_file = str(length) + 'm' + '_dt=' + str(dt) + '_Tin=' + temp_type + '_mflow=' + flow_type + '_Tambt=' + str(T_ambt) + '_mo.csv'
+    
     df_modelica = pd.read_csv(os.path.join(val_dir,'data', 'pipe_validation','modelica', mo_file ), delimiter = ",")
 
     # Getting rid of interval values from modelica
@@ -129,24 +137,21 @@ def clean_mo_csv(length, dt, temp_type, flow_type, T_ambt):
     output_csv = os.path.join(val_dir,'data', 'pipe_validation','modelica', clean_mo)
     df_modelica.to_csv(output_csv, sep=',', index = False)
 
-        
-if __name__ == "__main__":
-    # T_ambt = 20
-    # length_exp = 39
 
-    # # files = ['PipeDataULg151202', 'PipeDataULg160118_1', 'PipeDataULg151204_4', 'PipeDataULg160104_2']
-    # # dt_array = [1,1,1,30] # [s], delta time for every file
-    # # for i in range(len(files)):
-    # #     temp_type = files[i]
-    # #     flow_type = files[i]    
-    # #     clean_mo_csv(length_exp, dt_array[i], files[i], files[i], T_ambt)
-    
-    # # clean_mo_csv(length, 1, 'PipeDataULg151202','PipeDataULg151202',T_ambt)
+if __name__ == "__main__":
+    T_ambt = 18
+    files = ['A', 'B', 'C', 'D']
+    dt_array = [1,1,1,30] # [s], delta time for every file
+    for i in range(len(files)):
+        temp_type = files[i]
+        flow_type = files[i]    
+        clean_mo_csv(dt_array[i],T_ambt,f'Experiment{files[i]}')    
 
     # length = 2000
     # dt = 30
-    # clean_mo_csv(length, dt, 'constant','constant',T_ambt)
-    # clean_mo_csv(length, dt, 'oscillation','constant',T_ambt)
 
-    interpolate_irregular_data()
-    change_csv_file_layout_realdata()
+    # clean_mo_csv(1,18,'ExperimentA')
+    # clean_mo_csv(length, dt, 'constant','constant',T_ambt)
+    # clean_mo_csv(dt, T_ambt, length = length, temp_type = 'oscillation', flow_type = 'constant',no_cap = True)
+
+    # clean_mo_csv(1,18,'ExperimentA')•

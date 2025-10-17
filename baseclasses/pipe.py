@@ -7,22 +7,22 @@ class Pipe:
             self, 
             pipe_id : str, 
             pipe_length : float, 
-            pipe_radius_outer : float,
-            pipe_radius_inner : float,
-            K : float,
-            cp_pipe_mat : float,
-            rho_pipe_mat : float,
+            pipe_r_inner : float,
+            pipe_r_outer : float,
+            cp_pipe : float,
+            rho_pipe : float,
             cp_insu : float,
             rho_insu : float,
-            insu_thickness : float
+            insu_thickness : float,
+            K : float        
             ):
         """
         Initialize pipe.
 
         Args: 
         pipe_length [m],
-        pipe_radius_outer [m],
-        pipe_radius_inner [m],
+        pipe_r_outer [m],
+        pipe_r_inner [m],
         K: overall heat transmission coefficient [W/m2K]
 
         #TODO: update
@@ -30,8 +30,8 @@ class Pipe:
         self.pipe_id = pipe_id 
 
         self.L = pipe_length
-        self.radius_outer = pipe_radius_outer 
-        self.radius_inner = pipe_radius_inner
+        self.r_outer = pipe_r_outer 
+        self.r_inner = pipe_r_inner
         self.K = K
         self.insu_thickness = insu_thickness
 
@@ -39,28 +39,27 @@ class Pipe:
         self.rho_water = 1e3 # [kg/m3] NOTE: maybe later make a constant file. When there are too many constants.
         self.c_water = 4.18e3 # [J/kg K] specific heat capacity
 
-        self.rho_pipe_mat = rho_pipe_mat #  [kg/m3]
-        self.cp_pipe_mat = cp_pipe_mat # [J/kg K] specific heat capacity of steel
+        self.rho_pipe = rho_pipe #  [kg/m3]
+        self.cp_pipe = cp_pipe # [J/kg K] specific heat capacity of steel
 
-        self.inner_cs = np.pi * self.radius_inner ** 2 # inner cross section area
-        self.outer_cs = np.pi * self.radius_outer ** 2 # outer cross section area
-        self.Cp_pipe_mat = (self.outer_cs - self.inner_cs) * self.rho_pipe_mat * self.cp_pipe_mat * self.L # [J/K] total heat capacity pipe
+        self.inner_cs = np.pi * self.r_inner ** 2 # inner cross section area
+        self.outer_cs = np.pi * self.r_outer ** 2 # outer cross section area
+        self.C_pipe = (self.outer_cs - self.inner_cs) * self.rho_pipe * self.cp_pipe * self.L # [J/K] total heat capacity pipe
 
         self.rho_insu = rho_insu
         self.cp_insu = cp_insu 
-        self.Cp_insu = np.pi * ((self.radius_outer + self.insu_thickness) ** 2 - self.radius_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
+        self.C_insu = np.pi * ((self.r_outer + self.insu_thickness) ** 2 - self.r_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
 
-        self.Cp_whole_pipe = self.Cp_pipe_mat + self.Cp_insu
-        # self.Cp_whole_pipe = self.Cp_pipe_mat
-
-
+        self.C_whole_pipe = self.C_pipe + self.C_insu
 
     def bnode_init(self, 
             dt : float,
             num_steps : int,
             v_flow_array : np.ndarray[Union[float]],
             T_inlet_array : np.ndarray[Union[float]],
-            T_init: float):
+            T_init_water: float,
+            T_init_pipe: float
+            ):
         """
         Initialize history of velocities and temperatures to ensure valid solutions.
         
@@ -84,24 +83,28 @@ class Pipe:
         min_steps = int(np.ceil((self.L + v_flow_array[0] * self.dt) / (v_flow_array[0] * self.dt)))
         self.hist_len = min_steps + 5 # Add some margin to ensure we have enough history NOTE: based on what?
         
-        # Initialize velocity and temperature of water 
+        # Initialize history velocity and temperature of water 
         self.v_history = np.ones(self.hist_len) * v_flow_array[0]
-        self.T_history = np.ones(self.hist_len) * T_init
+        self.T_history = np.ones(self.hist_len) * T_init_water
 
-        #debug Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
-        self.m_flow_extended = np.concatenate([self.v_history, v_flow_array]) * self.inner_cs * self.rho_water
+        #NOTE Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
+        self.m_flow_extended = np.round(np.concatenate([self.v_history, v_flow_array]) * self.inner_cs * self.rho_water,3)
         self.T_in_extended = np.concatenate([self.T_history, T_inlet_array])
 
-        # initialize temperature arrays  #debug, verander later naar één array
-        self.T_lossless = np.ones(self.num_steps) # water temperature at the pipe output without heat loss or capacity of the pipe # debug
-        self.T_cap = np.ones(self.num_steps) # water temperature at the pipe output with heat loss  # debug
-        self.T = np.ones(self.num_steps)  # real water temperature at the pipe output
+        self.T_lossless = np.ones(self.num_steps) * T_init_water
+        self.T_cap = np.ones(self.num_steps) * T_init_water
+        self.T = np.ones(self.num_steps) * T_init_water
+        # T_lossless: water temperature at the pipe output without heat loss or capacity of the pipe 
+        # T_cap: water temperature at the pipe output with heat loss  
+        # T: real water temperature at the pipe output
 
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.m_flow = np.ones(self.num_steps)
-        self.T_pipe = np.ones(self.num_steps) * T_init  # temperature of the pipe NOTE: maybe use a different initialization, but for now it is good. It is longer than it should be but it works better with actual_N
+        self.m_flow[0] = self.m_flow_extended[self.hist_len]
+        self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
 
-        self.t_stay_array = np.ones(self.num_steps) # debug 
+        # Save average time delay in pipe
+        self.t_stay_array = np.ones(self.num_steps) 
 
     def bnode_method(self,
                      T_ambt : float,
@@ -121,18 +124,12 @@ class Pipe:
         T_N: Temperature of water flowing from the pipe at time step N
         """
         
-        # N_hist is for the extended arrays containing the fictive history of the pipe. The normal N is for the actual time step.
         N_hist = N + self.hist_len
-
+        m_flow_ex, T_in_ex = self.m_flow_extended, self.T_in_extended
         self.m_flow[N] = self.m_flow_extended[N_hist]
-
-
-        # TODO: needs to be done more elegantly
-        m_flow_ex = self.m_flow_extended
-        T_k = self.T_in_extended
         
         # Find smallest integer n and corresponding R
-        n = 0
+        n, R = 0, 0
         while True:
             R = sum(m_flow_ex[N_hist-n:N_hist+1] * self.dt)
             if R > self.L * self.inner_cs * self.rho_water:
@@ -148,38 +145,38 @@ class Pipe:
             m += 1
         
         # Compute Y and S
-        Y = sum(m_flow_ex[N_hist-m+1:N_hist-n] * T_k[N_hist-m+1:N_hist-n] * self.dt)
-        
-        # Calculate S based on conditions
-        if m > n:
-            S = sum(m_flow_ex[N_hist-m+1:N_hist+1] * self.dt)
-        else:  # m == n
-            S = R
-        
+        Y = sum(m_flow_ex[N_hist-m+1:N_hist-n] * T_in_ex[N_hist-m+1:N_hist-n] * self.dt)
+        S = sum(m_flow_ex[N_hist - m + 1:N_hist + 1] * self.dt) if m > n else R
+         
         # Compute the lossless output temperature T_N
-        self.T_lossless[N] = ((R - self.L * self.inner_cs * self.rho_water) * T_k[N_hist-n] + Y + (m_flow_ex[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_k[N_hist-m]) / (m_flow_ex[N_hist] * self.dt)
-        
+        lossless = (
+            (R - self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-n]
+            + Y
+            + (m_flow_ex[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-m]
+            ) / (m_flow_ex[N_hist] * self.dt)
+        self.T_lossless[N] = lossless      
+
         # Take into account the heat capacity of the steel pipe
-        if N - 1 < 0: # for beginning pipe temperature
-            self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.Cp_whole_pipe * self.T_pipe[N]) / (self.Cp_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
-        else:
-            self.T_cap[N] = (m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt + self.Cp_whole_pipe * self.T_pipe[N-1]) / (self.Cp_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+        # Assume equilibrium in dt between the temperature of the pipe and the water
+        prev_Tpipe = self.T_pipe[N-1] if N > 0 else self.T_pipe[N]
+        self.T_cap[N] = (
+            m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
+            + self.C_whole_pipe * prev_Tpipe
+            ) / (self.C_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
 
-        self.T_pipe[N] = self.T_cap[N] # update temperature pipe
+        # Update temperature pipe wall
+        self.T_pipe[N] = self.T_cap[N] 
 
-        # determine average delay in the pipe
+        # Determine average delay in the pipe
         t_stay = self.average_delay_bnode(n,m,R,S,m_flow_ex,N_hist)
-
         self.t_stay_array[N] = t_stay
 
-        if no_cap:
-            self.T[N] = T_ambt + (self.T_lossless[N] - T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
-        else:
-            self.T[N] = T_ambt + (self.T_cap[N] - T_ambt) * np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
-        
+        # Final outlet water temperature including heat loss to ambient
+        ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
 
-        # print(f' temperature {self.T[N]}, {self.pipe_id}') # debug
-       
+        # t_stay = t_stay / self.dt
+        decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+        self.T[N] = T_ambt + (ref_T - T_ambt) * decay    
 
     def average_delay_bnode(self,n,m,R,S,m_flow_ex,N):
         """    
@@ -204,7 +201,7 @@ class Pipe:
         for i in range(N-m+1, N-n):
             second_term_delay += (N - i) * m_flow_ex[i] * self.dt
             
-        third_term_delay = m * (m_flow_ex[N] * self.dt + (self.L * self.inner_cs * self.rho_water - S))
+        third_term_delay = m * (m_flow_ex[N] * self.dt + self.L * self.inner_cs * self.rho_water - S)
 
         # print(f' n = {n} and m = {m}') # debug
         delay = (first_term_delay + second_term_delay + third_term_delay)/m_flow_ex[N]
@@ -213,7 +210,7 @@ class Pipe:
     
     def set_m_flow_v(self, v_inflow, N):
         """
-        Set the mass flow of the pipe based on the inetlet velocity
+        Set the mass flow of the pipe based on the velocity
         """
 
         self.m_flow_extended[N + self.hist_len] = v_inflow * self.inner_cs * self.rho_water

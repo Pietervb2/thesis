@@ -101,7 +101,7 @@ class Node:
             if len(self.pipes_out) == 0:
                 return
             
-            m_pipe_flow = sum_m_flow / len(self.pipes_out)
+            m_pipe_flow = np.round(sum_m_flow / len(self.pipes_out),3)
 
             
             for pipe_id, pipe in self.pipes_out.items():
@@ -111,9 +111,6 @@ class Node:
 
         except(ZeroDivisionError):
             print(f"No ingoing mass flow in node  = {self.node_id}")
-
-    #     # TODO: workout the pressure calculation to further give this meaning. 
-
 
 
     def get_T(self, N):

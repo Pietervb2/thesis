@@ -21,7 +21,7 @@ class Simulation:
         self.num_steps = len(self.time) 
         self.T_ambt = T_ambt
 
-        if flow_type == 'oscillating' or flow_type == 'square' or flow_type == 'constant':
+        if flow_type == 'oscillation' or flow_type == 'square' or flow_type == 'constant':
             total_time_str = str(total_time)
         else:
             total_time_str = str(total_time - 1) 
@@ -48,13 +48,15 @@ class Simulation:
                          network : Network, 
                          T_in : np.ndarray[Union[float]],
                          v_inflow : np.ndarray[Union[float]],
-                         T_init : float,
+                         T_init_water : float,
+                         T_init_pipe : float,
                          T_ambt: float,
                          plot_network = False,
                          plot_nodes_T = False,
                          plot_pipes_T = False,
                          plot_pipes_m_flow = False,
-                         plot_nodes_dT = False):
+                         plot_nodes_dT = False,
+                         no_cap = False):
         """
         Simulate temperature dynamics for a network.
         
@@ -66,12 +68,13 @@ class Simulation:
         T_ambt: ambient temperature
         """
 
-        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init)
+        # T_in and v_inflow are saved in the network class
+        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
 
-        for N in range(self.num_steps):
-            if N == 70:
-                pass
-            network.set_T_and_flow_network(self.T_ambt, v_inflow[N], T_in[N], N)
+        for N in range(1,self.num_steps):
+ 
+            network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
+
         
         print('Simulation finished')
 
@@ -81,6 +84,7 @@ class Simulation:
         self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
         self.plot_pipe_m_flow_network(network, v_inflow, plot = plot_pipes_m_flow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
+        self.plot_cap_influence(network)
         self.save_data(network, T_in, v_inflow) 
 
         plt.show()  
@@ -286,6 +290,28 @@ class Simulation:
         if not plot:
             plt.close(fig)
 
+    def plot_cap_influence(self, network: Network):
+        """
+        Plotting function to see the effect of the heat capacity plot
+        """
+        fig = plt.figure(figsize=(10, 6))
+        plt.title("Pipe Capacity Influence (Last Pipe)")
+
+        # Get the last pipe in the network
+        last_pipe_id = list(network.pipes.keys())[-1]
+        last_pipe = network.pipes[last_pipe_id]['pipe_instance']
+
+        plt.plot(self.time, last_pipe.T_cap, label='T_cap')
+        plt.plot(self.time, last_pipe.T_lossless, label='T_lossless')
+        plt.plot(self.time, last_pipe.T, label='T (real)')
+
+        plt.xlabel(f'Time (s), dt = {self.dt}')
+        plt.ylabel('Temperature (°C)')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(self.folder + '/cap_influence_last_pipe.png')
+        plt.close(fig)
+
     def save_data(self, network: Network, T_in, v_flow):
         """
         Save simulation data to CSV file.
@@ -332,12 +358,12 @@ class Simulation:
         Network_data['#pipes'] = len(network.pipes)
 
         pipe = network.pipes['Pipe 1']['pipe_instance']
-        Network_data['pipe_radius_outer'] = pipe.radius_outer
-        Network_data['pipe_radius_inner'] = pipe.radius_inner
+        Network_data['pipe_r_outer'] = pipe.r_outer
+        Network_data['pipe_r_inner'] = pipe.r_inner
         Network_data['K'] = pipe.K
-        Network_data["rho_pipe_mat"] = pipe.rho_pipe_mat
+        Network_data["rho_pipe"] = pipe.rho_pipe
         Network_data["rho_insu"] = pipe.rho_insu 
-        Network_data["cp_pipe_mat"] = pipe.cp_pipe_mat
+        Network_data["cp_pipe"] = pipe.cp_pipe
         Network_data["cp_insu"] = pipe.cp_insu
         Network_data["insu_thickness"] = pipe.insu_thickness
 
