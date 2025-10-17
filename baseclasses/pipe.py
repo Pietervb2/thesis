@@ -44,13 +44,13 @@ class Pipe:
 
         self.inner_cs = np.pi * self.r_inner ** 2 # inner cross section area
         self.outer_cs = np.pi * self.r_outer ** 2 # outer cross section area
-        self.Cp_pipe = (self.outer_cs - self.inner_cs) * self.rho_pipe * self.cp_pipe * self.L # [J/K] total heat capacity pipe
+        self.C_pipe = (self.outer_cs - self.inner_cs) * self.rho_pipe * self.cp_pipe * self.L # [J/K] total heat capacity pipe
 
         self.rho_insu = rho_insu
         self.cp_insu = cp_insu 
-        self.Cp_insu = np.pi * ((self.r_outer + self.insu_thickness) ** 2 - self.r_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
+        self.C_insu = np.pi * ((self.r_outer + self.insu_thickness) ** 2 - self.r_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
 
-        self.Cp_whole_pipe = self.Cp_pipe + self.Cp_insu
+        self.C_whole_pipe = self.C_pipe + self.C_insu
 
     def bnode_init(self, 
             dt : float,
@@ -161,8 +161,8 @@ class Pipe:
         prev_Tpipe = self.T_pipe[N-1] if N > 0 else self.T_pipe[N]
         self.T_cap[N] = (
             m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
-            + self.Cp_whole_pipe * prev_Tpipe
-            ) / (self.Cp_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+            + self.C_whole_pipe * prev_Tpipe
+            ) / (self.C_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
 
         # Update temperature pipe wall
         self.T_pipe[N] = self.T_cap[N] 
@@ -174,7 +174,7 @@ class Pipe:
         # Final outlet water temperature including heat loss to ambient
         ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
 
-        t_stay = t_stay / self.dt
+        # t_stay = t_stay / self.dt
         decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
         self.T[N] = T_ambt + (ref_T - T_ambt) * decay    
 

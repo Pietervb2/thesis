@@ -290,7 +290,8 @@ class Test:
                                 plot_nodes_T = plot_nodes_T, 
                                 plot_pipes_T = plot_pipes_T, 
                                 plot_pipes_m_flow = plot_pipes_m_flow, 
-                                plot_nodes_dT = plot_nodes_dT)
+                                plot_nodes_dT = plot_nodes_dT,
+                                no_cap = no_cap)
 
     def compare_simulations(network,
                             T_ambt,
@@ -334,12 +335,15 @@ class Test:
             
             total_length = int(network.get_total_network_length())
             mo_name = (f"{total_length}m_dt={dt}_Tin={temp_type}_mflow={flow_type}_"
-                    f"Tambt={T_ambt}_mo_clean.csv")
+                    f"Tambt={T_ambt}_mo")
 
-        if no_cap:
-            sim_name += "_no_cap" 
-            print("Rembemer: heat capacity in modelica still activated!")
-        
+            if no_cap:
+                sim_name += "_no_cap" 
+                mo_name += "_no_cap"
+                print("Rembemer: heat capacity in modelica still activated!")
+            
+            mo_name += "_clean.csv"
+            
         # Path names
         sim_folder = os.path.join(base_dir,'figures','simulation',sim_name)                               
         sim_file = os.path.join(sim_folder, 'simulation_data.csv')
@@ -445,18 +449,18 @@ class Test:
         with open(constants_file) as f:
             constants = json.load(f)
 
-        r_inner = constants[pipe_data_set]['r_inner'] 
-        r_outer = constants[pipe_data_set]['r_outer']
+        r_inner = constants[pipe_data_set]['r_inner'] # [m]
+        r_outer = constants[pipe_data_set]['r_outer'] # [m]
         # K = constants[pipe_data_set]['K']
-        rho_pipe = constants[pipe_data_set]['rho_pipe']
-        cp_pipe = constants[pipe_data_set]['cp_pipe']
-        rho_insu = constants[pipe_data_set]['rho_insu']
-        cp_insu = constants[pipe_data_set]['cp_insu']
-        insu_thickness = constants[pipe_data_set]['insu_thickness']
+        rho_pipe = constants[pipe_data_set]['rho_pipe'] # [kg / m3]
+        cp_pipe = constants[pipe_data_set]['cp_pipe']  # [J / kg K]
+        rho_insu = constants[pipe_data_set]['rho_insu'] # [kg / m3]
+        cp_insu = constants[pipe_data_set]['cp_insu']  # [J/ kg K]
+        insu_thickness = constants[pipe_data_set]['insu_thickness'] # [m]
 
-        k_pipe = constants[pipe_data_set]['k_pipe'] #thermal conductivity pipe
-        k_insu = constants[pipe_data_set]['k_insu'] #thermal conductivity insulation
-        h_pipe_air = constants[pipe_data_set]['h_pipe_air'] # natural convection from pipe to surrounding air
+        k_pipe = constants[pipe_data_set]['k_pipe'] #thermal conductivity pipe [W / m K]
+        k_insu = constants[pipe_data_set]['k_insu'] #thermal conductivity insulation [W / m K]
+        h_pipe_air = constants[pipe_data_set]['h_pipe_air'] # natural convection from pipe to surrounding air [W / m2 K]
 
         R = (
                 np.log(r_outer/r_inner)/(2*np.pi*k_pipe) # conduction pipe
@@ -464,7 +468,7 @@ class Test:
                 + 1/(2*np.pi*(r_outer+insu_thickness)*h_pipe_air) # convection pipe to air
             )
 
-        K = 1/R # total heat transmission coefficient
+        K = 1/R # total heat transmission coefficient [W / m K]
 
         pipe_data = [r_inner, r_outer, cp_pipe, rho_pipe, cp_insu, rho_insu, insu_thickness, K]
 
@@ -502,21 +506,23 @@ if __name__ == "__main__":
 
     number_of_nodes = 2
     T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! MOET NAAR 18, MAAR EERST DAARVOOR MODELICA RUNNEN
-    total_time = 8000 # [s]
     total_length = 39 # [m]
 
     network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    # Test.compare_simulations(network_exp, T_ambt, dt_array[3], file = files[3])
+    # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
     for k in range(len(files)):
         Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
 
     dt = 30 # [s]
     total_L = 2000
+
     network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_L)
 
+    # Test.simulate_network(network_synt,5, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
     # With oscillation T, constant Flow
-    # Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
+    # Test.compare_simulations(network_synt, 20, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant',no_cap=True )
 
+    # Test.simulate_network(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
     # Constant T, oscillation Flow
     # Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'constant', flow_type = 'oscillation')
 

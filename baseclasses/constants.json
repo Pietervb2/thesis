@@ -50,7 +50,7 @@
         "comment_k": "Heat conductivity of the pipe material and insulation layer [W/mK], heat conductivity of pipe is neglibible",
         "k_pipe": 14.9, 
         "k_insu": 0.04, 
-        "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/mK]",
+        "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/m2 K]",
         "h_pipe_air": 5,
         "comment_thickness": "Thickness of the insulation layer [m]",
         "insu_thickness": 0.013 

@@ -55,7 +55,8 @@ class Simulation:
                          plot_nodes_T = False,
                          plot_pipes_T = False,
                          plot_pipes_m_flow = False,
-                         plot_nodes_dT = False):
+                         plot_nodes_dT = False,
+                         no_cap = False):
         """
         Simulate temperature dynamics for a network.
         
@@ -72,7 +73,7 @@ class Simulation:
 
         for N in range(1,self.num_steps):
  
-            network.set_T_and_flow_network(self.T_ambt, N)
+            network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
 
         
         print('Simulation finished')
@@ -83,6 +84,7 @@ class Simulation:
         self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
         self.plot_pipe_m_flow_network(network, v_inflow, plot = plot_pipes_m_flow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
+        self.plot_cap_influence(network)
         self.save_data(network, T_in, v_inflow) 
 
         plt.show()  
@@ -287,6 +289,28 @@ class Simulation:
 
         if not plot:
             plt.close(fig)
+
+    def plot_cap_influence(self, network: Network):
+        """
+        Plotting function to see the effect of the heat capacity plot
+        """
+        fig = plt.figure(figsize=(10, 6))
+        plt.title("Pipe Capacity Influence (Last Pipe)")
+
+        # Get the last pipe in the network
+        last_pipe_id = list(network.pipes.keys())[-1]
+        last_pipe = network.pipes[last_pipe_id]['pipe_instance']
+
+        plt.plot(self.time, last_pipe.T_cap, label='T_cap')
+        plt.plot(self.time, last_pipe.T_lossless, label='T_lossless')
+        plt.plot(self.time, last_pipe.T, label='T (real)')
+
+        plt.xlabel(f'Time (s), dt = {self.dt}')
+        plt.ylabel('Temperature (°C)')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(self.folder + '/cap_influence_last_pipe.png')
+        plt.close(fig)
 
     def save_data(self, network: Network, T_in, v_flow):
         """
