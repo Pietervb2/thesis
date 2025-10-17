@@ -51,6 +51,7 @@ class Simulation:
                          T_init_water : float,
                          T_init_pipe : float,
                          T_ambt: float,
+                         file,
                          plot_network = False,
                          plot_nodes_T = False,
                          plot_pipes_T = False,
@@ -69,7 +70,7 @@ class Simulation:
         """
 
         # T_in and v_inflow are saved in the network class
-        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
+        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe, file)
 
         for N in range(1,self.num_steps):
  
@@ -85,6 +86,7 @@ class Simulation:
         self.plot_pipe_m_flow_network(network, v_inflow, plot = plot_pipes_m_flow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
         self.plot_cap_influence(network)
+        self.plot_differ_pipe_temp(network,file)
         self.save_data(network, T_in, v_inflow) 
 
         plt.show()  
@@ -311,6 +313,32 @@ class Simulation:
         plt.grid(True)
         plt.savefig(self.folder + '/cap_influence_last_pipe.png')
         plt.close(fig)
+
+    def plot_differ_pipe_temp(self, network: Network, file):
+
+        # Get the last pipe in the network
+        last_pipe_id = list(network.pipes.keys())[-1]
+        last_pipe = network.pipes[last_pipe_id]['pipe_instance']
+
+
+        ######
+        # reading pipe temperature
+        basedir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        data_csv = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', 'experiment', file + '_interpolated.csv'))
+        real_temp = data_csv['OutletWaterTemp'].values
+        #####
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.time, last_pipe.T, label='Node method')
+        plt.plot(self.time, last_pipe.T_real_data, label='Real pipe data implemented in NM')
+        plt.plot(real_temp, label = "Experimental data")
+        plt.xlabel(f'Time (s)')
+        plt.ylabel('Temperature (°C)')
+        plt.title(f'Water temperature, Experiment {file[-1]}')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(self.folder + f'/different_pipe_temp.png')
+        plt.close()
 
     def save_data(self, network: Network, T_in, v_flow):
         """

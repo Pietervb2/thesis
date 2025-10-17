@@ -132,7 +132,8 @@ class Network:
                            v_init_array : np.ndarray[Union[float]], 
                            T_in : np.ndarray[Union[float]],
                            T_init_water : float,
-                           T_init_pipe : float):
+                           T_init_pipe : float,
+                           file):
         """
         Initialize the temperature in the network
 
@@ -147,7 +148,7 @@ class Network:
                 node.initialize_node(num_steps, T_init_water)
 
         for pipe in self.pipes.values():
-            pipe['pipe_instance'].bnode_init(dt, num_steps, v_init_array, T_in, T_init_water, T_init_pipe)
+            pipe['pipe_instance'].bnode_init(dt, num_steps, v_init_array, T_in, T_init_water, T_init_pipe, file)
 
     def set_T_and_flow_network(self, T_ambt : float, N : int, no_cap = False):
             

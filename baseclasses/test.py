@@ -285,7 +285,7 @@ class Test:
             sim = Simulation(dt, total_time, network.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type, no_cap = no_cap)
             T_init_water = T_init_pipe = T_ambt      
 
-        sim.simulate_network(network, T_in, v_flow, T_init_water, T_init_pipe, T_ambt, 
+        sim.simulate_network(network, T_in, v_flow, T_init_water, T_init_pipe, T_ambt, file,
                                 plot_network = plot_network, 
                                 plot_nodes_T = plot_nodes_T, 
                                 plot_pipes_T = plot_pipes_T, 
@@ -501,33 +501,21 @@ class Test:
     
 if __name__ == "__main__":
 
-    files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
-    dt_array = [1,1,1,30] # [s], delta time for every file
+    files = ['ExperimentB', 'ExperimentC', 'ExperimentD']
+    dt_array = [1,1,30] # [s], delta time for every file
 
     number_of_nodes = 2
     T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! MOET NAAR 18, MAAR EERST DAARVOOR MODELICA RUNNEN
     total_length = 39 # [m]
 
     network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    # # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
+    
     for k in range(len(files)):
-        Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
+        Test.simulate_network(network_exp,T_ambt,dt_array[k],file = files[k])
+    
 
-    dt = 30 # [s]
-    total_L = 2000
-    nodes = [25,50,100,200]
+    # dt = 30 # [s]
+    # total_L = 2000
+    # nodes = [25,50,100,200]
 
-    network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_L)
-
-    # Test.simulate_network(network_synt,5, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
-    # With oscillation T, constant Flow
-    for node in nodes:
-        Test.compare_simulations(network_synt, 20, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant',number_of_nodes=node)
-
-    # Test.simulate_network(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
-    # Constant T, oscillation Flow
-    # Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'constant', flow_type = 'oscillation')
-
-    # Oscillation T, oscillation Flow
-    # Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'oscillation')
-
+    # network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_L)
