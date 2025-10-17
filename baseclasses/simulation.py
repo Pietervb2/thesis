@@ -295,15 +295,15 @@ class Simulation:
         Plotting function to see the effect of the heat capacity plot
         """
         fig = plt.figure(figsize=(10, 6))
-        plt.title("Pipe Capacity Influence (Last Pipe)")
+        plt.title("Pipe Capacity Influence")
 
         # Get the last pipe in the network
         last_pipe_id = list(network.pipes.keys())[-1]
         last_pipe = network.pipes[last_pipe_id]['pipe_instance']
 
-        plt.plot(self.time, last_pipe.T_cap, label='T_cap')
-        plt.plot(self.time, last_pipe.T_lossless, label='T_lossless')
-        plt.plot(self.time, last_pipe.T, label='T (real)')
+        plt.plot(self.time, last_pipe.T_cap, label='T cap')
+        plt.plot(self.time, last_pipe.T_lossless, label='T lossless')
+        plt.plot(self.time, last_pipe.T, label='T real')
 
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')

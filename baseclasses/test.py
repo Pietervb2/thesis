@@ -300,6 +300,7 @@ class Test:
                             file = None,
                             temp_type = None,
                             flow_type = None,
+                            number_of_nodes = None,
                             no_cap = False):
      
         """
@@ -335,7 +336,7 @@ class Test:
             
             total_length = int(network.get_total_network_length())
             mo_name = (f"{total_length}m_dt={dt}_Tin={temp_type}_mflow={flow_type}_"
-                    f"Tambt={T_ambt}_mo")
+                    f"Tambt={T_ambt}_nodes={number_of_nodes}_mo")
 
             if no_cap:
                 sim_name += "_no_cap" 
@@ -374,7 +375,7 @@ class Test:
                             "figures",
                             "validation",
                             "exp_simulation_modelica" if file else "simulation_modelica",
-                            sim_name,
+                            sim_name if file else f'{sim_name}_nodes={number_of_nodes}',
                         )
         
         if not os.path.exists(plots_folder):
@@ -388,9 +389,8 @@ class Test:
             plt.title(f"Temperature comparison: Experiment {file[-1]} ")
         else:
             plt.title(f"Temperature comparison Tin: {temp_type}, mass flow: {flow_type} ")
-            plt.plot(mo_time, mo_temp, label = 'Modelica')
+            plt.plot(mo_time, mo_temp, label = f'Modelica, #nodes = {number_of_nodes}')
             plt.plot(sim_data['time'], sim_temp, label = f'Simulation RMSE {round(root_mean_squared_error(mo_temp, sim_temp),2)}')
-        # plt.plot(sim_data['time'], sim_data['T_Node 1'].values, label = 'Inlet temp', linestyle='--')
         plt.xlabel('Time (s)')
         plt.ylabel('Temperature (°C)')
         plt.legend()
@@ -509,18 +509,20 @@ if __name__ == "__main__":
     total_length = 39 # [m]
 
     network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
+    # # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
     for k in range(len(files)):
         Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
 
     dt = 30 # [s]
     total_L = 2000
+    nodes = [25,50,100,200]
 
     network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_L)
 
     # Test.simulate_network(network_synt,5, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
     # With oscillation T, constant Flow
-    # Test.compare_simulations(network_synt, 20, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant',no_cap=True )
+    for node in nodes:
+        Test.compare_simulations(network_synt, 20, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant',number_of_nodes=node)
 
     # Test.simulate_network(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
     # Constant T, oscillation Flow
