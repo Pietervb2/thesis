@@ -1,5 +1,7 @@
 import numpy as np
 from typing import Union
+import os
+import pandas as pd
 
 class Pipe:
 
@@ -58,7 +60,8 @@ class Pipe:
             v_flow_array : np.ndarray[Union[float]],
             T_inlet_array : np.ndarray[Union[float]],
             T_init_water: float,
-            T_init_pipe: float
+            T_init_pipe: float,
+            file
             ):
         """
         Initialize history of velocities and temperatures to ensure valid solutions.
@@ -101,10 +104,22 @@ class Pipe:
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.m_flow = np.ones(self.num_steps)
         self.m_flow[0] = self.m_flow_extended[self.hist_len]
-        self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
+
+        self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe
 
         # Save average time delay in pipe
         self.t_stay_array = np.ones(self.num_steps) 
+
+
+        ######
+        # reading pipe temperature
+        basedir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        data_csv = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', 'experiment', file + '_interpolated.csv'))
+        self.T_pipe_real_data = data_csv['OutletPipeTemp'].values
+        self.T_cap_real_data = np.ones(self.num_steps)*T_init_water
+        self.T_real_data = np.ones(self.num_steps)*T_init_water
+        ######
+
 
     def bnode_method(self,
                      T_ambt : float,
@@ -167,6 +182,16 @@ class Pipe:
         # Update temperature pipe wall
         self.T_pipe[N] = self.T_cap[N] 
 
+        ######
+        # Use real pipe data to update             
+        
+        self.T_cap_real_data[N] = (
+            m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
+            + self.C_whole_pipe * self.T_pipe_real_data[N]
+            ) / (self.C_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+        
+        ######
+
         # Determine average delay in the pipe
         t_stay = self.average_delay_bnode(n,m,R,S,m_flow_ex,N_hist)
         self.t_stay_array[N] = t_stay
@@ -174,9 +199,15 @@ class Pipe:
         # Final outlet water temperature including heat loss to ambient
         ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
 
-        # t_stay = t_stay / self.dt
         decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
         self.T[N] = T_ambt + (ref_T - T_ambt) * decay    
+
+        ######
+        # Use real pipe data
+       
+        self.T_real_data[N] = T_ambt + (self.T_cap_real_data[N] - T_ambt) * decay 
+
+        ######
 
     def average_delay_bnode(self,n,m,R,S,m_flow_ex,N):
         """    
