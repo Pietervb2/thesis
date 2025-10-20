@@ -139,13 +139,13 @@ def clean_mo_csv(dt, T_ambt, file = None, temp_type = None, flow_type = None, le
 
 
 if __name__ == "__main__":
-    T_ambt = 18
-    files = ['A', 'B', 'C', 'D']
-    dt_array = [1,1,1,30] # [s], delta time for every file
-    for i in range(len(files)):
-        temp_type = files[i]
-        flow_type = files[i]    
-        clean_mo_csv(dt_array[i],T_ambt,f'Experiment{files[i]}')    
+    # T_ambt = 18
+    # files = ['A', 'B', 'C', 'D']
+    # dt_array = [1,1,1,30] # [s], delta time for every file
+    # for i in range(len(files)):
+    #     temp_type = files[i]
+    #     flow_type = files[i]    
+    #     clean_mo_csv(dt_array[i],T_ambt,f'Experiment{files[i]}')    
 
     # length = 2000
     # dt = 30
@@ -157,4 +157,8 @@ if __name__ == "__main__":
     # clean_mo_csv(length, dt, 'constant','constant',T_ambt)
     # clean_mo_csv(dt, T_ambt, length = length, temp_type = 'oscillation', flow_type = 'constant',no_cap = True)
 
-    # clean_mo_csv(1,18,'ExperimentA')•
+    # clean_mo_csv(1,18,'ExperimentA')
+
+    dt = 1
+    T_ambt = 20
+    clean_mo_csv(dt,T_ambt,temp_type='oscillation', flow_type = 'constant', length = 40, number_of_nodes=80)

@@ -305,7 +305,8 @@ class Test:
      
         """
         #TODO: aanvullen
-        # total_time: only necessary when non experimental values. 
+        # total_time: only necessary when non experimental values.
+        # Number of nodes only important for Node Method vs Modelica. Therefore the experiment doesn't require it. 
         """
 
         base_dir =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -391,6 +392,7 @@ class Test:
             plt.title(f"Temperature comparison Tin: {temp_type}, mass flow: {flow_type} ")
             plt.plot(mo_time, mo_temp, label = f'Modelica, #nodes = {number_of_nodes}')
             plt.plot(sim_data['time'], sim_temp, label = f'Simulation RMSE {round(root_mean_squared_error(mo_temp, sim_temp),2)}')
+        # plt.plot(mo_time,mo_Tin, label = 'Inlet temperature')
         plt.xlabel('Time (s)')
         plt.ylabel('Temperature (°C)')
         plt.legend()
@@ -468,7 +470,7 @@ class Test:
                 + 1/(2*np.pi*(r_outer+insu_thickness)*h_pipe_air) # convection pipe to air
             )
 
-        K = 1/R # total heat transmission coefficient [W / m K]
+        K = 1/R # total thermal conductivity [W / m K]
 
         pipe_data = [r_inner, r_outer, cp_pipe, rho_pipe, cp_insu, rho_insu, insu_thickness, K]
 
@@ -476,9 +478,13 @@ class Test:
     
     def generate_input(temp_type, flow_type, total_time, dt):
 
-        num_steps = int(total_time / dt) + 1
-        
-    
+        # Check if total_time / dt is a whole number
+        if (total_time / dt) % 1 != 0:
+                    num_steps = int(total_time / dt) + 1
+        else: 
+            num_steps = int(total_time/dt)
+
+
         if temp_type == "constant":
             T_in = np.ones(num_steps) * 65                                 # Constant
         elif temp_type == "oscillation":
@@ -501,33 +507,32 @@ class Test:
     
 if __name__ == "__main__":
 
-    files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
-    dt_array = [1,1,1,30] # [s], delta time for every file
+    # files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
+    # dt_array = [1,1,1,30] # [s], delta time for every file
 
-    number_of_nodes = 2
-    T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! MOET NAAR 18, MAAR EERST DAARVOOR MODELICA RUNNEN
-    total_length = 39 # [m]
+    # number_of_nodes = 2
+    # T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! MOET NAAR 18, MAAR EERST DAARVOOR MODELICA RUNNEN
+    # total_length = 39 # [m]
 
-    network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    # # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
-    for k in range(len(files)):
-        Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
+    # network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
+    # # # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
+    # for k in range(len(files)):
+    #     Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
 
-    dt = 30 # [s]
-    total_L = 2000
+    dt = 1 # [s]
+    total_L = 40
+    total_time = 160
+    T_ambt = 20
     nodes = [25,50,100,200]
 
-    network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_L)
+    network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', 2, total_L)
 
-    # Test.simulate_network(network_synt,5, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
-    # With oscillation T, constant Flow
-    for node in nodes:
-        Test.compare_simulations(network_synt, 20, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant',number_of_nodes=node)
+    # # Test.simulate_network(network_synt,5, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
+    # # With oscillation T, constant Flow
+    # for node in nodes:
+    #     Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant',number_of_nodes=node)
 
-    # Test.simulate_network(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
-    # Constant T, oscillation Flow
-    # Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'constant', flow_type = 'oscillation')
+    Test.compare_simulations(network_synt,T_ambt,dt,total_time,temp_type = 'oscillation',flow_type = 'constant', number_of_nodes=80)
+    
 
-    # Oscillation T, oscillation Flow
-    # Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'oscillation')
-
+    
