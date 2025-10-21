@@ -57,11 +57,6 @@ class Node:
 
         # TODO: maybe it need to put in the new flow at N + 1
         """         
-        # print(f'temperature node {self.T[N]}')
-
-        if N == 100 and self.node_id == 'Node 5': # debug
-            pass 
-
         sum_T_flow = 0
         sum_m_inflow = 0
         for _, pipe in self.pipes_in.items():
@@ -106,8 +101,6 @@ class Node:
             
             for pipe_id, pipe in self.pipes_out.items():
                 pipe.set_m_flow_m(m_pipe_flow, N)
-
-                # print(f'{pipe_id}, flow : {m_pipe_flow}') # debug
 
         except(ZeroDivisionError):
             print(f"No ingoing mass flow in node  = {self.node_id}")
