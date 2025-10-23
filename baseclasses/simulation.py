@@ -228,7 +228,8 @@ class Simulation:
         plt.savefig(self.folder + '/pipe_flows.png')
 
 
-        pipe1 = network.pipes['Pipe 1']['pipe_instance']
+        pipe1 = next(iter(network.pipes.values()))['pipe_instance']
+
 
         fig_m_flow_in = plt.figure()
         plt.plot(v_flow * pipe1.inner_cs * pipe1.rho_water)
@@ -277,7 +278,7 @@ class Simulation:
             mid_z = (from_node.z + to_node.z) / 2
 
             # Add pipe number at the midpoint
-            pipe_number = pipe_id.split()[1]
+            pipe_number = ' '.join(pipe_id.split()[1:])
             ax.text(mid_x, mid_y, mid_z, f'{pipe_number}', color='red', fontsize=14)
             
         ax.set_xlabel('X')
@@ -357,7 +358,7 @@ class Simulation:
         Network_data['#nodes'] = len(network.nodes)
         Network_data['#pipes'] = len(network.pipes)
 
-        pipe = network.pipes['Pipe 1']['pipe_instance']
+        pipe = next(iter(network.pipes.values()))['pipe_instance']
         Network_data['pipe_r_outer'] = pipe.r_outer
         Network_data['pipe_r_inner'] = pipe.r_inner
         Network_data['K'] = pipe.K
@@ -371,6 +372,24 @@ class Simulation:
 
         df_pipes = pd.DataFrame(Network_data, index = Index)
         df_pipes.to_csv(os.path.join(self.folder, 'pipe_data.csv'), index=False)
+
+        # Saving the data corresponding to HEX and consumers
+        HEX_data = {}
+        
+        for hex_key in network.hexs.keys():
+            
+            hex = network.hexs[hex_key]['hex_instance']
+
+            HEX_data['Tc_in'] = hex.consumer.Tc_in
+            HEX_data['Tc_out'] = hex.consumer.Tc_out
+            HEX_data['mflow_consumer'] = hex.consumer.mflow
+
+            HEX_data['Th_in'] = hex.pipes_in[f'pipe in {hex.node_id}'].T
+            HEX_data['Th_out'] = hex.T
+            HEX_data['mflow_hex'] = hex.pipes_in[f'pipe in {hex.node_id}'].m_flow
+
+        df_hex = pd.DataFrame(HEX_data)
+        df_hex.to_csv(os.path.join(self.folder, 'hex_consumer_data.csv'), index = False)
         
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 from network import Network 
 from simulation import Simulation
+from consumer import Consumer
+
 from scipy.signal import square
 from sklearn.metrics import root_mean_squared_error
 
@@ -241,6 +243,40 @@ class Test:
         df = df[cols]
         df.to_csv(os.path.join(plots_folder, "comparison_data.csv"), index=False)
 
+    def initial_test_HEX():
+        """
+        Initial test to see whether the heat exchanger class is working properly.
+        """
+        # Create network
+        net = Network("Test HEX network")
+        net.add_node('Node 1', 0, 0, 0)
+        net.add_node('Node 2', 10, 0, 0)
+
+        pipe_data = Test.read_pipe_data('Pipe of experiment van der Heijden')
+
+        # Create consumer
+        consumer = Consumer('Consumer 1', 5000, 3000, 3600, 7200, 0, np.pi/4)
+
+        # Add heat exchanger
+        hex_data = [0.5, 0.3, 10000, 0.8] # dummy data
+        net.add_hex('HEX 1', 'Node 1', 'Node 2', hex_data, pipe_data, consumer)
+
+        # Simulation parameters
+        dt = 10
+        total_time = 3600 * 2
+        T_ambt = 20
+
+        # Input profiles
+        temp_type = 'constant'
+        flow_type = 'constant'
+        
+        T_in, v_flow = Test.generate_input(temp_type,flow_type, total_time, dt)
+
+        # Run simulation
+        sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type)      
+        sim.simulate_network(net, T_in, v_flow, T_ambt, T_ambt, T_ambt,
+                             plot_network=True,
+                             )
 ###########################################################
 # Help functions for the tests
 ###########################################################
@@ -346,34 +382,6 @@ class Test:
     
 if __name__ == "__main__":
 
-    # files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
-    # dt_array = [1,1,1,30] # [s], delta time for every file
-
-    # number_of_nodes = 2
-    # T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! MOET NAAR 18, MAAR EERST DAARVOOR MODELICA RUNNEN
-    # total_length = 39 # [m]
-
-    # network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    # # # Test.compare_simulations(network_exp, T_ambt, dt_array[0], file = files[0])
-    # for k in range(len(files)):
-    #     Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
-
-    # dt = 1 # [s]
-    # total_L = 40
-    # total_time = 160
-    # T_ambt = 20
-    # nodes = [25,50,100,200]
-
-    network_synt = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', 2, total_L)
-
-    # # Test.simulate_network(network_synt,5, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant')
-    # # With oscillation T, constant Flow
-    # for node in nodes:
-    #     Test.compare_simulations(network_synt, T_ambt, dt, total_time = 8000, temp_type = 'oscillation', flow_type = 'constant',number_of_nodes=node)
-
-    # Test.compare_simulations(network_synt,T_ambt,dt,total_time,temp_type = 'oscillation',flow_type = 'constant', number_of_nodes=80)
-
-    
-    
+    Test.initial_test_HEX()
 
     

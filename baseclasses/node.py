@@ -13,11 +13,7 @@ class Node:
         self.y = y
         self.z = z  
         self.node_id = node_id 
-
-        """
-        TODO: Working with T and flow requires using a timestep. This can be later implemented when implementing the for loop simulation. 
-        """
-        
+       
 
     def initialize_node(self, num_steps, T_init) -> None:
         """

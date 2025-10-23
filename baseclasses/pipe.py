@@ -240,10 +240,3 @@ class Pipe:
         """
         
         self.m_flow_extended[N + self.hist_len] = m_flow
-    
-    def thermal_transmission_coef(self):
-        """
-        Calculate the thermal transmission coefficient of the pipe.
-        TODO: Implement this function
-        """
-        pass

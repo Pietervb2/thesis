@@ -1,10 +1,11 @@
 from node import Node
 from pipe import Pipe
+from heatexchanger import HeatExchanger
+from typing import Union
+
 
 import numpy as np
 import matplotlib.pyplot as plt
-
-from typing import Union
 
 
 class Network:
@@ -18,7 +19,11 @@ class Network:
         """
         self.nodes = {}
         self.pipes = {}
+        self.hexs = {}
         self.net_id = net_id
+
+    def __repr__(self):
+        return f"Network(net_id={self.net_id}, nodes={list(self.nodes.keys())}, pipes={list(self.pipes.keys())}, hexs={list(self.hexs.keys())})"
 
     def add_node(self, node_id : str, x : float, y : float , z : float, data = None) -> None:
         """
@@ -41,8 +46,6 @@ class Network:
     def add_pipe(self, pipe_id : str, from_node : str, to_node : str, pipe_data : list) -> None:
         """
         Add a pipe between two nodes.
-        # TODO: data argument can be used to later tell more about the pipe, 
-        # maybe easy to create a json file from where all the standard values for a pipe can be read. Like inner and outer diameter. 
         """
         if pipe_id in self.pipes.keys():
             raise ValueError(f"Pipe with id {pipe_id} already exists in the network")
@@ -70,7 +73,41 @@ class Network:
         in_node.connect_pipe_to_node(pipe_id, pipe, 'incoming') 
 
         # self._next_pipe_id += 1
-    
+
+    def add_hex(self, hex_id : str, from_node : str, to_node : str, hex_data : list, pipe_data : list, consumer : object) -> None:
+        """
+        Add a heat exchanger between two nodes.
+        """
+        if hex_id in self.hexs.keys():
+            raise ValueError(f"Heat Exchanger with id {hex_id} already exists in the network")
+
+        if from_node not in self.nodes:
+            raise ValueError(f"{from_node} must exist in the network")
+        elif to_node not in self.nodes:
+            raise ValueError(f"{to_node} must exist in the network")
+        
+        # Place heat exchanger in the middle of the two nodes
+        x = (self.nodes[from_node].x + self.nodes[to_node].x) / 2
+        y = (self.nodes[from_node].y + self.nodes[to_node].y) / 2
+        z = (self.nodes[from_node].z + self.nodes[to_node].z) / 2
+
+        hex = HeatExchanger(x,y,z,hex_id, hex_data[0], hex_data[1], hex_data[2], hex_data[3], consumer)
+
+        # Attach pipes to the heat exchanger and the nodes
+        pipe_in_id = f'pipe in {hex_id}'
+        pipe_out_id = f'pipe out {hex_id}'
+        
+        self.nodes[hex_id] = hex
+        
+        self.add_pipe(pipe_in_id, from_node, hex_id, pipe_data) # this pipe will contain a valve controlled by HEX
+        self.add_pipe(pipe_out_id, hex_id, to_node, pipe_data)
+
+        self.hexs[hex_id] = {
+            'from': from_node,
+            'to': to_node,
+            'hex_instance': hex
+        }
+  
     def pipe_length(self, Node1, Node2):
         """
         Function that calculates the length of the pipe between two nodes. 
@@ -154,11 +191,11 @@ class Network:
             self.pipes_finished = []
 
             # Done by hand as no inflow pipe connected to node
-            pipe1 = self.pipes['Pipe 1']['pipe_instance']
+            pipe1 = next(iter(self.pipes.values()))['pipe_instance']
             pipe1.bnode_method(T_ambt, N, no_cap = no_cap)
             
-            self.pipes_finished.append("Pipe 1")
-            next_node_id = self.pipes["Pipe 1"]['to']
+            self.pipes_finished.append(pipe1.pipe_id)
+            next_node_id = self.pipes[pipe1.pipe_id]['to']
             next_node = self.nodes[next_node_id]
             next_node.set_T(N)
             next_node.set_m_flow(N)
@@ -192,8 +229,11 @@ class Network:
         Assumes each pipe instance has an attribute 'L' for length.
         """
         return sum(pipe_data['pipe_instance'].L for pipe_data in self.pipes.values())  
+
+
 if __name__ == "__main__":
-    pass 
+    
+    pass
     
 
 
