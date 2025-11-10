@@ -181,7 +181,7 @@ class Network:
             if i == 0:
                 self.nodes['Node 1'].T = T_in
             else:
-                node.initialize_node(num_steps, T_init_water)
+                node.initialize_node(num_steps, T_init_water, dt)
 
         for pipe in self.pipes.values():
             pipe['pipe_instance'].bnode_init(dt, num_steps, v_init_array, T_in, T_init_water, T_init_pipe)

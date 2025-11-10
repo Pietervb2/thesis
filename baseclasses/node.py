@@ -15,13 +15,14 @@ class Node:
         self.node_id = node_id 
        
 
-    def initialize_node(self, num_steps, T_init) -> None:
+    def initialize_node(self, num_steps, T_init, dt) -> None:
         """
         Initialize the temperature in the node
 
         Args:
         num_steps: number of steps the simulation takes
         T_init: initial temperature [K]
+        dt: not used here, but in the initialize consumer method
         """
 
         self.T = np.zeros(num_steps)

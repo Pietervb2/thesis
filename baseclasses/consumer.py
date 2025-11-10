@@ -1,5 +1,5 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class Consumer:
 
@@ -10,7 +10,8 @@ class Consumer:
                  Period1: float,
                  Period2: float,
                  phi1: float,
-                 phi2: float):
+                 phi2: float, 
+                 offset):
         
         """
         Args:
@@ -29,8 +30,9 @@ class Consumer:
         self.Period2 = Period2  
         self.phi1 = phi1
         self.phi2 = phi2
+        self.offset = offset
 
-    def initialize_consumer(self, num_steps: int) -> None:
+    def initialize_consumer(self, num_steps: int, dt: float) -> None:
         """
         Initialize the consumer parameters.
         Args:
@@ -40,24 +42,28 @@ class Consumer:
         self.Tc_in = np.ones(num_steps)*40 # Cold side inlet temperature [C]. #TODO: for now it is constant. Need to check the constant value. 
         self.Tc_out = np.ones(num_steps)*40 # Cold side outlet temperature [C]
         self.mflow = np.zeros(num_steps) # Mass flow rate [kg/s]
+
+        times = np.arange(0,num_steps*dt,dt)
+        self.Q_d = self.A1 * np.sin(2 * np.pi / (self.Period1*3600) * times + self.phi1) +\
+                         self.A2 * np.sin(2 * np.pi / (self.Period2*3600) * times + self.phi2) + self.offset  # Heat demand [W]
+        
+        plt.figure()
+        plt.plot(self.Q_d)
+        plt.title('Heat demand consumer')
     
     def __repr__(self):
         return f"Consumer(consumer_id={self.consumer_id}, A1={self.A1}, A2={self.A2}, Period1={self.Period1}, Period2={self.Period2}, phi1={self.phi1}, phi2={self.phi2})"
 
-    def get_heat_demand(self, time: float) -> float:
+    def get_heat_demand(self, N) -> float:
         """
         Calculate the heat demand of the consumer at a given time.
-
         Args:
             - time: current time [s]
 
         Returns:
             - Q_demand: heat demand [W]
         """
-        Q_demand = (self.A1 * np.sin(2 * np.pi / self.Period1 * time + self.phi1) +
-                    self.A2 * np.sin(2 * np.pi / self.Period2 * time + self.phi2))
-        
-        return Q_demand
+        return self.Q_demand[N]
     
     def set_mflow(self,N,Q_supply):
         """

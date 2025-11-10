@@ -246,6 +246,7 @@ class Test:
     def initial_test_HEX():
         """
         Initial test to see whether the heat exchanger class is working properly.
+        The consumer demand profile is set for 1 day. 
         """
         # Create network
         net = Network("Test HEX network")
@@ -255,15 +256,22 @@ class Test:
         pipe_data = Test.read_pipe_data('Pipe of experiment van der Heijden')
 
         # Create consumer
-        consumer = Consumer('Consumer 1', 5000, 3000, 3600, 7200, 0, np.pi/4)
+        A1 = 0.109*1.524
+        A2 = 0.113*1.524
+        Period1 = 2*np.pi / 0.298
+        Period2 = 2*np.pi / 0.529
+        Phi1 = -1.949
+        Phi2 = -2.154
+        offset = 0.509*1.524
+        consumer = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset)
 
         # Add heat exchanger
         hex_data = [0.5, 0.3, 10000, 0.8] # dummy data
         net.add_hex('HEX 1', 'Node 1', 'Node 2', hex_data, pipe_data, consumer)
 
         # Simulation parameters
-        dt = 10
-        total_time = 3600 * 2
+        dt = 60 # s
+        total_time = 24 * 3600 # h
         T_ambt = 20
 
         # Input profiles
@@ -274,11 +282,10 @@ class Test:
 
         # Run simulation
         sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type)      
-        sim.simulate_network(net, T_in, v_flow, T_ambt, T_ambt, T_ambt,
-                             plot_network=True,
-                             )
+        sim.simulate_network(net, T_in, v_flow, T_ambt, T_ambt, T_ambt)
+        
 ###########################################################
-# Help functions for the tests
+# Help functions for the testsµ
 ###########################################################
 
     def network_builder_one_pipe(pipe_data_set,

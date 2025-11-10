@@ -30,14 +30,14 @@ class HeatExchanger(Node):
         # Consumer connected to the heat exchanger
         self.consumer = consumer
 
-    def initialize_node(self, num_steps, T_init):
+    def initialize_node(self, num_steps, T_init, dt):
         """
         Overriding function in Node Class.
         Initialize the temperature in the node and the consumer parameters.
         """ 
 
-        super().initialize_node(num_steps, T_init)
-        self.consumer.initialize_consumer(num_steps)
+        super().initialize_node(num_steps, T_init, dt)
+        self.consumer.initialize_consumer(num_steps, dt)
 
     
     def set_T(self, N):
@@ -79,18 +79,13 @@ class HeatExchanger(Node):
         Tc_in = self.consumer.Tc_in[N]
         mflow_c = self.consumer.mflow[N]
 
+        if mflow_h < 1e-6 or mflow_c < 1e-6:
+            # If either mass flow rate is zero, no heat exchange occurs
+            return Tc_in, Th_in
+
         # Heat capacity rates
         Cc = mflow_c * pipe.c_water
-        Ch = mflow_h * pipe.c_water
-
-        # In case of zero mass flow rate on secundary side
-        if mflow_c < 1e-6:
-            # implicit Euler step for stability
-            m_hex = 0.5 # water mass in heat exchanger [kg] - TODO need to be defined properly
-            factor = (self.U*self.As*dt)/(m_hex*pipe.c_water)
-            Tc_out = (self.T[N-1] + factor*Th_in)/(1 + factor)
-            
-
+        Ch = mflow_h * pipe.c_water         
 
         Cmin = min(Cc, Ch)
         Cmax = max(Cc, Ch)

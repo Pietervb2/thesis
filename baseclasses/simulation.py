@@ -387,6 +387,7 @@ class Simulation:
             HEX_data['Th_in'] = hex.pipes_in[f'pipe in {hex.node_id}'].T
             HEX_data['Th_out'] = hex.T
             HEX_data['mflow_hex'] = hex.pipes_in[f'pipe in {hex.node_id}'].m_flow
+            HEX_data['Q_d'] = hex.consumer.Q_d
 
         df_hex = pd.DataFrame(HEX_data)
         df_hex.to_csv(os.path.join(self.folder, 'hex_consumer_data.csv'), index = False)
