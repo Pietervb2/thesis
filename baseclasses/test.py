@@ -285,7 +285,7 @@ class Test:
         sim.simulate_network(net, T_in, v_flow, T_ambt, T_ambt, T_ambt)
         
 ###########################################################
-# Help functions for the testsµ
+# Help functions for the tests
 ###########################################################
 
     def network_builder_one_pipe(pipe_data_set,

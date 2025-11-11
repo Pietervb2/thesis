@@ -56,6 +56,8 @@ class Simulation:
                          plot_pipes_T = False,
                          plot_pipes_m_flow = False,
                          plot_nodes_dT = False,
+                         plot_cap_influence = False,
+                         plot_consumer_demand = False,
                          no_cap = False):
         """
         Simulate temperature dynamics for a network.
@@ -84,7 +86,8 @@ class Simulation:
         self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
         self.plot_pipe_m_flow_network(network, v_inflow, plot = plot_pipes_m_flow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
-        self.plot_cap_influence(network)
+        self.plot_cap_influence(network, plot = plot_cap_influence)
+        self.plot_consumer_demand(network, plot = plot_consumer_demand)
         self.save_data(network, T_in, v_inflow) 
 
         plt.show()  
@@ -291,7 +294,7 @@ class Simulation:
         if not plot:
             plt.close(fig)
 
-    def plot_cap_influence(self, network: Network):
+    def plot_cap_influence(self, network: Network, plot = False):
         """
         Plotting function to see the effect of the heat capacity plot
         """
@@ -311,7 +314,29 @@ class Simulation:
         plt.legend()
         plt.grid(True)
         plt.savefig(self.folder + '/cap_influence_last_pipe.png')
-        plt.close(fig)
+
+        if not plot:
+            plt.close(fig)
+
+    def plot_consumer_demand(self, network: Network, plot = False):
+        """
+        Plot the heat demand of all consumers in the network
+        """
+        fig = plt.figure(figsize=(10, 6))
+        plt.title("Consumer Heat Demand")
+
+        for hex_key in network.hexs.keys():
+            hex = network.hexs[hex_key]['hex_instance']
+            plt.plot(self.time, hex.consumer.Q_d, label=f'{hex.consumer.consumer_id}')
+
+        plt.xlabel(f'Time (s), dt = {self.dt}')
+        plt.ylabel('Heat Demand (W)')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(self.folder + '/consumer_heat_demand.png')
+
+        if not plot:
+            plt.close(fig)
 
     def save_data(self, network: Network, T_in, v_flow):
         """

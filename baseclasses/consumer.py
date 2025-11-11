@@ -46,11 +46,7 @@ class Consumer:
         times = np.arange(0,num_steps*dt,dt)
         self.Q_d = self.A1 * np.sin(2 * np.pi / (self.Period1*3600) * times + self.phi1) +\
                          self.A2 * np.sin(2 * np.pi / (self.Period2*3600) * times + self.phi2) + self.offset  # Heat demand [W]
-        
-        plt.figure()
-        plt.plot(self.Q_d)
-        plt.title('Heat demand consumer')
-    
+           
     def __repr__(self):
         return f"Consumer(consumer_id={self.consumer_id}, A1={self.A1}, A2={self.A2}, Period1={self.Period1}, Period2={self.Period2}, phi1={self.phi1}, phi2={self.phi2})"
 
