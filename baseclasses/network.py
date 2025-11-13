@@ -74,12 +74,12 @@ class Network:
 
         # self._next_pipe_id += 1
 
-    def add_hex(self, hex_id : str, from_node : str, to_node : str, hex_data : list, pipe_data : list, consumer : object) -> None:
+    def add_hex(self, node_id : str, from_node : str, to_node : str, hex_data : list, pipe_data : list, consumer : object) -> None:
         """
         Add a heat exchanger between two nodes.
         """
-        if hex_id in self.hexs.keys():
-            raise ValueError(f"Heat Exchanger with id {hex_id} already exists in the network")
+        if node_id in self.hexs.keys():
+            raise ValueError(f"Heat Exchanger with id {node_id} already exists in the network")
 
         if from_node not in self.nodes:
             raise ValueError(f"{from_node} must exist in the network")
@@ -91,18 +91,18 @@ class Network:
         y = (self.nodes[from_node].y + self.nodes[to_node].y) / 2
         z = (self.nodes[from_node].z + self.nodes[to_node].z) / 2
 
-        hex = HeatExchanger(x,y,z,hex_id, hex_data[0], hex_data[1], hex_data[2], hex_data[3], consumer)
+        hex = HeatExchanger(x,y,z,node_id, hex_data[0], hex_data[1], hex_data[2], hex_data[3], consumer)
 
         # Attach pipes to the heat exchanger and the nodes
-        pipe_in_id = f'pipe in {hex_id}'
-        pipe_out_id = f'pipe out {hex_id}'
+        pipe_in_id = f'Pipe {node_id.split()[-1]}.1'
+        pipe_out_id = f'Pipe {node_id.split()[-1]}.2'
         
-        self.nodes[hex_id] = hex
+        self.nodes[node_id] = hex
         
-        self.add_pipe(pipe_in_id, from_node, hex_id, pipe_data) # this pipe will contain a valve controlled by HEX
-        self.add_pipe(pipe_out_id, hex_id, to_node, pipe_data)
+        self.add_pipe(pipe_in_id, from_node, node_id, pipe_data) # this pipe will contain a valve controlled by HEX
+        self.add_pipe(pipe_out_id, node_id, to_node, pipe_data)
 
-        self.hexs[hex_id] = {
+        self.hexs[node_id] = {
             'from': from_node,
             'to': to_node,
             'hex_instance': hex
@@ -158,8 +158,6 @@ class Network:
         
         incoming = self.nodes[node_id].pipes_in
         outgoing = self.nodes[node_id].pipes_out
-
-        # TODO: vraag me af of dit goed gaat
 
         return incoming, outgoing
     

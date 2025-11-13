@@ -37,7 +37,7 @@ class Pipe:
 
         # Physical constants       
         self.rho_water = 1e3 # [kg/m3] NOTE: maybe later make a constant file. When there are too many constants.
-        self.c_water = 4.18e3 # [J/kg K] specific heat capacity
+        self.c_water = 4.186e3 # [J/kg K] specific heat capacity
 
         self.rho_pipe = rho_pipe #  [kg/m3]
         self.cp_pipe = cp_pipe # [J/kg K] specific heat capacity of steel
@@ -91,12 +91,12 @@ class Pipe:
         self.m_flow_extended = np.round(np.concatenate([self.v_history, v_flow_array]) * self.inner_cs * self.rho_water,3)
         self.T_in_extended = np.concatenate([self.T_history, T_inlet_array])
 
+        # T_lossless: water temperature at the pipe output without heat loss or capacity of the pipe 
+        # T_cap: water temperature at the pipe output with heat loss to capacity of the pipe  
+        # T: real water temperature at the pipe output
         self.T_lossless = np.ones(self.num_steps) * T_init_water
         self.T_cap = np.ones(self.num_steps) * T_init_water
         self.T = np.ones(self.num_steps) * T_init_water
-        # T_lossless: water temperature at the pipe output without heat loss or capacity of the pipe 
-        # T_cap: water temperature at the pipe output with heat loss  
-        # T: real water temperature at the pipe output
 
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.m_flow = np.ones(self.num_steps)

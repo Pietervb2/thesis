@@ -123,6 +123,7 @@ class Test:
             - network : compared network
             - T_ambt : ambient temperature
             - total_time: only necessary when non experimental values.
+            - file : name of the experimental file. If None, synthetic data is used. And the name of the simulation folder will be based on that. 
 
         Number of nodes only important for Node Method vs Modelica. As it concerns the number of nodes in the finite volume method.
         Therefore the experiment doesn't require it. 
@@ -248,14 +249,10 @@ class Test:
         Initial test to see whether the heat exchanger class is working properly.
         The consumer demand profile is set for 1 day. 
         """
-        # Create network
-        net = Network("Test HEX network")
-        net.add_node('Node 1', 0, 0, 0)
-        net.add_node('Node 2', 10, 0, 0)
-
-        pipe_data = Test.read_pipe_data('Pipe of experiment van der Heijden')
-
         # Create consumer
+        # Values chosen to mimic realistic heat demand profile based on literature. 
+        # And the integral of the heat demand is scaled to 65 MJ/day. 
+         
         A1 = 0.109*1.524
         A2 = 0.113*1.524
         Period1 = 2*np.pi / 0.298
@@ -263,11 +260,39 @@ class Test:
         Phi1 = -1.949
         Phi2 = -2.154
         offset = 0.509*1.524
-        consumer = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset)
+        tau = 3600 
 
-        # Add heat exchanger
-        hex_data = [0.5, 0.3, 10000, 0.8] # dummy data
-        net.add_hex('HEX 1', 'Node 1', 'Node 2', hex_data, pipe_data, consumer)
+        consumer1 = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset,0)
+        consumer2 = Consumer('Consumer 2',A1,A2,Period1,Period2,Phi1,Phi2,offset,tau)
+
+        pipe_data = Test.read_pipe_data('Pipe of experiment van der Heijden')
+        hex_data = Test.read_hex_data('Standard hex constants dummy pressure')
+
+        # Create network
+        net = Network("Model step 5")
+
+        net.add_node('Node 1', 0, 0, 0)
+        net.add_node('Node 2', 0, 0, 6)
+        net.add_node('Node 3', 0, 0, 12)
+        net.add_node('Node 4', 5, 0, 12)
+        net.add_node('Node 5', 5, 0, 11)
+        net.add_node('Node 6', 2, 0, 11)
+        net.add_node('Node 7', 5, 0, 6)
+        net.add_node('Node 8', 5, 0, 5)
+        net.add_node('Node 9', 2, 0, 5)
+        net.add_node('Node 10',2, 0, 0)
+
+        net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
+        net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
+        net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
+        net.add_pipe('Pipe 4', 'Node 5', 'Node 6', pipe_data)
+        net.add_pipe('Pipe 5', 'Node 2', 'Node 7', pipe_data)
+        net.add_pipe('Pipe 6', 'Node 6', 'Node 9', pipe_data)
+        net.add_pipe('Pipe 7', 'Node 8', 'Node 9', pipe_data)
+        net.add_pipe('Pipe 8', 'Node 9', 'Node 10', pipe_data)
+        
+        net.add_hex('Hex 1', 'Node 4', 'Node 5', hex_data, pipe_data, consumer1)
+        net.add_hex('Hex 2', 'Node 7', 'Node 8', hex_data, pipe_data, consumer2)
 
         # Simulation parameters
         dt = 60 # s
@@ -278,7 +303,7 @@ class Test:
         temp_type = 'constant'
         flow_type = 'constant'
         
-        T_in, v_flow = Test.generate_input(temp_type,flow_type, total_time, dt)
+        T_in, v_flow = Test.generate_input_network(temp_type,flow_type, total_time, dt)
 
         # Run simulation
         sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type)      
@@ -336,7 +361,24 @@ class Test:
 
         return pipe_data
     
-    def generate_input(temp_type, flow_type, total_time, dt):
+    def read_hex_data(hex_data_set):
+
+        thesis_dir = os.path.dirname(os.path.abspath(__file__))
+        constants_file = os.path.join(thesis_dir, 'constants_hex.json')
+
+        with open(constants_file) as f:
+            constants = json.load(f)
+
+        U = constants[hex_data_set]['U'] # Overall heat transfer coefficient [W/m2K]
+        As = constants[hex_data_set]['As'] # Heat transfer area [m2]
+        F = constants[hex_data_set]['F'] # Correction factor [-]
+        K_hx = constants[hex_data_set]['K_hx'] # Pressure loss coefficient [-]
+
+        hex_data = [U, As, F, K_hx]
+
+        return hex_data
+    
+    def generate_input_one_pipe(temp_type, flow_type, total_time, dt):
 
         """
         Generate time series for inlet temperature and flow velocity used in simulations.
@@ -366,6 +408,39 @@ class Test:
         else: 
             num_steps = int(total_time/dt)
 
+        if temp_type == "constant":
+            T_in = np.ones(num_steps) * 65                                 # Constant
+        elif temp_type == "oscillation":
+            T_in = 65 + 5 * np.sin(np.linspace(0, 8*np.pi, num_steps))   # Oscillating inlet temperature
+        elif temp_type == "square":
+            T_in = 80 + 1* square(2 * np.pi * total_time / 20)       
+        else:
+            raise ValueError("This temperature type doesn't exist!")
+    
+        if flow_type == "constant":
+            v_flow = np.ones(num_steps) * 2                           # Constant
+        elif flow_type == "oscillation":
+            v_flow = 1.5 + 0.8*np.cos(np.linspace(0, 2*np.pi, num_steps)) # Oscillating flow velocity
+        elif flow_type == "square":
+            v_flow = 1.5 + 0.5 * square(2 * np.pi * total_time / 50)        # Square wave flow velocity, 50 is the period
+        else:
+            raise ValueError("This flow type doesn't exist!")
+        return T_in, v_flow
+    
+    def generate_input_network(temp_type, flow_type, total_time, dt):
+
+        """
+        Generate time series for inlet temperature and flow velocity used in simulations.
+
+        Args:
+        """
+
+        # Check if total_time / dt is a whole number
+        if (total_time / dt) % 1 != 0:
+                    num_steps = int(total_time / dt) + 1
+        else: 
+            num_steps = int(total_time/dt)
+
 
         if temp_type == "constant":
             T_in = np.ones(num_steps) * 65                                 # Constant
@@ -378,11 +453,18 @@ class Test:
     
 
         if flow_type == "constant":
-            v_flow = np.ones(num_steps) * 2                           # Constant
+            ## Q = A * v * rho * c_p * delta_T
+            # 0.7 kW = A * v * 1000 * 4186 * 20
+            # A * v = 0.7e3 / (1000 * 4186 * 20) = 8.36e-6 m3/s  
+            # For pipe with DN50, A = 0.00195 m2
+            # v = 8.36e-6 / 0.00195 = 0.00429 m/s
+            # TODO: set inlet flow as mass flow instead of velocity?
+
+            v_flow = np.ones(num_steps) * 0.00429                           # Constant
         elif flow_type == "oscillation":
-            v_flow = 1.5 + 0.8*np.cos(np.linspace(0, 2*np.pi, num_steps)) # Oscillating flow velocity
+            v_flow = (1.5 + 0.8*np.cos(np.linspace(0, 2*np.pi, num_steps))) * 0.00429 # Oscillating flow velocity
         elif flow_type == "square":
-            v_flow = 1.5 + 0.5 * square(2 * np.pi * total_time / 50)        # Square wave flow velocity, 50 is the period
+            v_flow = (1.5 + 0.5 * square(2 * np.pi * total_time / 50)) * 0.00429        # Square wave flow velocity, 50 is the period
         else:
             raise ValueError("This flow type doesn't exist!")
         return T_in, v_flow

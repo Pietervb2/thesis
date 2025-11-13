@@ -48,8 +48,7 @@ class HeatExchanger(Node):
         """         
 
         Tc_out, Th_out = HeatExchanger.NTU_method(self,N)
-        self.consumer.Tc_out[N] = Tc_out
-
+        
         for _, pipe in self.pipes_in.items():
             
             self.T[N] = Th_out
@@ -72,7 +71,7 @@ class HeatExchanger(Node):
         """
 
         # Get inlet temperatures and mass flow rates
-        pipe = self.pipes_in[f'pipe in {self.node_id}'] #Assuming single inlet pipe
+        pipe = self.pipes_in[f'Pipe {self.node_id.split()[-1]}.1'] #Assuming single inlet pipe
         Th_in = pipe.T[N]
         mflow_h = pipe.get_m_flow(N)
 
@@ -103,6 +102,9 @@ class HeatExchanger(Node):
 
         Tc_out = Tc_in + Q / Cc
         Th_out = Th_in - Q / Ch
+
+        self.consumer.Tc_out[N] = Tc_out
+        self.consumer.Q_supply[N] = max((Tc_out - Tc_in) * mflow_c * pipe.c_water, 0)
 
         return Tc_out, Th_out
 

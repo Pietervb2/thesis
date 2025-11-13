@@ -1,0 +1,14 @@
+{
+    "Standard hex constants dummy pressure":{
+        "comment_U": "Overall heat transfer coefficient [W/m2K]",
+        "U" : 2000, 
+        "comment_As": "Heat transfer area [m2]",
+        "extra_comment_As": "Qd = U * As * F * delta_T_mean, 700 = 2000 * As * 0.95 * 20, Therefore As = 0.0184 m2",
+        "As" : 0.02,    
+        "comment_F": "Correction factor [-]",
+        "F" : 0.95,
+        "comment_K_hx": "Pressure loss coefficient [-] DUMMY",
+        "K_hx" : 10
+    }
+}
+
