@@ -55,10 +55,10 @@ class Pipe:
     def bnode_init(self, 
             dt : float,
             num_steps : int,
-            v_flow_array : np.ndarray[Union[float]],
-            T_inlet_array : np.ndarray[Union[float]],
             T_init_water: float,
-            T_init_pipe: float
+            T_init_pipe: float,
+            v_inflow: np.ndarray[Union[float]],
+            T_in: np.ndarray[Union[float]] = None
             ):
         """
         Initialize history of velocities and temperatures to ensure valid solutions.
@@ -74,22 +74,28 @@ class Pipe:
         Returns:
         v_history: array of historical velocities
         T_history: array of historical temperatures
+
+        #TODO: update
         """
         
         self.dt = dt
         self.num_steps = num_steps
 
         # Calculate minimum history length needed based on pipe length and flow velocity
-        min_steps = int(np.ceil((self.L + v_flow_array[0] * self.dt) / (v_flow_array[0] * self.dt)))
+        min_steps = int(np.ceil((self.L + v_inflow[0] * self.dt) / (v_inflow[0] * self.dt)))
         self.hist_len = min_steps + 5 # Add some margin to ensure we have enough history NOTE: based on what?
         
         # Initialize history velocity and temperature of water 
-        self.v_history = np.ones(self.hist_len) * v_flow_array[0]
+        self.v_history = np.ones(self.hist_len) * v_inflow[0]
         self.T_history = np.ones(self.hist_len) * T_init_water
 
         #NOTE Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
-        self.m_flow_extended = np.round(np.concatenate([self.v_history, v_flow_array]) * self.inner_cs * self.rho_water,3)
-        self.T_in_extended = np.concatenate([self.T_history, T_inlet_array])
+        self.m_flow_extended = np.round(np.concatenate([self.v_history, v_inflow]) * self.inner_cs * self.rho_water,5)
+
+        if T_in:
+            self.T_in_extended = np.concatenate([self.T_history, T_in])
+        else:
+            self.T_in_extended = np.round(np.concatenate([self.T_history, np.ones(num_steps)*T_init_water]),5)
 
         # T_lossless: water temperature at the pipe output without heat loss or capacity of the pipe 
         # T_cap: water temperature at the pipe output with heat loss to capacity of the pipe  
