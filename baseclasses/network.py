@@ -186,8 +186,8 @@ class Network:
             
             if i == 0:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow, T_in = T_in)
-            
-            pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe)
+            else:
+                pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
 
     def set_T_and_flow_network(self, T_ambt : float, N : int, no_cap = False):
             

@@ -90,7 +90,7 @@ class Node:
             if len(self.pipes_out) == 0:
                 return
             
-            m_pipe_flow = np.round(sum_m_flow / len(self.pipes_out),5)
+            m_pipe_flow = sum_m_flow / len(self.pipes_out)
 
             
             for pipe_id, pipe in self.pipes_out.items():

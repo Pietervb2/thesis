@@ -99,7 +99,7 @@ class Test:
             sim = Simulation(dt, total_time, network.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type, no_cap = no_cap)
             T_init_water = T_init_pipe = T_ambt      
 
-        sim.simulate_network(network, T_in, v_flow, T_init_water, T_init_pipe, T_ambt, 
+        sim.simulate_network(network, T_in, v_flow, T_init_water, T_init_pipe, 
                                 plot_network = plot_network, 
                                 plot_nodes_T = plot_nodes_T, 
                                 plot_pipes_T = plot_pipes_T, 
@@ -133,7 +133,12 @@ class Test:
         data_dict = {}
         
         # Perform the simulation
-        Test.simulate_network_compare(network,T_ambt, dt, total_time, file, temp_type, flow_type, no_cap = no_cap)
+        Test.simulate_network_compare(network,T_ambt, dt, 
+                                      total_time = total_time,
+                                      file = file,
+                                      temp_type = temp_type,
+                                      flow_type = flow_type,
+                                      no_cap = no_cap)
 
         if file:
 
@@ -168,13 +173,15 @@ class Test:
             
         # Path names
         sim_folder = os.path.join(base_dir,'figures','simulation',sim_name)                               
-        sim_file = os.path.join(sim_folder, 'simulation_data.csv')
+        sim_folder = os.path.join(sim_folder,'simulation_data')
         mo_file = os.path.join(base_dir, "data", "pipe_validation", "modelica", mo_name)
 
               
         # Simulation and modelica data
-        sim_data = pd.read_csv(sim_file)
-        sim_temp = sim_data[f"T_Node {len(network.nodes)}"]
+        sim_data_mflow = pd.read_csv(os.path.join(sim_folder, 'Pipe_mflow.csv'))
+        sim_data_temp = pd.read_csv(os.path.join(sim_folder, 'Node_temp.csv'))
+
+        sim_temp = sim_data_temp[f"Node {len(network.nodes)}"]
 
         mo_data = pd.read_csv(mo_file, delimiter=",")
 
@@ -206,12 +213,12 @@ class Test:
         if file:
             plt.plot(T_out_exp, label = "Experimental data")
             plt.plot(mo_time, mo_temp, label = f'Modelica RMSE {round(root_mean_squared_error(T_out_exp[::dt],mo_temp),2)}')
-            plt.plot(sim_data['time'], sim_temp, label = f'Simulation RMSE {round(root_mean_squared_error(T_out_exp[::dt], sim_temp),2)}')
+            plt.plot(sim_data_temp['time'], sim_temp, label = f'Simulation RMSE {round(root_mean_squared_error(T_out_exp[::dt], sim_temp),2)}')
             plt.title(f"Temperature comparison: Experiment {file[-1]} ")
         else:
             plt.title(f"Temperature comparison Tin: {temp_type}, mass flow: {flow_type} ")
             plt.plot(mo_time, mo_temp, label = f'Modelica, #nodes = {number_of_nodes}')
-            plt.plot(sim_data['time'], sim_temp, label = f'Simulation RMSE {round(root_mean_squared_error(mo_temp, sim_temp),2)}')
+            plt.plot(sim_data_temp['time'], sim_temp, label = f'Simulation RMSE {round(root_mean_squared_error(mo_temp, sim_temp),2)}')
         plt.plot(mo_time,mo_Tin, label = 'Inlet temperature',linestyle = '--')
         plt.xlabel('Time (s)')
         plt.ylabel('Temperature (°C)')
@@ -222,7 +229,7 @@ class Test:
         
         plt.figure()
         plt.title("Input mass flow rate")
-        plt.plot(sim_data['time'], sim_data['m_flow Pipe 1'])
+        plt.plot(sim_data_temp['time'], sim_data_mflow['Pipe 1'])
         plt.xlabel('Time (s)')
         plt.ylabel('Mass Flow (kg/s)')
         plt.grid(True)
@@ -231,11 +238,11 @@ class Test:
 
         # Save data
         data_dict.update({
-            "Time": sim_data['time'],
+            "Time": sim_data_temp['time'],
             "Simulation temp": sim_temp.values,
             "Modelica temp": mo_temp.values,
-            "Mass flow": sim_data["m_flow Pipe 1"].values,
-            "Input temp simulation": sim_data["T_Node 1"].values,
+            "Mass flow": sim_data_mflow["Pipe 1"].values,
+            "Input temp simulation": sim_data_temp["Node 1"].values,
             "Input temp modelica": mo_Tin.values,
         })
 
@@ -330,12 +337,12 @@ class Test:
         net.add_pipe('Pipe 4', 'Node 5', 'Node 6', pipe_data)
         net.add_pipe('Pipe 5', 'Node 2', 'Node 7', pipe_data)
         net.add_pipe('Pipe 6', 'Node 6', 'Node 9', pipe_data)
-        net.add_pipe('Pipe 9', 'Node 7', 'Node 8', pipe_data)
+        # net.add_pipe('Pipe 9', 'Node 7', 'Node 8', pipe_data)
         net.add_pipe('Pipe 7', 'Node 8', 'Node 9', pipe_data)
         net.add_pipe('Pipe 8', 'Node 9', 'Node 10', pipe_data)
         
         net.add_hex('Hex 1', 'Node 4', 'Node 5', hex_data, pipe_data, consumer1)
-        # net.add_hex('Hex 2', 'Node 7', 'Node 8', hex_data, pipe_data, consumer2)
+        net.add_hex('Hex 2', 'Node 7', 'Node 8', hex_data, pipe_data, consumer2)
 
         # Simulation parameters
         dt = 60 # s
@@ -363,7 +370,6 @@ class Test:
                         number_of_nodes, total_length):
         
         pipe_data = Test.read_pipe_data(pipe_data_set)
-        number_of_nodes = 2
         pipe_length = total_length / (number_of_nodes -1)
 
         net = Network("One_pipe_#nodes_" + str(number_of_nodes) + "_length=" + str(total_length))
@@ -504,9 +510,9 @@ class Test:
             # A * v = 0.7e3 / (1000 * 4186 * 20) = 8.36e-6 m3/s  
             # For pipe with DN50, A = 0.00196 m2
             # v = 8.36e-6 / 0.00195 = 0.00427 m/s
-            # TODO: set inlet flow as mass flow instead of velocity?
+            # TODO: set inlet flow as mass flow instead of velocity?, but this on the customer side. Go for bigger initial velocity.
 
-            v_flow = np.ones(num_steps) * 0.00427                           # Constant
+            v_flow = np.ones(num_steps) * 0.00427                          # Constant
         elif flow_type == "oscillation":
             v_flow = (1.5 + 0.8*np.cos(np.linspace(0, 2*np.pi, num_steps))) * 0.00427 # Oscillating flow velocity
         elif flow_type == "square":
@@ -517,10 +523,15 @@ class Test:
     
 if __name__ == "__main__":
 
-    # Test.model_step_5()
-    # Test.initial_test_HEX()
+    Test.model_step_5()
 
-    network = Test.network_builder_one_pipe("Pipe of experiment van der Heijden", number_of_nodes=2, total_length=100)
-    Test.compare_simulations()
+    # number_of_nodes = 2
+    # T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! 
+    # total_length = 39 # [m]
 
-    ### Eerste node moet je altijd Node 1 noemen, omdat die naam hard gecodeerd is in de network class. Kan ik later nog aanpassen.
+    # network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
+    # files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
+    # dt_array = [1,1,1,30] # [s], delta time for every file
+    # Test.compare_simulations(network_exp, T_ambt, dt_array[1], file = files[1])
+    # # for k in range(len(files)):
+    # #     Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)

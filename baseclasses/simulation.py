@@ -53,7 +53,6 @@ class Simulation:
                          v_inflow : np.ndarray[Union[float]],
                          T_init_water : float,
                          T_init_pipe : float,
-                         T_ambt: float,
                          plot_network = False,
                          plot_nodes_T = False,
                          plot_pipes_T = False,
@@ -76,7 +75,7 @@ class Simulation:
         # T_in and v_inflow are saved in the network class
         network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
 
-        for N in range(1,self.num_steps):
+        for N in range(0,self.num_steps):
  
             network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
 
@@ -107,6 +106,13 @@ class Simulation:
         
         for node_id, node in network.nodes.items():
             plt.plot(self.time, node.T, label=f'{node_id}')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
       
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
@@ -166,6 +172,14 @@ class Simulation:
 
             pipe = network.pipes[pipe_id]['pipe_instance']
             plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend()
@@ -422,7 +436,7 @@ class Simulation:
         for pipe_id, pipe_info in network.pipes.items():
             pipe = pipe_info['pipe_instance']
             pipe_T_data[f'{pipe_id}'] = np.round(pipe.T,3)
-            pipe_mflow_data[f'{pipe_id}'] = pipe.m_flow
+            pipe_mflow_data[f'{pipe_id}'] = np.round(pipe.m_flow,5)
         
         for pipe_id, pipe_info in network.pipes.items():
             node_from = pipe_info['from']

@@ -86,16 +86,15 @@ class Pipe:
         self.hist_len = min_steps + 5 # Add some margin to ensure we have enough history NOTE: based on what?
         
         # Initialize history velocity and temperature of water 
-        self.v_history = np.ones(self.hist_len) * v_inflow[0]
+        self.v_history = np.ones(self.hist_len) * v_inflow[0] 
         self.T_history = np.ones(self.hist_len) * T_init_water
 
-        #NOTE Voor zodadelijk uitwerken! Kijken of ik het in de pipe class allemaal moet op slaan of het per keer moet berekenen. 
-        self.m_flow_extended = np.round(np.concatenate([self.v_history, v_inflow]) * self.inner_cs * self.rho_water,5)
-
-        if T_in:
+        if T_in is not None:
             self.T_in_extended = np.concatenate([self.T_history, T_in])
+            self.m_flow_extended = np.round(np.concatenate([self.v_history, v_inflow])* self.inner_cs * self.rho_water,5)
         else:
-            self.T_in_extended = np.round(np.concatenate([self.T_history, np.ones(num_steps)*T_init_water]),5)
+            self.T_in_extended = np.round(np.concatenate([self.T_history, np.zeros(num_steps)]),5)
+            self.m_flow_extended = np.round(np.concatenate([self.v_history, np.zeros(num_steps)]) * self.inner_cs * self.rho_water,5)
 
         # T_lossless: water temperature at the pipe output without heat loss or capacity of the pipe 
         # T_cap: water temperature at the pipe output with heat loss to capacity of the pipe  
@@ -103,11 +102,11 @@ class Pipe:
         self.T_lossless = np.ones(self.num_steps) * T_init_water
         self.T_cap = np.ones(self.num_steps) * T_init_water
         self.T = np.ones(self.num_steps) * T_init_water
+        
+        self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
 
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.m_flow = np.ones(self.num_steps)
-        self.m_flow[0] = self.m_flow_extended[self.hist_len]
-        self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
 
         # Save average time delay in pipe
         self.t_stay_array = np.ones(self.num_steps) 
@@ -180,7 +179,6 @@ class Pipe:
         # Final outlet water temperature including heat loss to ambient
         ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
 
-        # t_stay = t_stay / self.dt
         decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
         self.T[N] = T_ambt + (ref_T - T_ambt) * decay    
 
@@ -209,7 +207,6 @@ class Pipe:
             
         third_term_delay = m * (m_flow_ex[N] * self.dt + self.L * self.inner_cs * self.rho_water - S)
 
-        # print(f' n = {n} and m = {m}') # debug
         delay = (first_term_delay + second_term_delay + third_term_delay)/m_flow_ex[N]
 
         return delay

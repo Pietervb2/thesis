@@ -1,2 +1,2 @@
 #nodes,#pipes,pipe_r_outer,pipe_r_inner,K,rho_pipe,rho_insu,cp_pipe,cp_insu,insu_thickness
-2,1,0.02819,0.02624,0.4381254802235937,8000,32,500,2500,0.013
+100,99,0.02819,0.02624,0.4381254802235937,8000,32,500,2500,0.013
