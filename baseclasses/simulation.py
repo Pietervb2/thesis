@@ -53,7 +53,6 @@ class Simulation:
                          v_inflow : np.ndarray[Union[float]],
                          T_init_water : float,
                          T_init_pipe : float,
-                         T_ambt: float,
                          plot_network = False,
                          plot_nodes_T = False,
                          plot_pipes_T = False,
@@ -76,7 +75,7 @@ class Simulation:
         # T_in and v_inflow are saved in the network class
         network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
 
-        for N in range(1,self.num_steps):
+        for N in range(0,self.num_steps):
  
             network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
 
@@ -107,6 +106,13 @@ class Simulation:
         
         for node_id, node in network.nodes.items():
             plt.plot(self.time, node.T, label=f'{node_id}')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
       
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
@@ -166,6 +172,14 @@ class Simulation:
 
             pipe = network.pipes[pipe_id]['pipe_instance']
             plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend()
@@ -274,7 +288,8 @@ class Simulation:
                 mode='markers+text',
                 marker=dict(size=5, color='red'),
                 text=[node_id],
-                textposition='top center'
+                textposition='top center',
+                name = node_id
             ))
 
         # Plot pipes
@@ -389,37 +404,57 @@ class Simulation:
             T_in: Input temperature array
             v_flow: Input flow velocity array
         """
-        # Initialize empty dictionary to store data
-        data = {}
+
+        sim_data_folder = os.path.join(self.folder, 'simulation_data')
+        if not os.path.exists(sim_data_folder):
+            os.makedirs(sim_data_folder)
         
-        # Store input data
-        data['time'] = self.time
-        data['T_in'] = T_in
-        data['v_flow'] = v_flow
-        
-        # Store node temperatures
+        # Initialize empty dictionaries to store data
+        node_data = {}
+        node_dT_data = {}
+
+        pipe_T_data = {}
+        pipe_mflow_data = {}
+               
+        # Store time in all dicts
+        node_data['time'] = self.time
+        node_dT_data['time'] = self.time
+        pipe_T_data['time'] = self.time
+        pipe_mflow_data['time'] = self.time
+
+        # Inlet temperature
+        node_data['T_in'] = T_in
+
         for node_id, node in network.nodes.items():
-            data[f'T_{node_id}'] = np.round(node.T,3)
+            node_data[f'{node_id}'] = np.round(node.T,3)
+
+        node_data['T_ambient'] = self.T_ambt
         
         # Store pipe mass flows and temperatures, and the temperature differences between nodes
+        pipe_mflow_data['v_flow_in'] = v_flow
+
         for pipe_id, pipe_info in network.pipes.items():
             pipe = pipe_info['pipe_instance']
-            data[f'T {pipe_id}'] = np.round(pipe.T,3)
-            data[f'm_flow {pipe_id}'] = np.round(pipe.m_flow,3)
-
+            pipe_T_data[f'{pipe_id}'] = np.round(pipe.T,3)
+            pipe_mflow_data[f'{pipe_id}'] = np.round(pipe.m_flow,5)
+        
         for pipe_id, pipe_info in network.pipes.items():
             node_from = pipe_info['from']
             node_to = pipe_info['to']
-            data[f'dT {node_from.split()[1]}_{node_to.split()[1]}'] = np.round(network.nodes[node_from].T - network.nodes[node_to].T,3)
+            node_dT_data[f'dT {node_from.split()[1]}_{node_to.split()[1]}'] = np.round(network.nodes[node_from].T - network.nodes[node_to].T,3)
 
-        data['T_ambient'] = self.T_ambt
+        # Save simulation data
+        df_node = pd.DataFrame(node_data)
+        df_pipe_T = pd.DataFrame(pipe_T_data)
+        df_pipe_mflow = pd.DataFrame(pipe_mflow_data)
+        df_node_dT = pd.DataFrame(node_dT_data)
 
-        # Create DataFrame and save to CSV
-        df = pd.DataFrame(data)
-        df.to_csv(os.path.join(self.folder, 'simulation_data.csv'), index=False)
+        df_node.to_csv(os.path.join(sim_data_folder, 'Node_temp.csv'), index=False)
+        df_pipe_T.to_csv(os.path.join(sim_data_folder,'Pipe_temp.csv'),index=False)
+        df_pipe_mflow.to_csv(os.path.join(sim_data_folder,'Pipe_mflow.csv'), index =  False)
+        df_node_dT.to_csv(os.path.join(sim_data_folder,'Node_dT.csv'),index = False)
 
-        # Store data for pipes #TODO: need to think of better way when using different pipes in one network.
-
+        # Network data incombination with the pipe properites
         Network_data = {}
 
         Network_data['#nodes'] = len(network.nodes)
@@ -442,9 +477,9 @@ class Simulation:
 
         # Saving the data corresponding to HEX and consumers
         HEX_data = {}
-    
-        if not os.path.exists(self.folder):
-            os.makedirs(os.path.join(self.folder,'hex_consumer_data'))
+        hex_folder = os.path.join(self.folder, 'hex_consumer_data')
+        if not os.path.exists(hex_folder):
+            os.makedirs(hex_folder)
 
         for hex_key in network.hexs.keys():
             

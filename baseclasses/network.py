@@ -164,12 +164,13 @@ class Network:
     def initialize_network(self, 
                            dt : float, 
                            num_steps : int, 
-                           v_init_array : np.ndarray[Union[float]], 
+                           v_inflow : np.ndarray[Union[float]], 
                            T_in : np.ndarray[Union[float]],
                            T_init_water : float,
                            T_init_pipe : float):
         """
-        Initialize the temperature in the network
+        Initialize the temperature in the network. 
+        Loading the inlet temperature and inlet flow for the first node and pipe. The rest will be dummy variables.
 
         # NOTE: for now just visit all nodes and pipes. They are all given the initial temperature of the first node. 
         """
@@ -181,38 +182,54 @@ class Network:
             else:
                 node.initialize_node(num_steps, T_init_water, dt)
 
-        for pipe in self.pipes.values():
-            pipe['pipe_instance'].bnode_init(dt, num_steps, v_init_array, T_in, T_init_water, T_init_pipe)
+        for i, pipe in enumerate(self.pipes.values()):
+            
+            if i == 0:
+                pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow, T_in = T_in)
+            else:
+                pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
 
     def set_T_and_flow_network(self, T_ambt : float, N : int, no_cap = False):
             
+            # List of pipes for which the bnode method is performed.
             self.pipes_finished = []
 
-            # Done by hand as no inflow pipe connected to node
-            pipe1 = next(iter(self.pipes.values()))['pipe_instance']
-            pipe1.bnode_method(T_ambt, N, no_cap = no_cap)
+            # Done by hand as no inflow pipe connected to node, gets Pipe 1. But now name is not hard coded.
+            first_pipe = next(iter(self.pipes.values()))['pipe_instance'] 
+            first_node = next(iter(self.nodes.values()))
             
-            self.pipes_finished.append(pipe1.pipe_id)
-            next_node_id = self.pipes[pipe1.pipe_id]['to']
+            # first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
+            first_pipe.bnode_method(T_ambt, N, no_cap = no_cap)
+
+            self.pipes_finished.append(first_pipe.pipe_id)
+
+            # Get node at end of pipe. 
+            next_node_id = self.pipes[first_pipe.pipe_id]['to']
             next_node = self.nodes[next_node_id]
+
+            # Update temperature and mass flow
             next_node.set_T(N)
             next_node.set_m_flow(N)
             
-
             self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
+
             
     def set_T_and_flow_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int, no_cap = False):
-        # print(f'Current node = {node_id}') #debug
+        """"
+        To determine which node to update next I perform a recursion. 
+        As for all incoming pipes the bnode method needs to be completed before the node is updated. 
+        """
 
         for pipe_id, pipe in node.pipes_out.items():
+
+            if pipe_id == "Pipe 9" and N == 7: # debug
+                pass
 
             pipe.bnode_method(T_ambt, N, no_cap = no_cap)
             self.pipes_finished.append(pipe_id)
             
             next_node_id = self.pipes[pipe_id]['to']
             next_node = self.nodes[next_node_id]
-            # print(f' pipes finished = {self.pipes_finished}') #debug
-            # print(f' next node id = {next_node_id}')    #debug
 
             if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
                 # print(f'Activate {next_node}') #debug
