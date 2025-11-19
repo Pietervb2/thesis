@@ -98,13 +98,13 @@ class HeatExchanger(Node):
         else:
             epsilon = NTU / (1 + NTU)
 
-        Q = epsilon * Cmin * (Th_in - Tc_in)
+        Q = self.F * epsilon * Cmin * (Th_in - Tc_in)
 
         Tc_out = Tc_in + Q / Cc
         Th_out = Th_in - Q / Ch
 
         self.consumer.Tc_out[N] = Tc_out
-        self.consumer.Q_supply[N] = max((Tc_out - Tc_in) * mflow_c * pipe.c_water, 0)
+        self.consumer.Q_supply[N] = (Tc_out - Tc_in) * mflow_c * pipe.c_water
 
         return Tc_out, Th_out
 

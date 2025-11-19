@@ -323,26 +323,30 @@ class Test:
         net.add_node('Node 1', 0, 0, 0)
         net.add_node('Node 2', 0, 0, 6)
         net.add_node('Node 3', 0, 0, 12)
-        net.add_node('Node 4', 5, 0, 12)
-        net.add_node('Node 5', 5, 0, 11)
-        net.add_node('Node 6', 2, 0, 11)
-        net.add_node('Node 7', 5, 0, 6)
-        net.add_node('Node 8', 5, 0, 5)
-        net.add_node('Node 9', 2, 0, 5)
-        net.add_node('Node 10',2, 0, 0)
+        net.add_node('Node 4', 0, 0, 13)
+        net.add_node('Node 5', 2, 0, 13)
+        net.add_node('Node 6', 5, 0, 12)
+        net.add_node('Node 7', 5, 0, 11)
+        net.add_node('Node 8', 2, 0, 11)
+        net.add_node('Node 9', 5, 0, 6)
+        net.add_node('Node 10', 5, 0, 5)
+        net.add_node('Node 11', 2, 0, 5)
+        net.add_node('Node 12',2, 0, 0)
 
         net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
         net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
         net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
-        net.add_pipe('Pipe 4', 'Node 5', 'Node 6', pipe_data)
-        net.add_pipe('Pipe 5', 'Node 2', 'Node 7', pipe_data)
-        net.add_pipe('Pipe 6', 'Node 6', 'Node 9', pipe_data)
-        # net.add_pipe('Pipe 9', 'Node 7', 'Node 8', pipe_data)
-        net.add_pipe('Pipe 7', 'Node 8', 'Node 9', pipe_data)
-        net.add_pipe('Pipe 8', 'Node 9', 'Node 10', pipe_data)
+        net.add_pipe('Pipe 4', 'Node 4', 'Node 5', pipe_data)
+        net.add_pipe('Pipe 5', 'Node 5', 'Node 8', pipe_data)
+        net.add_pipe('Pipe 6', 'Node 3', 'Node 6', pipe_data)
+        net.add_pipe('Pipe 7', 'Node 7', 'Node 8', pipe_data)
+        net.add_pipe('Pipe 8', 'Node 2', 'Node 9', pipe_data)
+        net.add_pipe('Pipe 9', 'Node 8', 'Node 11', pipe_data)
+        net.add_pipe('Pipe 10', 'Node 10', 'Node 11', pipe_data)
+        net.add_pipe('Pipe 11', 'Node 11', 'Node 12', pipe_data)
         
-        net.add_hex('Hex 1', 'Node 4', 'Node 5', hex_data, pipe_data, consumer1)
-        net.add_hex('Hex 2', 'Node 7', 'Node 8', hex_data, pipe_data, consumer2)
+        net.add_hex('Hex 1', 'Node 6', 'Node 7', hex_data, pipe_data, consumer1)
+        net.add_hex('Hex 2', 'Node 9', 'Node 10', hex_data, pipe_data, consumer2)
 
         # Simulation parameters
         dt = 60 # s
@@ -512,11 +516,11 @@ class Test:
             # v = 8.36e-6 / 0.00195 = 0.00427 m/s
             # TODO: set inlet flow as mass flow instead of velocity?, but this on the customer side. Go for bigger initial velocity.
 
-            v_flow = np.ones(num_steps) * 0.00427                          # Constant
+            v_flow = np.ones(num_steps) * 0.2                          # Constant
         elif flow_type == "oscillation":
-            v_flow = (1.5 + 0.8*np.cos(np.linspace(0, 2*np.pi, num_steps))) * 0.00427 # Oscillating flow velocity
+            v_flow = (1.5 + 0.8*np.cos(np.linspace(0, 2*np.pi, num_steps))) * 0.2 # Oscillating flow velocity
         elif flow_type == "square":
-            v_flow = (1.5 + 0.5 * square(2 * np.pi * total_time / 50)) * 0.00427        # Square wave flow velocity, 50 is the period
+            v_flow = (1.5 + 0.5 * square(2 * np.pi * total_time / 50)) * 0.00427    # Square wave flow velocity, 50 is the period
         else:
             raise ValueError("This flow type doesn't exist!")
         return T_in, v_flow
@@ -524,6 +528,7 @@ class Test:
 if __name__ == "__main__":
 
     Test.model_step_5()
+    # Test.initial_test_HEX()
 
     # number_of_nodes = 2
     # T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! 
