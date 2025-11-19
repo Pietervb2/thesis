@@ -54,24 +54,5 @@
         "h_pipe_air": 5,
         "comment_thickness": "Thickness of the insulation layer [m]",
         "insu_thickness": 0.013 
-    },
-
-        "Pipe of DN50" : {
-        "comment_radius": "Inner and outer radius of the pipe [m]",
-        "r_inner" : 0.025, 
-        "r_outer" : 0.030, 
-        "comment_density": "Density of the pipe material and its insulation layer [kg/m^3]",
-        "rho_pipe": 8000, 
-        "rho_insu" : 32, 
-        "comment_cp": "Specific heat capacity of the pipe material and its insulation layer[J/kgK]",
-        "cp_pipe": 500, 
-        "cp_insu": 2500, 
-        "comment_k": "Heat conductivity of the pipe material and insulation layer [W/mK], heat conductivity of pipe is neglibible",
-        "k_pipe": 14.9, 
-        "k_insu": 0.04, 
-        "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/m2 K]",
-        "h_pipe_air": 5,
-        "comment_thickness": "Thickness of the insulation layer [m]",
-        "insu_thickness": 0.013 
     }
 }
