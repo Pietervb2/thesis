@@ -110,7 +110,7 @@ def change_csv_file_layout_realdata():
             text_file.write(f"#1 \ndouble tab{total_time,number_of_colums} \n")  # Add header line
             text_file.write(content)
 
-def clean_mo_csv(dt, T_ambt, file = None, temp_type = None, flow_type = None, length = None, no_cap = False):
+def clean_mo_csv(dt, T_ambt, file = None, temp_type = None, flow_type = None, length = None, number_of_nodes = None, no_cap = False):
     """
     Function to put the modelica data into a 1 sec timestep
     """
@@ -122,9 +122,9 @@ def clean_mo_csv(dt, T_ambt, file = None, temp_type = None, flow_type = None, le
     else:
     
         if no_cap:        
-            mo_file = str(length) + 'm' + '_dt=' + str(dt) + '_Tin=' + temp_type + '_mflow=' + flow_type + '_Tambt=' + str(T_ambt) + '_mo_no_cap.csv'
+            mo_file = f'{length}m_dt={dt}_Tin={temp_type}_mflow={flow_type}_Tambt={T_ambt}_nodes={number_of_nodes}_mo_no_cap.csv'
         else:
-            mo_file = str(length) + 'm' + '_dt=' + str(dt) + '_Tin=' + temp_type + '_mflow=' + flow_type + '_Tambt=' + str(T_ambt) + '_mo.csv'
+            mo_file = f'{length}m_dt={dt}_Tin={temp_type}_mflow={flow_type}_Tambt={T_ambt}_nodes={number_of_nodes}_mo.csv'
     
     df_modelica = pd.read_csv(os.path.join(val_dir,'data', 'pipe_validation','modelica', mo_file ), delimiter = ",")
 
@@ -139,19 +139,26 @@ def clean_mo_csv(dt, T_ambt, file = None, temp_type = None, flow_type = None, le
 
 
 if __name__ == "__main__":
-    T_ambt = 18
-    files = ['A', 'B', 'C', 'D']
-    dt_array = [1,1,1,30] # [s], delta time for every file
-    for i in range(len(files)):
-        temp_type = files[i]
-        flow_type = files[i]    
-        clean_mo_csv(dt_array[i],T_ambt,f'Experiment{files[i]}')    
+    # T_ambt = 18
+    # files = ['A', 'B', 'C', 'D']
+    # dt_array = [1,1,1,30] # [s], delta time for every file
+    # for i in range(len(files)):
+    #     temp_type = files[i]
+    #     flow_type = files[i]    
+    #     clean_mo_csv(dt_array[i],T_ambt,f'Experiment{files[i]}')    
 
     # length = 2000
     # dt = 30
 
+    # nodes = [25,50,100,200]
+    # for node in nodes:
+    #     clean_mo_csv(dt, T_ambt, length = length, temp_type = 'oscillation', flow_type = 'constant',number_of_nodes=node)
     # clean_mo_csv(1,18,'ExperimentA')
     # clean_mo_csv(length, dt, 'constant','constant',T_ambt)
     # clean_mo_csv(dt, T_ambt, length = length, temp_type = 'oscillation', flow_type = 'constant',no_cap = True)
 
-    # clean_mo_csv(1,18,'ExperimentA')•
+    # clean_mo_csv(1,18,'ExperimentA')
+
+    dt = 1
+    T_ambt = 20
+    clean_mo_csv(dt,T_ambt,temp_type='oscillation', flow_type = 'constant', length = 40, number_of_nodes=80)

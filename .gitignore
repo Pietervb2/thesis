@@ -1,6 +1,7 @@
 # My own changes to git ignore:
-# figures/
-validation/data/
+figures/
+data/
+temperatuurtest.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

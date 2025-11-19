@@ -2,7 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+import plotly.tools as tls
+import plotly.graph_objects as go
 
+from pathlib import Path
 from scipy.signal import square
 from typing import Union
 
@@ -50,12 +53,13 @@ class Simulation:
                          v_inflow : np.ndarray[Union[float]],
                          T_init_water : float,
                          T_init_pipe : float,
-                         T_ambt: float,
                          plot_network = False,
                          plot_nodes_T = False,
                          plot_pipes_T = False,
                          plot_pipes_m_flow = False,
                          plot_nodes_dT = False,
+                         plot_cap_influence = False,
+                         plot_consumer_demand = False,
                          no_cap = False):
         """
         Simulate temperature dynamics for a network.
@@ -71,7 +75,7 @@ class Simulation:
         # T_in and v_inflow are saved in the network class
         network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
 
-        for N in range(1,self.num_steps):
+        for N in range(0,self.num_steps):
  
             network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
 
@@ -84,48 +88,12 @@ class Simulation:
         self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
         self.plot_pipe_m_flow_network(network, v_inflow, plot = plot_pipes_m_flow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
-        self.plot_cap_influence(network)
+        self.plot_cap_influence(network, plot = plot_cap_influence)
+        self.plot_consumer_demand(network, plot = plot_consumer_demand)
         self.save_data(network, T_in, v_inflow) 
 
         plt.show()  
 
-    def plot_results_single_pipe_simulation(self, T_in, pipe, v_flow, decimal = 4):
-
-        """
-        Plot the results of the simulation
-        time: time array for the simulation
-        T_in: inlet temperature array
-        pipe: pipe object with simulation results
-        v_flow: flow velocity array
-        decimal: number of decimals to round the temperature arrays to
-        """
-        plt.figure(figsize=(10, 6))
-        plt.title("Water temperature")
-        plt.ticklabel_format(style='plain', axis='y')  # Use plain formatting for y-axis
-
-        plt.plot(self.time, T_in, label='Inlet Temperature')
-        plt.plot(self.time, np.round(pipe.T_lossless, decimal), label = "Lossless temperature")
-        plt.plot(self.time, np.round(pipe.T_cap, decimal), label='Temperature with pipe capacity')
-        plt.plot(self.time, np.round(pipe.T, decimal), label = 'Real temperature')
-
-        plt.xlabel('Time')
-        plt.ylabel('Temperature')
-        plt.legend()
-        plt.grid(True)
-
-        plt.figure()
-        plt.plot(pipe.t_stay_array)
-        plt.title('Average delay in the pipe')
-
-        plt.figure()
-        plt.plot(self.time, v_flow)
-        plt.title('Flow velocity')
-
-        plt.figure()
-        plt.plot(self.time, pipe.m_flow)
-        plt.title("Mass flow [m3/s]")
-        plt.show()
-    
     def plot_node_temperature_network(self, network: Network, T_in, plot = False):
         """
         Plot the temperature history for all nodes in the network
@@ -138,10 +106,17 @@ class Simulation:
         
         for node_id, node in network.nodes.items():
             plt.plot(self.time, node.T, label=f'{node_id}')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
       
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
-        plt.legend()
+        plt.legend(loc='lower right')
         plt.grid(True)
 
         plt.savefig(self.folder + '/node_temperatures.png')
@@ -197,6 +172,14 @@ class Simulation:
 
             pipe = network.pipes[pipe_id]['pipe_instance']
             plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend()
@@ -228,7 +211,8 @@ class Simulation:
         plt.savefig(self.folder + '/pipe_flows.png')
 
 
-        pipe1 = network.pipes['Pipe 1']['pipe_instance']
+        pipe1 = next(iter(network.pipes.values()))['pipe_instance']
+
 
         fig_m_flow_in = plt.figure()
         plt.plot(v_flow * pipe1.inner_cs * pipe1.rho_water)
@@ -243,7 +227,7 @@ class Simulation:
             plt.close(fig_pipe_flow)
             plt.close(fig_m_flow_in)
 
-    def plot_network(self, network: Network, plot = False):
+    def plot_network_old(self, network: Network, plot = False):
 
         """
         Plot the network showing nodes as points and pipes as lines.
@@ -277,40 +261,139 @@ class Simulation:
             mid_z = (from_node.z + to_node.z) / 2
 
             # Add pipe number at the midpoint
-            pipe_number = pipe_id.split()[1]
-            ax.text(mid_x, mid_y, mid_z, f'{pipe_number}', color='red', fontsize=14)
+            pipe_number = ' '.join(pipe_id.split()[1:])
+            ax.text(mid_x, mid_y, mid_z, f'{pipe_number}', color='red', fontsize=10)
             
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         ax.set_title('Network Layout')
 
-        plt.savefig(self.folder + '/network.png')
+        # Convert to Plotly figure and save as HTML
+        plotly_fig = tls.mpl_to_plotly(fig)
+        plotly_fig.write_html(self.folder + "/interactive_plot.html")
 
-        if not plot:
-            plt.close(fig)
+        # plt.savefig(self.folder + '/network.png')
 
-    def plot_cap_influence(self, network: Network):
+        # if not plot:
+        #     plt.close(fig)
+
+    def plot_network(self, network, plot=False):
+        fig = go.Figure()
+
+        # Plot nodes
+        for node_id, node in network.nodes.items():
+            fig.add_trace(go.Scatter3d(
+                x=[node.x], y=[node.y], z=[node.z],
+                mode='markers+text',
+                marker=dict(size=5, color='red'),
+                text=[node_id],
+                textposition='top center',
+                name = node_id
+            ))
+
+        # Plot pipes
+        for pipe_id, pipe_info in network.pipes.items():
+            from_node = network.nodes[pipe_info['from']]
+            to_node = network.nodes[pipe_info['to']]
+
+            # Pipe line
+            fig.add_trace(go.Scatter3d(
+                x=[from_node.x, to_node.x],
+                y=[from_node.y, to_node.y],
+                z=[from_node.z, to_node.z],
+                mode='lines',
+                line=dict(color='blue', width=3),
+                name=str(pipe_id)
+            ))
+
+            # Pipe label (midpoint)
+            mid_x = (from_node.x + to_node.x) / 2
+            mid_y = (from_node.y + to_node.y) / 2
+            mid_z = (from_node.z + to_node.z) / 2
+
+            fig.add_trace(go.Scatter3d(
+                x=[mid_x], y=[mid_y], z=[mid_z],
+                mode='text',
+                text=[str(pipe_id.split(" ")[-1])],
+                textfont=dict(color='red', size=10),
+                showlegend=False
+            ))
+
+        # Layout
+        fig.update_layout(
+            title='Network Layout',
+            scene=dict(
+                xaxis_title='X',
+                yaxis_title='Y',
+                zaxis_title='Z'
+            ),
+            width=900,
+            height=900
+        )
+
+        # Save interactive HTML
+        Path(self.folder).mkdir(parents=True, exist_ok=True)
+        html_path = Path(self.folder) / "interactive_plot.html"
+        fig.write_html(html_path, auto_open = plot)
+
+        # Optional: also export a static image
+        # fig.write_image(Path(self.folder) / "network.png") TODO: requires orca installation
+
+        # if plot:
+        #     fig.show()
+
+    def plot_cap_influence(self, network: Network, plot = False):
         """
         Plotting function to see the effect of the heat capacity plot
         """
         fig = plt.figure(figsize=(10, 6))
-        plt.title("Pipe Capacity Influence (Last Pipe)")
+        plt.title("Pipe Capacity Influence")
 
         # Get the last pipe in the network
         last_pipe_id = list(network.pipes.keys())[-1]
         last_pipe = network.pipes[last_pipe_id]['pipe_instance']
 
-        plt.plot(self.time, last_pipe.T_cap, label='T_cap')
-        plt.plot(self.time, last_pipe.T_lossless, label='T_lossless')
-        plt.plot(self.time, last_pipe.T, label='T (real)')
+        plt.plot(self.time, last_pipe.T_cap, label='T cap')
+        plt.plot(self.time, last_pipe.T_lossless, label='T lossless')
+        plt.plot(self.time, last_pipe.T, label='T real')
 
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend()
         plt.grid(True)
         plt.savefig(self.folder + '/cap_influence_last_pipe.png')
-        plt.close(fig)
+
+        if not plot:
+            plt.close(fig)
+
+    def plot_consumer_demand(self, network: Network, plot = False):
+        """
+        Plot the heat demand of all consumers in the network
+        """
+        fig = plt.figure(figsize=(10, 6))
+        plt.title("Consumer Heat Demand vs Supply")
+
+        for hex_key in network.hexs.keys():
+            hex = network.hexs[hex_key]['hex_instance']
+            plt.plot(self.time, hex.consumer.Q_d, label=f'Heat demand of C{hex.consumer.consumer_id.split(" ")[1]}')
+            plt.plot(self.time, hex.consumer.Q_supply, label=f'Heat supplied to C{hex.consumer.consumer_id.split(" ")[1]}', linestyle='--')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
+        plt.xlabel(f'Time (hours), dt = {self.dt}')
+        plt.ylabel('Heat Demand (W)')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(self.folder + '/HEAT.png')
+
+        if not plot:
+            plt.close(fig)
 
     def save_data(self, network: Network, T_in, v_flow):
         """
@@ -321,43 +404,63 @@ class Simulation:
             T_in: Input temperature array
             v_flow: Input flow velocity array
         """
-        # Initialize empty dictionary to store data
-        data = {}
+
+        sim_data_folder = os.path.join(self.folder, 'simulation_data')
+        if not os.path.exists(sim_data_folder):
+            os.makedirs(sim_data_folder)
         
-        # Store input data
-        data['time'] = self.time
-        data['T_in'] = T_in
-        data['v_flow'] = v_flow
-        
-        # Store node temperatures
+        # Initialize empty dictionaries to store data
+        node_data = {}
+        node_dT_data = {}
+
+        pipe_T_data = {}
+        pipe_mflow_data = {}
+               
+        # Store time in all dicts
+        node_data['time'] = self.time
+        node_dT_data['time'] = self.time
+        pipe_T_data['time'] = self.time
+        pipe_mflow_data['time'] = self.time
+
+        # Inlet temperature
+        node_data['T_in'] = T_in
+
         for node_id, node in network.nodes.items():
-            data[f'T_{node_id}'] = node.T
+            node_data[f'{node_id}'] = np.round(node.T,3)
+
+        node_data['T_ambient'] = self.T_ambt
         
         # Store pipe mass flows and temperatures, and the temperature differences between nodes
+        pipe_mflow_data['v_flow_in'] = v_flow
+
         for pipe_id, pipe_info in network.pipes.items():
             pipe = pipe_info['pipe_instance']
-            data[f'T {pipe_id}'] = pipe.T
-            data[f'm_flow {pipe_id}'] = pipe.m_flow
-
+            pipe_T_data[f'{pipe_id}'] = np.round(pipe.T,3)
+            pipe_mflow_data[f'{pipe_id}'] = np.round(pipe.m_flow,5)
+        
         for pipe_id, pipe_info in network.pipes.items():
             node_from = pipe_info['from']
             node_to = pipe_info['to']
-            data[f'dT {node_from.split()[1]}_{node_to.split()[1]}'] = network.nodes[node_from].T - network.nodes[node_to].T
+            node_dT_data[f'dT {node_from.split()[1]}_{node_to.split()[1]}'] = np.round(network.nodes[node_from].T - network.nodes[node_to].T,3)
 
-        data['T_ambient'] = self.T_ambt
+        # Save simulation data
+        df_node = pd.DataFrame(node_data)
+        df_pipe_T = pd.DataFrame(pipe_T_data)
+        df_pipe_mflow = pd.DataFrame(pipe_mflow_data)
+        df_node_dT = pd.DataFrame(node_dT_data)
 
-        # Create DataFrame and save to CSV
-        df = pd.DataFrame(data)
-        df.to_csv(os.path.join(self.folder, 'simulation_data.csv'), index=False)
+        df_node.to_csv(os.path.join(sim_data_folder, 'Node_temp.csv'), index=False)
+        df_pipe_T.to_csv(os.path.join(sim_data_folder,'Pipe_temp.csv'),index=False)
+        df_pipe_mflow.to_csv(os.path.join(sim_data_folder,'Pipe_mflow.csv'), index =  False)
+        df_node_dT.to_csv(os.path.join(sim_data_folder,'Node_dT.csv'),index = False)
 
-        # Store data for pipes #TODO: need to think of better way when using different pipes in one network.
-
+        # Network data incombination with the pipe properites
         Network_data = {}
 
         Network_data['#nodes'] = len(network.nodes)
         Network_data['#pipes'] = len(network.pipes)
 
-        pipe = network.pipes['Pipe 1']['pipe_instance']
+        pipe = next(iter(network.pipes.values()))['pipe_instance']
         Network_data['pipe_r_outer'] = pipe.r_outer
         Network_data['pipe_r_inner'] = pipe.r_inner
         Network_data['K'] = pipe.K
@@ -371,6 +474,29 @@ class Simulation:
 
         df_pipes = pd.DataFrame(Network_data, index = Index)
         df_pipes.to_csv(os.path.join(self.folder, 'pipe_data.csv'), index=False)
+
+        # Saving the data corresponding to HEX and consumers
+        HEX_data = {}
+        hex_folder = os.path.join(self.folder, 'hex_consumer_data')
+        if not os.path.exists(hex_folder):
+            os.makedirs(hex_folder)
+
+        for hex_key in network.hexs.keys():
+            
+            hex = network.hexs[hex_key]['hex_instance']
+
+            HEX_data['Tc_in'] = hex.consumer.Tc_in
+            HEX_data['Th_in'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].T
+            HEX_data['Tc_out'] = hex.consumer.Tc_out
+            HEX_data['Th_out'] = hex.T
+            HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].m_flow
+            HEX_data['mflow_sec'] = hex.consumer.mflow           
+            HEX_data['Q_d'] = hex.consumer.Q_d
+            HEX_data['Q_supply'] = hex.consumer.Q_supply
+
+            df_hex = pd.DataFrame(HEX_data)
+
+            df_hex.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}.csv'), index = False)
         
 
 if __name__ == "__main__":
