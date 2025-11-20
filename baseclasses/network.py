@@ -53,8 +53,15 @@ class Network:
             else:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
 
-    def set_T_and_flow_network(self, T_ambt : float, N : int, no_cap = False):
+        
+        # obtain loop matrix for flow calculations
+
+    def set_T_network(self, T_ambt : float, N : int, no_cap = False):
             
+            """"
+            Set temperature in the network.
+            """
+
             # List of pipes for which the bnode method is performed.
             self.pipes_finished = []
 
@@ -71,14 +78,13 @@ class Network:
             next_node_id = self.pipes[first_pipe.pipe_id]['to']
             next_node = self.nodes[next_node_id]
 
-            # Update temperature and mass flow
+            # Update temperature 
             next_node.set_T(N)
-            next_node.set_m_flow(N)
             
-            self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
+            self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
 
            
-    def set_T_and_flow_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int, no_cap = False):
+    def set_T_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int, no_cap = False):
         """"
         To determine which node to update next I perform a recursion. 
         As for all incoming pipes the bnode method needs to be completed before the node is updated. 
@@ -97,11 +103,13 @@ class Network:
 
             if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
                 # print(f'Activate {next_node}') #debug
-                next_node.set_m_flow(N) # here the inlet values for the mass flow is set
                 next_node.set_T(N)      # here the inlet temperature for the pipe is set coming from the node. 
-
-                self.set_T_and_flow_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)    
+                self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)    
     
+    def set_flow_network(self,N):
+        
+        # newton raphson implementation
+        pass
     
     def add_node(self, node_id : str, x : float, y : float , z : float, data = None) -> None:
         """

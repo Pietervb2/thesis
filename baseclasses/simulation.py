@@ -76,8 +76,10 @@ class Simulation:
         network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
 
         for N in range(0,self.num_steps):
- 
-            network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
+            
+            network.set_flow_network()
+            network.set_T_network(self.T_ambt, N, no_cap = no_cap)
+            # network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
 
         
         print('Simulation finished')
