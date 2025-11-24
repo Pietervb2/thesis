@@ -36,7 +36,7 @@ class Pipe:
         self.insu_thickness = insu_thickness
 
         # Physical constants       
-        self.rho_water = 1e3 # [kg/m3] NOTE: maybe later make a constant file. When there are too many constants.
+        self.rho_water = 1e3 # [kg/m3] 
         self.c_water = 4.186e3 # [J/kg K] specific heat capacity
 
         self.rho_pipe = rho_pipe #  [kg/m3]
@@ -91,10 +91,9 @@ class Pipe:
 
         if T_in is not None:
             self.T_in_extended = np.concatenate([self.T_history, T_in])
-            self.m_flow_extended = np.round(np.concatenate([self.v_history, v_inflow])* self.inner_cs * self.rho_water,5)
+            self.m_flow_extended = np.round(np.concatenate([self.v_history, np.zeros(num_steps)]) * self.inner_cs * self.rho_water,5)
         else:
             self.T_in_extended = np.round(np.concatenate([self.T_history, np.zeros(num_steps)]),5)
-            self.m_flow_extended = np.round(np.concatenate([self.v_history, np.zeros(num_steps)]) * self.inner_cs * self.rho_water,5)
 
         # T_lossless: water temperature at the pipe output without heat loss or capacity of the pipe 
         # T_cap: water temperature at the pipe output with heat loss to capacity of the pipe  

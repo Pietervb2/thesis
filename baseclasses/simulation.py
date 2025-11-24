@@ -50,7 +50,6 @@ class Simulation:
     def simulate_network(self, 
                          network : Network, 
                          T_in : np.ndarray[Union[float]],
-                         v_inflow : np.ndarray[Union[float]],
                          T_init_water : float,
                          T_init_pipe : float,
                          plot_network = False,
@@ -73,11 +72,11 @@ class Simulation:
         """
 
         # T_in and v_inflow are saved in the network class
-        network.initialize_network(self.dt, self.num_steps, v_inflow, T_in, T_init_water, T_init_pipe)
+        network.initialize_network(self.dt, self.num_steps, T_in, T_init_water, T_init_pipe)
 
         for N in range(0,self.num_steps):
             
-            network.set_flow_network()
+            network.set_mflow_network()
             network.set_T_network(self.T_ambt, N, no_cap = no_cap)
             # network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
 

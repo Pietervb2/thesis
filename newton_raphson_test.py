@@ -14,26 +14,34 @@ print(f'pressure coefficient = {f}')
 def pressure_df(L):
     return f * 8 * rho_w * L / (np.pi**2 * D**5)
 
+df2 = pressure_df(2)
+df3 = pressure_df(3)
+
 loop_matrix = np.array([[ 1,  1,  1,  1, 0, 0, 0],
                         [0, 0, -1, 0, 1, 1, 1]])
 
-
-incidence_matrix = np.array([
+incidence_matrix_reduced = np.array([
                             [0,1,-1,0,-1,0,0],
                             [0,0,0,0,1,-1,0],
                             [0,0,0,0,0,1,-1],
                             [0,0,1,-1,0,0,1],
                             [-1,0,0,1,0,0,0]]
                             )
-
-
-
-
-df2 = pressure_df(2)
-df3 = pressure_df(3)
-
 k_vector = np.array([df3,df2,df3,df2,df2,df3,df2])
 flow_init = np.array([0.1,0.1,0.05,0.1,0.05,0.05,0.05])
+pump_array = np.array([0,0,0,0,0,pump_pressure,0])
+
+# loop_matrix = np.array([[1,1,1,1]])
+# incidence_matrix_reduced = np.array([[1,1,0,0],
+#                              [0,1,1,0],
+#                              [0,0,1,1],
+#                              ])
+
+# k_vector = np.array([df2,df3,df2,df3])
+# flow_init = np.array([0.1,0.1,0.1,0.1])
+
+# pump_array = np.array([0,0,0,pump_pressure])
+
 
 
 # newton-raphson
@@ -45,19 +53,20 @@ max_iter = 100
 for it in range(max_iter):
 
     head_loss = np.matmul(loop_matrix, k_vector * flow**2)
-    continuity = np.matmul(incidence_matrix,flow)
-    F = np.concatenate([continuity, head_loss], axis = 0) + np.array([0,0,0,0,0,0,pump_pressure,0]) 
+    continuity = np.matmul(incidence_matrix_reduced,flow)
+
+    F = np.concatenate([continuity, head_loss]) - pump_array
+    
     error = np.linalg.norm(F)
     if error < tolerance:
         break
 
-    J = np.concatenate([incidence_matrix,loop_matrix * (2 * k_vector * flow)])  # Jacobian (2x7)
-    print(f'determinant Jacobian {np.linalg.det(J)}')
+    J = np.vstack([incidence_matrix_reduced,loop_matrix * (2 * k_vector * flow)])  # Jacobian (2x7)
+
     delta, *_ = np.linalg.lstsq(J, -F, rcond=None)
     flow += delta
 
-print(f'flow {flow}, iterations {it+1}, error {error}')
 if error >= tolerance:
     print("Warning: Newton-Raphson did not converge within", max_iter, "iterations")
 
-
+print(f'flow {flow}, iterations {it+1}, error {error}')

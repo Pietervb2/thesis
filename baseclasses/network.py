@@ -1,11 +1,13 @@
 from node import Node
 from pipe import Pipe
 from heatexchanger import HeatExchanger
-from typing import Union
 
+from typing import Union
 
 import numpy as np
 import matplotlib.pyplot as plt
+import networkx as nx
+
 
 
 class Network:
@@ -38,7 +40,16 @@ class Network:
 
         # NOTE: for now just visit all nodes and pipes. They are all given the initial temperature of the first node. 
         """
+        # Initialize mass flows
 
+        # Determine incidence and loop matrix
+        self.build_incidence_matrix()
+        self.build_loop_matrix_from_incidence()
+
+        
+
+
+        # Initialize temperatures
         for i, node in enumerate(self.nodes.values()):
             
             if i == 0:
@@ -51,10 +62,83 @@ class Network:
             if i == 0:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow, T_in = T_in)
             else:
-                pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
-
+                pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)      
         
-        # obtain loop matrix for flow calculations
+
+
+    def build_incidence_matrix(self):
+
+        """
+        Finding incidence matrix of the graph. Needed for Newton-Raphson implementation. 
+        """
+        
+        # As not all nodes and pipes are named in order, first make a mapping.
+        node_ids = list(self.nodes.keys())
+        pipe_ids = list(self.pipes.keys())
+
+        node_map = {nid: i for i, nid in enumerate(node_ids)}
+        pipe_map = {pid: j for j, pid in enumerate(pipe_ids)}
+
+        # Make incidence matrix and walk throw the pipes
+        self.incidence_matrix = np.zeros((len(node_map),len(pipe_map)))
+
+        for pipe_id, pipe in self.pipes.items():
+            from_node = pipe['from']
+            to_node = pipe['to']
+            pipe_id = pipe_id
+
+            self.incidence_matrix[node_map[from_node], pipe_map[pipe_id]] = -1
+            self.incidence_matrix[node_map[to_node], pipe_map[pipe_id]] = 1
+    
+    def build_loop_matrix_from_incidence(self):
+        """
+        Obtain the loop matrix from the incidence matrix using networkx.
+        """
+
+        G = nx.DiGraph()
+
+        node_ids = list(self.nodes.keys())
+        pipe_ids = list(self.pipes.keys())
+
+        A = self.incidence_matrix
+
+        # build the graph from the incidence matrix
+        for e, edge_id in enumerate(pipe_ids):
+            # incidence matrix column: exactly +1 / −1 at endpoints
+            tail = node_ids[np.where(A[:, e] == -1)[0][0]]
+            head = node_ids[np.where(A[:, e] == +1)[0][0]]
+            G.add_edge(tail, head, id=edge_id, col=e)
+
+        # compute all fundamental cycles
+        cycles = nx.cycle_basis(G.to_undirected())
+
+        # loop matrix
+        self.loop_matrix = np.zeros((len(cycles), len(pipe_ids)))
+
+        for i, cycle in enumerate(cycles):
+            # convert cycle (list of nodes) into list of directed edges
+            for u, v in zip(cycle, cycle[1:] + [cycle[0]]):
+                if G.has_edge(u, v):      # aligned edge
+                    e = G[u][v]['col']
+                    self.loop_matrix[i, e] = +1
+                elif G.has_edge(v, u):    # opposite direction edge, but set it to +1 as all directions are fixed
+                    e = G[v][u]['col']
+                    self.loop_matrix[i, e] = +1
+              
+    def set_mflow_network(self, N : int):
+
+        """
+        1. Fill in all the head differences per pipe including the valves for the loop matrix into the F(Q)
+        2. Make F(Q) correct with the corresponding pump
+        3. Update the Jacobian
+        4. Use the previous mflow values as their initial guess
+        5. Perform Newton Raphson
+        6. Update all the mass flows in the system for N
+        """
+       
+        # self.newton_raphson_flow(N)
+        pass
+
 
     def set_T_network(self, T_ambt : float, N : int, no_cap = False):
             
@@ -67,7 +151,6 @@ class Network:
 
             # Done by hand as no inflow pipe connected to node, gets Pipe 1. But now name is not hard coded.
             first_pipe = next(iter(self.pipes.values()))['pipe_instance'] 
-            first_node = next(iter(self.nodes.values()))
             
             # first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
             first_pipe.bnode_method(T_ambt, N, no_cap = no_cap)
@@ -82,8 +165,7 @@ class Network:
             next_node.set_T(N)
             
             self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
-
-           
+          
     def set_T_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int, no_cap = False):
         """"
         To determine which node to update next I perform a recursion. 
@@ -105,12 +187,7 @@ class Network:
                 # print(f'Activate {next_node}') #debug
                 next_node.set_T(N)      # here the inlet temperature for the pipe is set coming from the node. 
                 self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)    
-    
-    def set_flow_network(self,N):
         
-        # newton raphson implementation
-        pass
-    
     def add_node(self, node_id : str, x : float, y : float , z : float, data = None) -> None:
         """
         Add a node to the network.
@@ -258,7 +335,6 @@ class Network:
 if __name__ == "__main__":
     
     pass
-    
 
 
 

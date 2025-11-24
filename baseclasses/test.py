@@ -363,7 +363,71 @@ class Test:
         sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type)      
         sim.simulate_network(net, T_in, v_flow, T_ambt, T_ambt, T_ambt)
 
+    def test_incidence_and_loop_matrices():
+        
+        pipe_data = Test.read_pipe_data('Pipe of DN50')
+        hex_data = Test.read_hex_data('Standard hex constants dummy pressure')
 
+        A1 = 0.109*1.524
+        A2 = 0.113*1.524
+        Period1 = 2*np.pi / 0.298
+        Period2 = 2*np.pi / 0.529
+        Phi1 = -1.949
+        Phi2 = -2.154
+        offset = 0.509*1.524
+        tau = 3600 
+
+        consumer1 = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset,0)
+        consumer2 = Consumer('Consumer 2',A1,A2,Period1,Period2,Phi1,Phi2,offset,tau)
+
+        # Create network
+        net = Network("Model step 5")
+     
+        net.add_node('Node 1', 0, 0, 0)
+        net.add_node('Node 2', 0, 0, 6)
+        net.add_node('Node 3', 0, 0, 12)
+        net.add_node('Node 4', 0, 0, 13)
+        net.add_node('Node 5', 2, 0, 13)
+        net.add_node('Node 6', 5, 0, 12)
+        net.add_node('Node 7', 5, 0, 11)
+        net.add_node('Node 8', 2, 0, 11)
+        net.add_node('Node 9', 5, 0, 6)
+        net.add_node('Node 10', 5, 0, 5)
+        net.add_node('Node 11', 2, 0, 5)
+        net.add_node('Node 12',2, 0, 0)
+
+        net.add_pipe('Pipe 0', 'Node 12', 'Node 1', pipe_data)
+        net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
+        net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
+        net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
+        net.add_pipe('Pipe 4', 'Node 4', 'Node 5', pipe_data)
+        net.add_pipe('Pipe 5', 'Node 5', 'Node 8', pipe_data)
+        net.add_pipe('Pipe 6', 'Node 3', 'Node 6', pipe_data)
+        net.add_pipe('Pipe 7', 'Node 7', 'Node 8', pipe_data)
+        net.add_pipe('Pipe 8', 'Node 2', 'Node 9', pipe_data)
+        net.add_pipe('Pipe 9', 'Node 8', 'Node 11', pipe_data)
+        net.add_pipe('Pipe 10', 'Node 10', 'Node 11', pipe_data)
+        net.add_pipe('Pipe 11', 'Node 11', 'Node 12', pipe_data)
+        
+        net.add_hex('Hex 1', 'Node 6', 'Node 7', hex_data, pipe_data, consumer1)
+        net.add_hex('Hex 2', 'Node 9', 'Node 10', hex_data, pipe_data, consumer2)
+
+        net.build_incidence_matrix()
+        # print(net.incidence_matrix)
+        net.build_loop_matrix_from_incidence()
+        print(net.loop_matrix)
+
+        node_ids = list(net.nodes.keys())
+        pipe_ids = list(net.pipes.keys())
+
+        for i in range(len(net.loop_matrix)):
+            loop = []
+            for j in range(len(net.loop_matrix[i])):
+                if net.loop_matrix[i][j] == 1:
+                    loop.append(pipe_ids[j] + " (+)")
+                elif net.loop_matrix[i][j] == -1:
+                    loop.append(pipe_ids[j] + " (-)")
+            print(f"Loop {i+1}: " + ", ".join(loop))
 
         
 ###########################################################
@@ -387,7 +451,7 @@ class Test:
     def read_pipe_data(pipe_data_set):
 
         thesis_dir = os.path.dirname(os.path.abspath(__file__))
-        constants_file = os.path.join(thesis_dir, 'constants.json')
+        constants_file = os.path.join(os.path.dirname(thesis_dir),'constants', 'constants_pipe.json')
 
         with open(constants_file) as f:
             constants = json.load(f)
@@ -420,7 +484,7 @@ class Test:
     def read_hex_data(hex_data_set):
 
         thesis_dir = os.path.dirname(os.path.abspath(__file__))
-        constants_file = os.path.join(thesis_dir, 'constants_hex.json')
+        constants_file = os.path.join(os.path.dirname(thesis_dir),'constants', 'constants_hex.json')
 
         with open(constants_file) as f:
             constants = json.load(f)
@@ -527,16 +591,23 @@ class Test:
     
 if __name__ == "__main__":
 
-    Test.model_step_5()
-    # Test.initial_test_HEX()
+    # Test.model_step_5()
 
-    # number_of_nodes = 2
-    # T_ambt = 18 # [°C] Staat nu nog ook in de file van van der Heijden! 
-    # total_length = 39 # [m]
+    # net = Network("testing loop matrix")
+    # net.add_node('Node 1', 0, 0, 0)
+    # net.add_node('Node 2', 0, 3, 0)
+    # net.add_node('Node 3', 4, 3, 0)
+    # net.add_node('Node 4', 4, 0, 0)
+    
+    # pipe_data = Test.read_pipe_data('Pipe of DN50')
 
-    # network_exp = Test.network_builder_one_pipe('Pipe of experiment van der Heijden', number_of_nodes, total_length)
-    # files = ['ExperimentA', 'ExperimentB', 'ExperimentC', 'ExperimentD']
-    # dt_array = [1,1,1,30] # [s], delta time for every file
-    # Test.compare_simulations(network_exp, T_ambt, dt_array[1], file = files[1])
-    # # for k in range(len(files)):
-    # #     Test.compare_simulations(network_exp, T_ambt, dt_array[k], file = files[k], no_cap = False)
+    # net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
+    # net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
+    # net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
+    # net.add_pipe('Pipe 4', 'Node 4', 'Node 1', pipe_data)
+    # net.add_pipe('Pipe 5', 'Node 2', 'Node 4', pipe_data)
+    # net.build_incidence_matrix()
+    # net.build_loop_matrix_from_incidence()
+    # print(net.loop_matrix)
+
+    Test.test_incidence_and_loop_matrices()
