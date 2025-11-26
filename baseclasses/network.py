@@ -1,6 +1,7 @@
 from node import Node
 from pipe import Pipe
 from heatexchanger import HeatExchanger
+from pump import Pump
 
 from typing import Union
 
@@ -22,6 +23,9 @@ class Network:
         self.nodes = {}
         self.pipes = {}
         self.hexs = {}
+        self.pumps = {}
+        self.valves = {}
+
         self.net_id = net_id
 
     def __repr__(self):
@@ -30,7 +34,6 @@ class Network:
     def initialize_network(self, 
                            dt : float, 
                            num_steps : int, 
-                           v_inflow : np.ndarray[Union[float]], 
                            T_in : np.ndarray[Union[float]],
                            T_init_water : float,
                            T_init_pipe : float):
@@ -40,16 +43,19 @@ class Network:
 
         # NOTE: for now just visit all nodes and pipes. They are all given the initial temperature of the first node. 
         """
-        # Initialize mass flows
+        ### Hydraulics
 
         # Determine incidence and loop matrix
         self.build_incidence_matrix()
         self.build_loop_matrix_from_incidence()
+        self.build_help_vectors_NR()
 
-        
+        # Big matrix to save all the pipe mflows for faster acces to flows
+        self.Q_all = np.zeros([len(self.pipe_map),num_steps])
 
+        ### Thermodynamics
 
-        # Initialize temperatures
+        # Initialize temperature arrays within nodes. And set input temperature for first node.
         for i, node in enumerate(self.nodes.values()):
             
             if i == 0:
@@ -57,137 +63,18 @@ class Network:
             else:
                 node.initialize_node(num_steps, T_init_water, dt)
 
+        # Initialize temperature and mass flow arrays in pipes. For now just pass v_inflow with a low value.
+        # v_flow_history determines the velocity of the water before the simulation. 
+
+        v_inflow = 0.004 # m/s, dummy variable chosen very small on purpose so you have a enough history. 
+
         for i, pipe in enumerate(self.pipes.values()):
             
             if i == 0:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow, T_in = T_in)
             else:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)      
-        
-
-
-    def build_incidence_matrix(self):
-
-        """
-        Finding incidence matrix of the graph. Needed for Newton-Raphson implementation. 
-        """
-        
-        # As not all nodes and pipes are named in order, first make a mapping.
-        node_ids = list(self.nodes.keys())
-        pipe_ids = list(self.pipes.keys())
-
-        node_map = {nid: i for i, nid in enumerate(node_ids)}
-        pipe_map = {pid: j for j, pid in enumerate(pipe_ids)}
-
-        # Make incidence matrix and walk throw the pipes
-        self.incidence_matrix = np.zeros((len(node_map),len(pipe_map)))
-
-        for pipe_id, pipe in self.pipes.items():
-            from_node = pipe['from']
-            to_node = pipe['to']
-            pipe_id = pipe_id
-
-            self.incidence_matrix[node_map[from_node], pipe_map[pipe_id]] = -1
-            self.incidence_matrix[node_map[to_node], pipe_map[pipe_id]] = 1
-    
-    def build_loop_matrix_from_incidence(self):
-        """
-        Obtain the loop matrix from the incidence matrix using networkx.
-        """
-
-        G = nx.DiGraph()
-
-        node_ids = list(self.nodes.keys())
-        pipe_ids = list(self.pipes.keys())
-
-        A = self.incidence_matrix
-
-        # build the graph from the incidence matrix
-        for e, edge_id in enumerate(pipe_ids):
-            # incidence matrix column: exactly +1 / −1 at endpoints
-            tail = node_ids[np.where(A[:, e] == -1)[0][0]]
-            head = node_ids[np.where(A[:, e] == +1)[0][0]]
-            G.add_edge(tail, head, id=edge_id, col=e)
-
-        # compute all fundamental cycles
-        cycles = nx.cycle_basis(G.to_undirected())
-
-        # loop matrix
-        self.loop_matrix = np.zeros((len(cycles), len(pipe_ids)))
-
-        for i, cycle in enumerate(cycles):
-            # convert cycle (list of nodes) into list of directed edges
-            for u, v in zip(cycle, cycle[1:] + [cycle[0]]):
-                if G.has_edge(u, v):      # aligned edge
-                    e = G[u][v]['col']
-                    self.loop_matrix[i, e] = +1
-                elif G.has_edge(v, u):    # opposite direction edge, but set it to +1 as all directions are fixed
-                    e = G[v][u]['col']
-                    self.loop_matrix[i, e] = +1
-              
-    def set_mflow_network(self, N : int):
-
-        """
-        1. Fill in all the head differences per pipe including the valves for the loop matrix into the F(Q)
-        2. Make F(Q) correct with the corresponding pump
-        3. Update the Jacobian
-        4. Use the previous mflow values as their initial guess
-        5. Perform Newton Raphson
-        6. Update all the mass flows in the system for N
-        """
-       
-        # self.newton_raphson_flow(N)
-        pass
-
-
-    def set_T_network(self, T_ambt : float, N : int, no_cap = False):
-            
-            """"
-            Set temperature in the network.
-            """
-
-            # List of pipes for which the bnode method is performed.
-            self.pipes_finished = []
-
-            # Done by hand as no inflow pipe connected to node, gets Pipe 1. But now name is not hard coded.
-            first_pipe = next(iter(self.pipes.values()))['pipe_instance'] 
-            
-            # first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
-            first_pipe.bnode_method(T_ambt, N, no_cap = no_cap)
-
-            self.pipes_finished.append(first_pipe.pipe_id)
-
-            # Get node at end of pipe. 
-            next_node_id = self.pipes[first_pipe.pipe_id]['to']
-            next_node = self.nodes[next_node_id]
-
-            # Update temperature 
-            next_node.set_T(N)
-            
-            self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
-          
-    def set_T_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int, no_cap = False):
-        """"
-        To determine which node to update next I perform a recursion. 
-        As for all incoming pipes the bnode method needs to be completed before the node is updated. 
-        """
-
-        for pipe_id, pipe in node.pipes_out.items():
-
-            if pipe_id == "Pipe 9" and N == 7: # debug
-                pass
-
-            pipe.bnode_method(T_ambt, N, no_cap = no_cap)
-            self.pipes_finished.append(pipe_id)
-            
-            next_node_id = self.pipes[pipe_id]['to']
-            next_node = self.nodes[next_node_id]
-
-            if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
-                # print(f'Activate {next_node}') #debug
-                next_node.set_T(N)      # here the inlet temperature for the pipe is set coming from the node. 
-                self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)    
-        
+      
     def add_node(self, node_id : str, x : float, y : float , z : float, data = None) -> None:
         """
         Add a node to the network.
@@ -218,8 +105,8 @@ class Network:
         elif to_node not in self.nodes:
             raise ValueError(f"{to_node} must exist in the network")
 
-        L = self.pipe_length(self.nodes[from_node], self.nodes[to_node])
-        pipe = Pipe(pipe_id, L, pipe_data[0], pipe_data[1], pipe_data[2], pipe_data[3], pipe_data[4], pipe_data[5], pipe_data[6], pipe_data[7])
+        delta_z, L = self.pipe_length(self.nodes[from_node], self.nodes[to_node])
+        pipe = Pipe(pipe_id, L, delta_z, pipe_data)
 
         # pipe_id = self._next_pipe_id
         self.pipes[pipe_id] = {
@@ -271,11 +158,239 @@ class Network:
             'hex_instance': hex
         }
   
+    def add_pump(self, pump_id : str, from_node : str, to_node : str, pipe_data : list, dp_pump) -> None:
+        """
+        Add pump between nodes. The pump is a pipe with an extra pressure element. 
+        """
+        if pump_id in self.pipes.keys():
+            raise ValueError(f"Pump with id {pump_id} already exists in the network")
+
+        if from_node not in self.nodes:
+            raise ValueError(f"{from_node} must exist in the network")
+        elif to_node not in self.nodes:
+            raise ValueError(f"{to_node} must exist in the network")
+
+        delta_z, L = self.pipe_length(self.nodes[from_node], self.nodes[to_node])
+        pump = Pump(pump_id, L, delta_z, pipe_data, dp_pump)
+
+        self.pipes[pump_id] = {
+            'from': from_node,
+            'to': to_node,
+            'pipe_instance': pump
+        }
+
+        self.pumps[pump_id] = pump
+
+        # adding the pipes to the nodes
+        out_node = self.nodes[from_node]
+        out_node.connect_pipe_to_node(pump_id, pump, 'outgoing') 
+
+        in_node = self.nodes[to_node]
+        in_node.connect_pipe_to_node(pump_id, pump, 'incoming') 
+
+    def build_incidence_matrix(self):
+
+        """
+        Finding incidence matrix of the graph. Needed for Newton-Raphson implementation. 
+        """
+        
+        # As not all nodes and pipes are named in order, first make a mapping.
+        node_ids = list(self.nodes.keys())
+        pipe_ids = list(self.pipes.keys())
+
+        self.node_map = {nid: i for i, nid in enumerate(node_ids)}
+        self.pipe_map = {pid: j for j, pid in enumerate(pipe_ids)}
+
+        # Make incidence matrix and walk throw the pipes
+        self.incidence_matrix = np.zeros((len(self.node_map),len(self.pipe_map)))
+
+        for pipe_id, pipe in self.pipes.items():
+            from_node = pipe['from']
+            to_node = pipe['to']
+            pipe_id = pipe_id
+
+            self.incidence_matrix[self.node_map[from_node], self.pipe_map[pipe_id]] = -1
+            self.incidence_matrix[self.node_map[to_node], self.pipe_map[pipe_id]] = 1
+    
+    def build_loop_matrix_from_incidence(self):
+        """
+        Obtain the loop matrix from the incidence matrix using networkx.
+        """
+
+        G = nx.DiGraph()
+
+        node_ids = list(self.nodes.keys())
+        pipe_ids = list(self.pipes.keys())
+
+        A = self.incidence_matrix
+
+        # build the graph from the incidence matrix
+        for e, edge_id in enumerate(pipe_ids):
+            # incidence matrix column: exactly +1 / −1 at endpoints
+            tail = node_ids[np.where(A[:, e] == -1)[0][0]]
+            head = node_ids[np.where(A[:, e] == +1)[0][0]]
+            G.add_edge(tail, head, id=edge_id, col=e)
+
+        # compute all fundamental cycles
+        cycles = nx.cycle_basis(G.to_undirected())
+
+        # loop matrix
+        self.loop_matrix = np.zeros((len(cycles), len(pipe_ids)))
+
+        for i, cycle in enumerate(cycles):
+            # convert cycle (list of nodes) into list of directed edges
+            for u, v in zip(cycle, cycle[1:] + [cycle[0]]):
+                if G.has_edge(u, v):      # aligned edge
+                    e = G[u][v]['col']
+                    self.loop_matrix[i, e] = +1
+                elif G.has_edge(v, u):    # opposite direction edge, but set it to +1 as all directions are fixed
+                    e = G[v][u]['col']
+                    self.loop_matrix[i, e] = -1
+
+    def build_help_vectors_NR(self):
+
+        """
+        Build head difference vectors for friction and elevation per pipe. And pump vector.
+        """
+    
+        self.head_friction_vector = np.zeros(len(self.pipes))
+        self.head_elevation_vector = np.zeros(len(self.pipes))
+       
+        for j, pipe_id in enumerate(self.pipes.keys()):
+
+            pipe = self.pipes[pipe_id]['pipe_instance']
+            self.head_friction_vector[j] = pipe.pressure_head_friction()
+            self.head_elevation_vector[j] = pipe.pressure_head_elevation()
+
+        # Vector of pump pressure per pipe
+        self.pump_array = np.zeros(len(self.pipes))
+        for pump in self.pumps.values():
+            j = self.pipe_map[pump.pipe_id]
+            self.pump_array[j] = pump.pressure_head()
+
+    def set_mflow_network(self, N : int):
+
+        """
+        1. Fill in all the head differences per pipe including the valves for the loop matrix into the F(Q)
+        2. Make F(Q) correct with the corresponding pump
+        3. Update the Jacobian
+        4. Use the previous mflow values as their initial guess
+        5. Perform Newton Raphson
+        6. Update all the mass flows in the system for N
+        """
+        # prepare pipe and loop data
+        pipe_ids = list(self.pipes.keys())
+        p = len(pipe_ids)
+
+        # Initial guess for the mflows in the pipes
+        Q0 = np.zeros(p)
+        if N == 0:
+            Q0[:] = 0.01
+        else:
+            Q0 = self.Q_all[:,N-1]    
+
+        incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
+
+        # Newton-Raphson
+        error = 0
+        tolerance = 1e-6
+        mflow = Q0.copy()
+        max_iter = 100     
+
+        for it in range(max_iter):
+
+            # Continuity and loop head-loss equations
+            continuity = incidence_matrix_reduced @ mflow
+            head_loss  = self.loop_matrix @ (self.head_friction_vector * mflow**2
+                                            + self.head_elevation_vector)
+
+            # Pump contribution (only in loop equations)
+            pump_term = self.loop_matrix @ self.pump_array
+
+            # Full residual vector
+            F = np.concatenate([continuity, head_loss - pump_term])
+            
+            error = np.linalg.norm(F)
+            if error < tolerance:
+                break
+            
+            # Jacobian
+            J = np.vstack([incidence_matrix_reduced, self.loop_matrix * (2 * self.head_friction_vector * mflow)])  
+
+            # solve for delta y: J dy = -F
+            try:
+                dmflow = np.linalg.solve(J, -F)
+            except np.linalg.LinAlgError:
+                # fallback to least squares / pseudo-inverse
+                dmflow = np.linalg.lstsq(J, -F, rcond=None)[0]
+
+            mflow += dmflow
+        
+        if error >= tolerance:
+            raise RuntimeError(f"Newton-Raphson did not converge within {max_iter} iterations, final error: {error}")
+        
+        self.Q_all[:,N] = mflow
+
+        # Assign flows to the pipes for timestep N
+        for j, pipe_id in enumerate(pipe_ids):
+            pipe = self.pipes[pipe_id]['pipe_instance']
+            pipe.set_m_flow(mflow[j],N)
+
+
+    def set_T_network(self, T_ambt : float, N : int, no_cap = False):
+            
+            """"
+            Set temperature in the network.
+            """
+
+            # List of pipes for which the bnode method is performed.
+            self.pipes_finished = []
+
+            # Done by hand as no inflow pipe connected to node, gets Pipe 1. But now name is not hard coded.
+            first_pipe = next(iter(self.pipes.values()))['pipe_instance'] 
+            
+            # first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
+            first_pipe.bnode_method(T_ambt, N, no_cap = no_cap)
+
+            self.pipes_finished.append(first_pipe.pipe_id)
+
+            # Get node at end of pipe. 
+            next_node_id = self.pipes[first_pipe.pipe_id]['to']
+            next_node = self.nodes[next_node_id]
+
+            # Update temperature 
+            next_node.set_T(N)
+            # next_node.set_m_flow(N)
+            
+            self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
+          
+    def set_T_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int, no_cap = False):
+        """"
+        To determine which node to update next I perform a recursion. 
+        As for all incoming pipes the bnode method needs to be completed before the node is updated. 
+        """
+
+        for pipe_id, pipe in node.pipes_out.items():
+
+            pipe.bnode_method(T_ambt, N, no_cap = no_cap)
+            self.pipes_finished.append(pipe_id)
+            
+            next_node_id = self.pipes[pipe_id]['to']
+            next_node = self.nodes[next_node_id]
+
+            if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
+
+                if next_node_id == 'Node 1':
+                    continue    # Skip first node as its temperature is already set.
+
+                next_node.set_T(N)      # here the inlet temperature for the pipe is set coming from the node. 
+                self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)    
+        
     def pipe_length(self, Node1, Node2):
         """
         Function that calculates the length of the pipe between two nodes. 
         """
-        return np.sqrt((Node1.x - Node2.x)**2 + (Node1.y - Node2.y)**2 + (Node1.z - Node2.z)**2)
+        return Node2.z - Node1.z, np.sqrt((Node1.x - Node2.x)**2 + (Node1.y - Node2.y)**2 + (Node1.z - Node2.z)**2)
     
     def get_neighbor_nodes(self, node_id : str) -> tuple[Union[dict]]:
         """

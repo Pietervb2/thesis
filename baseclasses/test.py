@@ -363,6 +363,72 @@ class Test:
         sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type, flow_type = flow_type)      
         sim.simulate_network(net, T_in, v_flow, T_ambt, T_ambt, T_ambt)
 
+    def model_step_7():
+        """
+        Initial test to see whether the incidence and loop matrix construction is working properly.
+        """
+        pipe_data = Test.read_pipe_data('Pipe of DN50')
+        hex_data = Test.read_hex_data('Standard hex constants dummy pressure')
+
+        A1 = 0.109*1.524
+        A2 = 0.113*1.524
+        Period1 = 2*np.pi / 0.298
+        Period2 = 2*np.pi / 0.529
+        Phi1 = -1.949
+        Phi2 = -2.154
+        offset = 0.509*1.524
+        tau = 3600 
+
+        consumer1 = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset,0)
+        consumer2 = Consumer('Consumer 2',A1,A2,Period1,Period2,Phi1,Phi2,offset,tau)
+
+        # Create network
+        net = Network("Model step 7")
+     
+        net.add_node('Node 1', 0, 0, 0)
+        net.add_node('Node 2', 0, 0, 6)
+        net.add_node('Node 3', 0, 0, 12)
+        net.add_node('Node 4', 0, 0, 13)
+        net.add_node('Node 5', 2, 0, 13)
+        net.add_node('Node 6', 5, 0, 12)
+        net.add_node('Node 7', 5, 0, 11)
+        net.add_node('Node 8', 2, 0, 11)
+        net.add_node('Node 9', 5, 0, 6)
+        net.add_node('Node 10', 5, 0, 5)
+        net.add_node('Node 11', 2, 0, 5)
+        net.add_node('Node 12', 2, 0, 0)
+
+        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data, 2e5)
+
+        net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
+        net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
+        net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
+        net.add_pipe('Pipe 4', 'Node 4', 'Node 5', pipe_data)
+        net.add_pipe('Pipe 5', 'Node 5', 'Node 8', pipe_data)
+        net.add_pipe('Pipe 6', 'Node 3', 'Node 6', pipe_data)
+        net.add_pipe('Pipe 7', 'Node 7', 'Node 8', pipe_data)
+        net.add_pipe('Pipe 8', 'Node 2', 'Node 9', pipe_data)
+        net.add_pipe('Pipe 9', 'Node 8', 'Node 11', pipe_data)
+        net.add_pipe('Pipe 10', 'Node 10', 'Node 11', pipe_data)
+        net.add_pipe('Pipe 11', 'Node 11', 'Node 12', pipe_data)
+        
+        net.add_hex('Hex 1', 'Node 6', 'Node 7', hex_data, pipe_data, consumer1)
+        net.add_hex('Hex 2', 'Node 9', 'Node 10', hex_data, pipe_data, consumer2)
+
+        # Simulation parameters
+        dt = 60 # s
+        total_time = 24 * 3600 # h
+        T_ambt = 20
+
+        # Input profiles
+        temp_type = 'constant'
+        
+        T_in = Test.generate_input_network(temp_type, total_time, dt)
+
+        # Run simulation
+        sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)      
+        sim.simulate_network(net, T_in, T_ambt, T_ambt)
+
     def test_incidence_and_loop_matrices():
         
         pipe_data = Test.read_pipe_data('Pipe of DN50')
@@ -396,6 +462,8 @@ class Test:
         net.add_node('Node 11', 2, 0, 5)
         net.add_node('Node 12',2, 0, 0)
 
+        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data, 2e5)
+
         net.add_pipe('Pipe 0', 'Node 12', 'Node 1', pipe_data)
         net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
         net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
@@ -417,7 +485,6 @@ class Test:
         net.build_loop_matrix_from_incidence()
         print(net.loop_matrix)
 
-        node_ids = list(net.nodes.keys())
         pipe_ids = list(net.pipes.keys())
 
         for i in range(len(net.loop_matrix)):
@@ -429,7 +496,38 @@ class Test:
                     loop.append(pipe_ids[j] + " (-)")
             print(f"Loop {i+1}: " + ", ".join(loop))
 
+    def test_NR():
+
+        pipe_data = Test.read_pipe_data('Pipe of DN50')
+
+        # Create network
+        net = Network("NR test")
+     
+        net.add_node('Node 1', 0, 0, 0)
+        net.add_node('Node 2', 0, 2, 0)
+        net.add_node('Node 3', 3, 2, 0)
+        net.add_node('Node 4', 3, 0, 0)
+
+
+        net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
+        net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
+        net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
+        net.add_pump('Pump 1', 'Node 4', 'Node 1', pipe_data, 1e5)
+
+        # Simulation parameters
+        dt = 60 # s
+        total_time = 24 * 3600 # h
+        T_ambt = 20
+
+        # Input profiles
+        temp_type = 'constant'
         
+        T_in = Test.generate_input_network(temp_type, total_time, dt)
+
+        # Run simulation
+        sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)      
+        sim.simulate_network(net, T_in, T_ambt, T_ambt)
+
 ###########################################################
 # Help functions for the tests
 ###########################################################
@@ -465,9 +563,12 @@ class Test:
         cp_insu = constants[pipe_data_set]['cp_insu']  # [J/ kg K]
         insu_thickness = constants[pipe_data_set]['insu_thickness'] # [m]
 
-        k_pipe = constants[pipe_data_set]['k_pipe'] #thermal conductivity pipe [W / m K]
-        k_insu = constants[pipe_data_set]['k_insu'] #thermal conductivity insulation [W / m K]
+        k_pipe = constants[pipe_data_set]['k_pipe'] # thermal conductivity pipe [W / m K]
+        k_insu = constants[pipe_data_set]['k_insu'] # thermal conductivity insulation [W / m K]
         h_pipe_air = constants[pipe_data_set]['h_pipe_air'] # natural convection from pipe to surrounding air [W / m2 K]
+
+        epsilon = constants[pipe_data_set]['epsilon'] # rougness of inner pipe [m]
+        Re = constants[pipe_data_set]['Re'] # Reynolds number [-]
 
         R = (
                 np.log(r_outer/r_inner)/(2*np.pi*k_pipe) # conduction pipe
@@ -477,7 +578,7 @@ class Test:
 
         K = 1/R # total thermal conductivity [W / m K]
 
-        pipe_data = [r_inner, r_outer, cp_pipe, rho_pipe, cp_insu, rho_insu, insu_thickness, K]
+        pipe_data = [r_inner, r_outer, cp_pipe, rho_pipe, cp_insu, rho_insu, insu_thickness, K, epsilon, Re]
 
         return pipe_data
     
@@ -547,20 +648,17 @@ class Test:
             raise ValueError("This flow type doesn't exist!")
         return T_in, v_flow
     
-    def generate_input_network(temp_type, flow_type, total_time, dt):
+    def generate_input_network(temp_type, total_time, dt):
 
         """
-        Generate time series for inlet temperature and flow velocity used in simulations.
-
-        Args:
-        """
+        Generate time series for inlet temperature used in simulations.
+       """
 
         # Check if total_time / dt is a whole number
         if (total_time / dt) % 1 != 0:
                     num_steps = int(total_time / dt) + 1
         else: 
             num_steps = int(total_time/dt)
-
 
         if temp_type == "constant":
             T_in = np.ones(num_steps) * 65                                 # Constant
@@ -570,44 +668,12 @@ class Test:
             T_in = 80 + 1* square(2 * np.pi * total_time / 20)       
         else:
             raise ValueError("This temperature type doesn't exist!")
-    
 
-        if flow_type == "constant":
-            ## Q = A * v * rho * c_p * delta_T
-            # 0.7 kW = A * v * 1000 * 4186 * 20
-            # A * v = 0.7e3 / (1000 * 4186 * 20) = 8.36e-6 m3/s  
-            # For pipe with DN50, A = 0.00196 m2
-            # v = 8.36e-6 / 0.00195 = 0.00427 m/s
-            # TODO: set inlet flow as mass flow instead of velocity?, but this on the customer side. Go for bigger initial velocity.
-
-            v_flow = np.ones(num_steps) * 0.2                          # Constant
-        elif flow_type == "oscillation":
-            v_flow = (1.5 + 0.8*np.cos(np.linspace(0, 2*np.pi, num_steps))) * 0.2 # Oscillating flow velocity
-        elif flow_type == "square":
-            v_flow = (1.5 + 0.5 * square(2 * np.pi * total_time / 50)) * 0.00427    # Square wave flow velocity, 50 is the period
-        else:
-            raise ValueError("This flow type doesn't exist!")
-        return T_in, v_flow
+        return T_in
     
 if __name__ == "__main__":
 
-    # Test.model_step_5()
+    Test.model_step_7()
 
-    # net = Network("testing loop matrix")
-    # net.add_node('Node 1', 0, 0, 0)
-    # net.add_node('Node 2', 0, 3, 0)
-    # net.add_node('Node 3', 4, 3, 0)
-    # net.add_node('Node 4', 4, 0, 0)
-    
-    # pipe_data = Test.read_pipe_data('Pipe of DN50')
-
-    # net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
-    # net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
-    # net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
-    # net.add_pipe('Pipe 4', 'Node 4', 'Node 1', pipe_data)
-    # net.add_pipe('Pipe 5', 'Node 2', 'Node 4', pipe_data)
-    # net.build_incidence_matrix()
-    # net.build_loop_matrix_from_incidence()
-    # print(net.loop_matrix)
-
-    Test.test_incidence_and_loop_matrices()
+    # Test.test_NR()
+    # Test.test_incidence_and_loop_matrices()

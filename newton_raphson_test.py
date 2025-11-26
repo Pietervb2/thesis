@@ -7,7 +7,7 @@ Re = 4e4  # example Reynolds number
 
 log_term = (epsilon/D)/3.7 + (6.9/Re)**1.11
 f = (1 / (-1.8 * np.log10(log_term)))**2
-pump_pressure = 1e5  # [Pa] = 1 bar
+pump_pressure = 1e5 # [Pa] = 1 bar
 
 print(f'pressure coefficient = {f}')
 

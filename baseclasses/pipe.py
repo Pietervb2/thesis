@@ -7,14 +7,8 @@ class Pipe:
             self, 
             pipe_id : str, 
             pipe_length : float, 
-            pipe_r_inner : float,
-            pipe_r_outer : float,
-            cp_pipe : float,
-            rho_pipe : float,
-            cp_insu : float,
-            rho_insu : float,
-            insu_thickness : float,
-            K : float        
+            delta_z : float,
+            pipe_data : list[float]
             ):
         """
         Initialize pipe.
@@ -28,28 +22,29 @@ class Pipe:
         #TODO: update
         """
         self.pipe_id = pipe_id 
-
         self.L = pipe_length
-        self.r_outer = pipe_r_outer 
-        self.r_inner = pipe_r_inner
-        self.K = K
-        self.insu_thickness = insu_thickness
+        self.delta_z = delta_z
 
+        self.r_inner = pipe_data[0]
+        self.r_outer = pipe_data[1]
+        self.cp_pipe = pipe_data[2]
+        self.rho_pipe = pipe_data[3]
+        self.cp_insu = pipe_data[4]
+        self.rho_insu = pipe_data[5]
+        self.insu_thickness = pipe_data[6]
+        self.K = pipe_data[7]
+        self.epsilon = pipe_data[8]
+        self.Re = pipe_data[9]
+       
         # Physical constants       
         self.rho_water = 1e3 # [kg/m3] 
         self.c_water = 4.186e3 # [J/kg K] specific heat capacity
-
-        self.rho_pipe = rho_pipe #  [kg/m3]
-        self.cp_pipe = cp_pipe # [J/kg K] specific heat capacity of steel
-
+       
         self.inner_cs = np.pi * self.r_inner ** 2 # inner cross section area
         self.outer_cs = np.pi * self.r_outer ** 2 # outer cross section area
-        self.C_pipe = (self.outer_cs - self.inner_cs) * self.rho_pipe * self.cp_pipe * self.L # [J/K] total heat capacity pipe
-
-        self.rho_insu = rho_insu
-        self.cp_insu = cp_insu 
+        
+        self.C_pipe = (self.outer_cs - self.inner_cs) * self.rho_pipe * self.cp_pipe * self.L # [J/K] total heat capacity pipe      
         self.C_insu = np.pi * ((self.r_outer + self.insu_thickness) ** 2 - self.r_outer ** 2) * self.rho_insu * self.cp_insu * self.L # [J/K] total heat capacity insulation
-
         self.C_whole_pipe = self.C_pipe + self.C_insu
 
     def bnode_init(self, 
@@ -57,7 +52,7 @@ class Pipe:
             num_steps : int,
             T_init_water: float,
             T_init_pipe: float,
-            v_inflow: np.ndarray[Union[float]],
+            v_inflow: float,
             T_in: np.ndarray[Union[float]] = None
             ):
         """
@@ -82,16 +77,16 @@ class Pipe:
         self.num_steps = num_steps
 
         # Calculate minimum history length needed based on pipe length and flow velocity
-        min_steps = int(np.ceil((self.L + v_inflow[0] * self.dt) / (v_inflow[0] * self.dt)))
+        min_steps = int(np.ceil((self.L + v_inflow * self.dt) / (v_inflow * self.dt)))
         self.hist_len = min_steps + 5 # Add some margin to ensure we have enough history NOTE: based on what?
         
         # Initialize history velocity and temperature of water 
-        self.v_history = np.ones(self.hist_len) * v_inflow[0] 
+        self.v_history = np.ones(self.hist_len) * v_inflow 
         self.T_history = np.ones(self.hist_len) * T_init_water
 
+        self.m_flow_extended = np.round(np.concatenate([self.v_history, np.zeros(num_steps)]) * self.inner_cs * self.rho_water,5)
         if T_in is not None:
             self.T_in_extended = np.concatenate([self.T_history, T_in])
-            self.m_flow_extended = np.round(np.concatenate([self.v_history, np.zeros(num_steps)]) * self.inner_cs * self.rho_water,5)
         else:
             self.T_in_extended = np.round(np.concatenate([self.T_history, np.zeros(num_steps)]),5)
 
@@ -102,7 +97,8 @@ class Pipe:
         self.T_cap = np.ones(self.num_steps) * T_init_water
         self.T = np.ones(self.num_steps) * T_init_water
         
-        self.T_pipe = np.ones(self.num_steps) * T_init_pipe  # temperature of the pipe 
+        # Temperature of the pipe 
+        self.T_pipe = np.ones(self.num_steps) * T_init_pipe  
 
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.m_flow = np.ones(self.num_steps)
@@ -209,6 +205,29 @@ class Pipe:
         delay = (first_term_delay + second_term_delay + third_term_delay)/m_flow_ex[N]
 
         return delay
+    
+    def pressure_head_friction(self):
+        """
+        Darcy Weisbach equation to calculate pressure drop in pipe
+        Haaland method to determine frictor factor f
+
+        # TODO: might introduce formula for Reynolds number based on flow velocity
+        maybe influences the whole equation to calculate pressure drop for lower Reynolds numbers
+        """
+
+        D = self.r_inner*2
+        log_term = (self.epsilon/D)/3.7 + (6.9/self.Re)**1.11
+        f = (1 / (-1.8 * np.log10(log_term)))**2
+
+        return 8 * f * self.L / (np.pi ** 2 * D ** 5 * self.rho_water)
+
+    def pressure_head_elevation(self):
+        """
+        Calculate pressure head due to elevation difference
+        """
+
+        return 9.81 * self.rho_water * self.delta_z
+
     
     def set_m_flow_v(self, v_inflow, N):
         """

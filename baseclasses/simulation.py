@@ -16,7 +16,7 @@ from network import Network
 
 class Simulation:
 
-    def __init__(self, dt, total_time, net_id, T_ambt, temp_type = None, flow_type = None, file = None, no_cap = False):
+    def __init__(self, dt, total_time, net_id, T_ambt, temp_type = None, file = None, no_cap = False):
 
         self.dt = dt
         self.total_time = total_time
@@ -24,10 +24,7 @@ class Simulation:
         self.num_steps = len(self.time) 
         self.T_ambt = T_ambt
 
-        if flow_type == 'oscillation' or flow_type == 'square' or flow_type == 'constant':
-            total_time_str = str(total_time)
-        else:
-            total_time_str = str(total_time - 1) 
+        total_time_str = str(total_time)
 
         # Create simulation-specific subfolder
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -36,7 +33,7 @@ class Simulation:
         else:
             sim_name = (
                 f"network={net_id}_dt={dt}_total_time={total_time_str}_"
-                f"Tin={temp_type}_mflow={flow_type}_Tambt={T_ambt}"
+                f"Tin={temp_type}_Tambt={T_ambt}"
             )
 
         self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
@@ -76,7 +73,7 @@ class Simulation:
 
         for N in range(0,self.num_steps):
             
-            network.set_mflow_network()
+            network.set_mflow_network(N)
             network.set_T_network(self.T_ambt, N, no_cap = no_cap)
             # network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
 
@@ -87,11 +84,11 @@ class Simulation:
         self.plot_network(network, plot = plot_network)
         self.plot_node_temperature_network(network, T_in, plot = plot_nodes_T)
         self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
-        self.plot_pipe_m_flow_network(network, v_inflow, plot = plot_pipes_m_flow)
+        self.plot_pipe_m_flow_network(network, plot = plot_pipes_m_flow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
         self.plot_cap_influence(network, plot = plot_cap_influence)
         self.plot_consumer_demand(network, plot = plot_consumer_demand)
-        self.save_data(network, T_in, v_inflow) 
+        self.save_data(network, T_in) 
 
         plt.show()  
 
@@ -191,7 +188,7 @@ class Simulation:
         if not plot:
             plt.close(fig_pipe)
 
-    def plot_pipe_m_flow_network(self, network: Network, v_flow, plot = False):
+    def plot_pipe_m_flow_network(self, network: Network, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
@@ -204,29 +201,16 @@ class Simulation:
         for pipe_id in network.pipes.keys():
 
             pipe = network.pipes[pipe_id]['pipe_instance']
-            # plt.figure()
             plt.plot(self.time, pipe.m_flow, label=f'{pipe_id}')
+        
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.legend()
         plt.grid(True)
         plt.savefig(self.folder + '/pipe_flows.png')
 
 
-        pipe1 = next(iter(network.pipes.values()))['pipe_instance']
-
-
-        fig_m_flow_in = plt.figure()
-        plt.plot(v_flow * pipe1.inner_cs * pipe1.rho_water)
-        plt.title('Mass in flow')
-        plt.xlabel(f'Time (s), dt = {self.dt}')
-        plt.ylabel('Mass flow (kg/s)')
-        plt.grid(True)
-
-        plt.savefig(self.folder + '/inlet_mass_flow.png')
-
         if not plot:
             plt.close(fig_pipe_flow)
-            plt.close(fig_m_flow_in)
 
     def plot_network_old(self, network: Network, plot = False):
 
@@ -372,6 +356,11 @@ class Simulation:
         """
         Plot the heat demand of all consumers in the network
         """
+
+        if len(network.hexs) == 0:
+            print("No HEXs in the network to plot consumer demand.")
+            return
+        
         fig = plt.figure(figsize=(10, 6))
         plt.title("Consumer Heat Demand vs Supply")
 
@@ -396,14 +385,13 @@ class Simulation:
         if not plot:
             plt.close(fig)
 
-    def save_data(self, network: Network, T_in, v_flow):
+    def save_data(self, network: Network, T_in):
         """
         Save simulation data to CSV file.
         
         Args:
             network: Network object containing nodes and pipes
             T_in: Input temperature array
-            v_flow: Input flow velocity array
         """
 
         sim_data_folder = os.path.join(self.folder, 'simulation_data')
@@ -432,7 +420,6 @@ class Simulation:
         node_data['T_ambient'] = self.T_ambt
         
         # Store pipe mass flows and temperatures, and the temperature differences between nodes
-        pipe_mflow_data['v_flow_in'] = v_flow
 
         for pipe_id, pipe_info in network.pipes.items():
             pipe = pipe_info['pipe_instance']
