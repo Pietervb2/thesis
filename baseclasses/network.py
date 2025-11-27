@@ -148,15 +148,11 @@ class Network:
         pipe_out_id = f'Pipe {node_id.split()[-1]}.2'
         
         self.nodes[node_id] = hex
+        self.hexs[node_id] = hex
         
         self.add_pipe(pipe_in_id, from_node, node_id, pipe_data) # this pipe will contain a valve controlled by HEX
         self.add_pipe(pipe_out_id, node_id, to_node, pipe_data)
-
-        self.hexs[node_id] = {
-            'from': from_node,
-            'to': to_node,
-            'hex_instance': hex
-        }
+       
   
     def add_pump(self, pump_id : str, from_node : str, to_node : str, pipe_data : list, dp_pump) -> None:
         """
@@ -245,7 +241,7 @@ class Network:
                     self.loop_matrix[i, e] = +1
                 elif G.has_edge(v, u):    # opposite direction edge, but set it to +1 as all directions are fixed
                     e = G[v][u]['col']
-                    self.loop_matrix[i, e] = -1
+                    self.loop_matrix[i, e] = +1
 
     def build_help_vectors_NR(self):
 
@@ -253,14 +249,14 @@ class Network:
         Build head difference vectors for friction and elevation per pipe. And pump vector.
         """
     
-        self.head_friction_vector = np.zeros(len(self.pipes))
-        self.head_elevation_vector = np.zeros(len(self.pipes))
+        self.pressure_friction_vector = np.zeros(len(self.pipes))
+        self.pressure_elevation_vector = np.zeros(len(self.pipes))
        
         for j, pipe_id in enumerate(self.pipes.keys()):
 
             pipe = self.pipes[pipe_id]['pipe_instance']
-            self.head_friction_vector[j] = pipe.pressure_head_friction()
-            self.head_elevation_vector[j] = pipe.pressure_head_elevation()
+            self.pressure_friction_vector[j] = pipe.pressure_friction()
+            self.pressure_elevation_vector[j] = pipe.pressure_elevation()
 
         # Vector of pump pressure per pipe
         self.pump_array = np.zeros(len(self.pipes))
@@ -268,15 +264,27 @@ class Network:
             j = self.pipe_map[pump.pipe_id]
             self.pump_array[j] = pump.pressure_head()
 
+        # Vector of pressure per HEX. Which will be mapped to the inlet pipe of the HEX.
+        self.hex_array = np.zeros(len(self.pipes))
+        for hex_obj in self.hexs.values():
+            pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
+            j = self.pipe_map[pipe_id]
+            self.hex_array[j] = hex_obj.pressure_drop() / (pipe_obj.A**2 * 1e3)
+
+
     def set_mflow_network(self, N : int):
 
         """
-        1. Fill in all the head differences per pipe including the valves for the loop matrix into the F(Q)
-        2. Make F(Q) correct with the corresponding pump
-        3. Update the Jacobian
-        4. Use the previous mflow values as their initial guess
-        5. Perform Newton Raphson
-        6. Update all the mass flows in the system for N
+        Impelement Newton-Raphson to solve for mass flows in the network.
+
+        Steps:
+        1. Set up initial guess for mass flows in all pipes
+        2. Reduce the incidence matrix by removing the first row (reference node)
+        3. Set up the residual vector F(Q) containing continuity equations and loop head-loss equations
+        4. Set up the Jacobian matrix J
+        5. Solve for update in mass flows dQ: J dQ = -F(Q)
+        6. Update mass flows: Q = Q + dQ
+
         """
         # prepare pipe and loop data
         pipe_ids = list(self.pipes.keys())
@@ -301,8 +309,10 @@ class Network:
 
             # Continuity and loop head-loss equations
             continuity = incidence_matrix_reduced @ mflow
-            head_loss  = self.loop_matrix @ (self.head_friction_vector * mflow**2
-                                            + self.head_elevation_vector)
+
+            friction_vector = self.pressure_friction_vector + self.hex_array  # Add pressure drop of HEXs
+            head_loss  = self.loop_matrix @ (friction_vector * mflow**2
+                                            + self.pressure_elevation_vector)
 
             # Pump contribution (only in loop equations)
             pump_term = self.loop_matrix @ self.pump_array
@@ -315,7 +325,7 @@ class Network:
                 break
             
             # Jacobian
-            J = np.vstack([incidence_matrix_reduced, self.loop_matrix * (2 * self.head_friction_vector * mflow)])  
+            J = np.vstack([incidence_matrix_reduced, self.loop_matrix * (2 * self.pressure_friction_vector * mflow)])  
 
             # solve for delta y: J dy = -F
             try:
@@ -323,6 +333,7 @@ class Network:
             except np.linalg.LinAlgError:
                 # fallback to least squares / pseudo-inverse
                 dmflow = np.linalg.lstsq(J, -F, rcond=None)[0]
+                print("Warning: Jacobian is singular, using least squares solution.")
 
             mflow += dmflow
         
@@ -334,8 +345,7 @@ class Network:
         # Assign flows to the pipes for timestep N
         for j, pipe_id in enumerate(pipe_ids):
             pipe = self.pipes[pipe_id]['pipe_instance']
-            pipe.set_m_flow(mflow[j],N)
-
+            pipe.set_mflow(mflow[j],N)
 
     def set_T_network(self, T_ambt : float, N : int, no_cap = False):
             
@@ -360,7 +370,6 @@ class Network:
 
             # Update temperature 
             next_node.set_T(N)
-            # next_node.set_m_flow(N)
             
             self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
           

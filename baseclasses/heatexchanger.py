@@ -73,7 +73,7 @@ class HeatExchanger(Node):
         # Get inlet temperatures and mass flow rates
         pipe = self.pipes_in[f'Pipe {self.node_id.split()[-1]}.1'] #Assuming single inlet pipe
         Th_in = pipe.T[N]
-        mflow_h = pipe.get_m_flow(N)
+        mflow_h = pipe.get_mflow(N)
 
         Tc_in = self.consumer.Tc_in[N]
         mflow_c = self.consumer.mflow[N]
@@ -107,5 +107,11 @@ class HeatExchanger(Node):
         self.consumer.Q_supply[N] = (Tc_out - Tc_in) * mflow_c * pipe.c_water
 
         return Tc_out, Th_out
-
+    
+    def pressure_drop(self):
+        """"
+        pressure drop over heat exchanger is stated as dp = K_hx * Q^2 / (rho A^2)
+        """
+        
+        return self.K_hx 
 

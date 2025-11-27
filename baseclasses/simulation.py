@@ -52,7 +52,7 @@ class Simulation:
                          plot_network = False,
                          plot_nodes_T = False,
                          plot_pipes_T = False,
-                         plot_pipes_m_flow = False,
+                         plot_pipes_mflow = False,
                          plot_nodes_dT = False,
                          plot_cap_influence = False,
                          plot_consumer_demand = False,
@@ -84,7 +84,7 @@ class Simulation:
         self.plot_network(network, plot = plot_network)
         self.plot_node_temperature_network(network, T_in, plot = plot_nodes_T)
         self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
-        self.plot_pipe_m_flow_network(network, plot = plot_pipes_m_flow)
+        self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
         self.plot_cap_influence(network, plot = plot_cap_influence)
         self.plot_consumer_demand(network, plot = plot_consumer_demand)
@@ -188,7 +188,7 @@ class Simulation:
         if not plot:
             plt.close(fig_pipe)
 
-    def plot_pipe_m_flow_network(self, network: Network, plot = False):
+    def plot_pipe_mflow_network(self, network: Network, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
@@ -201,7 +201,7 @@ class Simulation:
         for pipe_id in network.pipes.keys():
 
             pipe = network.pipes[pipe_id]['pipe_instance']
-            plt.plot(self.time, pipe.m_flow, label=f'{pipe_id}')
+            plt.plot(self.time, pipe.mflow, label=f'{pipe_id}')
         
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.legend()
@@ -365,7 +365,7 @@ class Simulation:
         plt.title("Consumer Heat Demand vs Supply")
 
         for hex_key in network.hexs.keys():
-            hex = network.hexs[hex_key]['hex_instance']
+            hex = network.hexs[hex_key]
             plt.plot(self.time, hex.consumer.Q_d, label=f'Heat demand of C{hex.consumer.consumer_id.split(" ")[1]}')
             plt.plot(self.time, hex.consumer.Q_supply, label=f'Heat supplied to C{hex.consumer.consumer_id.split(" ")[1]}', linestyle='--')
 
@@ -424,7 +424,7 @@ class Simulation:
         for pipe_id, pipe_info in network.pipes.items():
             pipe = pipe_info['pipe_instance']
             pipe_T_data[f'{pipe_id}'] = np.round(pipe.T,3)
-            pipe_mflow_data[f'{pipe_id}'] = np.round(pipe.m_flow,5)
+            pipe_mflow_data[f'{pipe_id}'] = np.round(pipe.mflow,5)
         
         for pipe_id, pipe_info in network.pipes.items():
             node_from = pipe_info['from']
@@ -471,13 +471,13 @@ class Simulation:
 
         for hex_key in network.hexs.keys():
             
-            hex = network.hexs[hex_key]['hex_instance']
+            hex = network.hexs[hex_key]
 
             HEX_data['Tc_in'] = hex.consumer.Tc_in
             HEX_data['Th_in'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].T
             HEX_data['Tc_out'] = hex.consumer.Tc_out
             HEX_data['Th_out'] = hex.T
-            HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].m_flow
+            HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].mflow
             HEX_data['mflow_sec'] = hex.consumer.mflow           
             HEX_data['Q_d'] = hex.consumer.Q_d
             HEX_data['Q_supply'] = hex.consumer.Q_supply

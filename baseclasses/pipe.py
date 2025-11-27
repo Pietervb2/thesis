@@ -84,7 +84,7 @@ class Pipe:
         self.v_history = np.ones(self.hist_len) * v_inflow 
         self.T_history = np.ones(self.hist_len) * T_init_water
 
-        self.m_flow_extended = np.round(np.concatenate([self.v_history, np.zeros(num_steps)]) * self.inner_cs * self.rho_water,5)
+        self.mflow_extended = np.round(np.concatenate([self.v_history, np.zeros(num_steps)]) * self.inner_cs * self.rho_water,5)
         if T_in is not None:
             self.T_in_extended = np.concatenate([self.T_history, T_in])
         else:
@@ -101,7 +101,7 @@ class Pipe:
         self.T_pipe = np.ones(self.num_steps) * T_init_pipe  
 
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
-        self.m_flow = np.ones(self.num_steps)
+        self.mflow = np.ones(self.num_steps)
 
         # Save average time delay in pipe
         self.t_stay_array = np.ones(self.num_steps) 
@@ -125,13 +125,13 @@ class Pipe:
         """
         
         N_hist = N + self.hist_len
-        m_flow_ex, T_in_ex = self.m_flow_extended, self.T_in_extended
-        self.m_flow[N] = self.m_flow_extended[N_hist]
+        mflow_ex, T_in_ex = self.mflow_extended, self.T_in_extended
+        self.mflow[N] = self.mflow_extended[N_hist]
         
         # Find smallest integer n and corresponding R
         n, R = 0, 0
         while True:
-            R = sum(m_flow_ex[N_hist-n:N_hist+1] * self.dt)
+            R = sum(mflow_ex[N_hist-n:N_hist+1] * self.dt)
             if R > self.L * self.inner_cs * self.rho_water:
                 break
             n += 1
@@ -139,36 +139,36 @@ class Pipe:
         # Find smallest integer m
         m = 0
         while True:
-            sum_term = sum(m_flow_ex[N_hist-m:N_hist+1] * self.dt)
-            if sum_term > self.L * self.inner_cs * self.rho_water + m_flow_ex[N_hist] * self.dt:
+            sum_term = sum(mflow_ex[N_hist-m:N_hist+1] * self.dt)
+            if sum_term > self.L * self.inner_cs * self.rho_water + mflow_ex[N_hist] * self.dt:
                 break
             m += 1
         
         # Compute Y and S
-        Y = sum(m_flow_ex[N_hist-m+1:N_hist-n] * T_in_ex[N_hist-m+1:N_hist-n] * self.dt)
-        S = sum(m_flow_ex[N_hist - m + 1:N_hist + 1] * self.dt) if m > n else R
+        Y = sum(mflow_ex[N_hist-m+1:N_hist-n] * T_in_ex[N_hist-m+1:N_hist-n] * self.dt)
+        S = sum(mflow_ex[N_hist - m + 1:N_hist + 1] * self.dt) if m > n else R
          
         # Compute the lossless output temperature T_N
         lossless = (
             (R - self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-n]
             + Y
-            + (m_flow_ex[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-m]
-            ) / (m_flow_ex[N_hist] * self.dt)
+            + (mflow_ex[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-m]
+            ) / (mflow_ex[N_hist] * self.dt)
         self.T_lossless[N] = lossless      
 
         # Take into account the heat capacity of the steel pipe
         # Assume equilibrium in dt between the temperature of the pipe and the water
         prev_Tpipe = self.T_pipe[N-1] if N > 0 else self.T_pipe[N]
         self.T_cap[N] = (
-            m_flow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
+            mflow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
             + self.C_whole_pipe * prev_Tpipe
-            ) / (self.C_whole_pipe + m_flow_ex[N_hist] * self.c_water * self.dt)
+            ) / (self.C_whole_pipe + mflow_ex[N_hist] * self.c_water * self.dt)
 
         # Update temperature pipe wall
         self.T_pipe[N] = self.T_cap[N] 
 
         # Determine average delay in the pipe
-        t_stay = self.average_delay_bnode(n,m,R,S,m_flow_ex,N_hist)
+        t_stay = self.average_delay_bnode(n,m,R,S,mflow_ex,N_hist)
         self.t_stay_array[N] = t_stay
 
         # Final outlet water temperature including heat loss to ambient
@@ -177,7 +177,7 @@ class Pipe:
         decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
         self.T[N] = T_ambt + (ref_T - T_ambt) * decay    
 
-    def average_delay_bnode(self,n,m,R,S,m_flow_ex,N):
+    def average_delay_bnode(self,n,m,R,S,mflow_ex,N):
         """    
         Source: Maurer. J, Comparison of discrete dynamic pipeline models for operational optimization of District Heating Networks. 2021
 
@@ -189,7 +189,7 @@ class Pipe:
         N : Total number of time steps.
         R : The remaining distance at the start of the calculation.
         S : The remaining distance at the end of the calculation.
-        m_flow_ex : Array of mass flows at in let of the pipe
+        mflow_ex : Array of mass flows at in let of the pipe
         
         Returns:
         The average delay time of the water in the pipe.
@@ -198,15 +198,15 @@ class Pipe:
         first_term_delay = n * (R - self.L * self.inner_cs  * self.rho_water)
         second_term_delay = 0
         for i in range(N-m+1, N-n):
-            second_term_delay += (N - i) * m_flow_ex[i] * self.dt
+            second_term_delay += (N - i) * mflow_ex[i] * self.dt
             
-        third_term_delay = m * (m_flow_ex[N] * self.dt + self.L * self.inner_cs * self.rho_water - S)
+        third_term_delay = m * (mflow_ex[N] * self.dt + self.L * self.inner_cs * self.rho_water - S)
 
-        delay = (first_term_delay + second_term_delay + third_term_delay)/m_flow_ex[N]
+        delay = (first_term_delay + second_term_delay + third_term_delay)/mflow_ex[N]
 
         return delay
     
-    def pressure_head_friction(self):
+    def pressure_friction(self):
         """
         Darcy Weisbach equation to calculate pressure drop in pipe
         Haaland method to determine frictor factor f
@@ -216,12 +216,12 @@ class Pipe:
         """
 
         D = self.r_inner*2
-        log_term = (self.epsilon/D)/3.7 + (6.9/self.Re)**1.11
+        log_term = ((self.epsilon/D)/3.7)**1.11 + (6.9/self.Re)
         f = (1 / (-1.8 * np.log10(log_term)))**2
 
-        return 8 * f * self.L / (np.pi ** 2 * D ** 5 * self.rho_water)
+        return 8 * f * self.L / (np.pi ** 2 * D ** 5 * self.rho_water)                                                    
 
-    def pressure_head_elevation(self):
+    def pressure_elevation(self):
         """
         Calculate pressure head due to elevation difference
         """
@@ -229,19 +229,12 @@ class Pipe:
         return 9.81 * self.rho_water * self.delta_z
 
     
-    def set_m_flow_v(self, v_inflow, N):
+    def set_mflow_v(self, v_inflow, N):
         """
         Set the mass flow of the pipe based on the velocity
         """
 
-        self.m_flow_extended[N + self.hist_len] = v_inflow * self.inner_cs * self.rho_water
-
-    def set_m_flow_m(self, m_flow, N):
-        """
-        Set the mass flow of the pipe basedon the mass flow
-        """
- 
-        self.m_flow_extended[N + self.hist_len] = m_flow
+        self.mflow_extended[N + self.hist_len] = v_inflow * self.inner_cs * self.rho_water
     
     def set_T_in(self, T_inlet, N):
         """
@@ -249,15 +242,15 @@ class Pipe:
         """ 
         self.T_in_extended[N + self.hist_len] = T_inlet
 
-    def get_m_flow(self, N):
+    def get_mflow(self, N):
         """ 
         Get the inlet mass flow at timestep N
         """
-        return self.m_flow_extended[N + self.hist_len]
+        return self.mflow_extended[N + self.hist_len]
     
-    def set_m_flow(self, m_flow, N):
+    def set_mflow(self, mflow, N):
         """
         Set the inlet mass flow at timestep N
         """
         
-        self.m_flow_extended[N + self.hist_len] = m_flow
+        self.mflow_extended[N + self.hist_len] = mflow

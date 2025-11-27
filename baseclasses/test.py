@@ -64,7 +64,7 @@ class Test:
                         flow_type = None,
                         plot_nodes_T = False, 
                         plot_pipes_T = False, 
-                        plot_pipes_m_flow = False, 
+                        plot_pipes_mflow = False, 
                         plot_network = False,
                         plot_nodes_dT = False,
                         no_cap = False):
@@ -78,7 +78,7 @@ class Test:
 
             data_csv = pd.read_csv(os.path.join(basedir, 'data', 'pipe_validation', 'experiment', file + '_interpolated.csv'))
             T_in = data_csv['InletWaterTemp'].values
-            m_flow = data_csv['MassFlowRate'].values
+            mflow = data_csv['MassFlowRate'].values
             T_init_water = data_csv['OutletWaterTemp'].values[0] # initial water temperature in the network
             # T_init_pipe = data_csv['OutletPipeTemp'].values[0] # initial pipe temperature in the network
             T_init_pipe = T_init_water
@@ -86,11 +86,11 @@ class Test:
             # Step through data to create smaller vectors at dt intervals
             total_time = len(T_in)
             T_in = T_in[::dt]
-            m_flow = m_flow[::dt]
+            mflow = mflow[::dt]
             
 
             pipe1 = network.pipes['Pipe 1']['pipe_instance']
-            v_flow = np.round(m_flow / pipe1.rho_water / pipe1.inner_cs, 3)       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
+            v_flow = np.round(mflow / pipe1.rho_water / pipe1.inner_cs, 3)       #TODO Temporary solution for now the mass flow data. Maybe later I should reconstruct the code 
             sim = Simulation(dt, total_time, network.net_id, T_ambt, file = file, no_cap = no_cap)      
 
         else:
@@ -103,7 +103,7 @@ class Test:
                                 plot_network = plot_network, 
                                 plot_nodes_T = plot_nodes_T, 
                                 plot_pipes_T = plot_pipes_T, 
-                                plot_pipes_m_flow = plot_pipes_m_flow, 
+                                plot_pipes_mflow = plot_pipes_mflow, 
                                 plot_nodes_dT = plot_nodes_dT,
                                 no_cap = no_cap)
 
@@ -148,7 +148,7 @@ class Test:
             temp_type = flow_type = file
 
             T_out_exp = exp_csv['OutletWaterTemp'].values
-            m_flow_exp = exp_csv['MassFlowRate'].values
+            mflow_exp = exp_csv['MassFlowRate'].values
             
             data_dict['Exp temp'] = T_out_exp[::dt]
 
@@ -398,7 +398,8 @@ class Test:
         net.add_node('Node 11', 2, 0, 5)
         net.add_node('Node 12', 2, 0, 0)
 
-        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data, 2e5)
+        pump_pressure = 50e3  # Pa
+        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data, pump_pressure)
 
         net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
         net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
@@ -464,7 +465,6 @@ class Test:
 
         net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data, 2e5)
 
-        net.add_pipe('Pipe 0', 'Node 12', 'Node 1', pipe_data)
         net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
         net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
         net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)

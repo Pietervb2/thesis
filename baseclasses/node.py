@@ -55,7 +55,7 @@ class Node:
         sum_m_inflow = 0
         for _, pipe in self.pipes_in.items():
             
-            m_inflow = pipe.get_m_flow(N)
+            m_inflow = pipe.get_mflow(N)
             sum_T_flow += pipe.T[N] * m_inflow
             sum_m_inflow += m_inflow
         try:    
@@ -69,37 +69,6 @@ class Node:
             print(f"No ingoing mass flow in node  = {self.node_id}")
             
 
-    def set_m_flow(self, N):
-        """
-        Function that calculates the flow of each in- and output pipe of the node. And sets the node temperature
-
-        For now divide the mass flow based on the diameter of the pipes. 
-
-        # TODO: put in a ratio for the mass flow, to decide how it will be divided. If pipes have different diameters
-        """         
-
-        # Total inward flow node
-        sum_m_flow = 0
-        for _, pipe in self.pipes_in.items():
-            
-            m_inflow = pipe.get_m_flow(N)
-            sum_m_flow += m_inflow
-        
-        try:    
-            # Set the node mass outflow and temperature per pipe
-            if len(self.pipes_out) == 0:
-                return
-            
-            m_pipe_flow = sum_m_flow / len(self.pipes_out)
-
-            
-            for pipe_id, pipe in self.pipes_out.items():
-                pipe.set_m_flow_m(m_pipe_flow, N)
-
-        except(ZeroDivisionError):
-            print(f"No ingoing mass flow in node  = {self.node_id}")
-
-
     def get_T(self, N):
         return self.T[N]
 
@@ -108,15 +77,11 @@ class Node:
 
     def get_number_pipes_out(self):
         return len(self.pipes_out)
+    
+    def get_incoming_pipes(self):
+        return self.pipes_in
 
 
 if __name__ == "__main__":
 
-    node1 = Node(1,1,1, 'Node 1')
-    pipe1 = Pipe(10, 0.1, 0.08, 100, 'Pipe 1')
-    node1.connect_pipe_to_node('pipe1', pipe1, 'outgoing')
-    
-    node1.set_m_flow(0)
-    node1.set_T(0)
-
-    print(node1.get_number_pipes_out())
+    pass
