@@ -404,7 +404,8 @@ class Simulation:
 
         pipe_T_data = {}
         pipe_mflow_data = {}
-               
+        pipes_dp_data = {}
+                       
         # Store time in all dicts
         node_data['time'] = self.time
         node_dT_data['time'] = self.time
@@ -425,6 +426,7 @@ class Simulation:
             pipe = pipe_info['pipe_instance']
             pipe_T_data[f'{pipe_id}'] = np.round(pipe.T,3)
             pipe_mflow_data[f'{pipe_id}'] = np.round(pipe.mflow,5)
+            pipes_dp_data[f'{pipe_id}'] = np.round(pipe.dp_friction,3)
         
         for pipe_id, pipe_info in network.pipes.items():
             node_from = pipe_info['from']
@@ -433,15 +435,17 @@ class Simulation:
 
         # Save simulation data
         df_node = pd.DataFrame(node_data)
+        df_node_dT = pd.DataFrame(node_dT_data)
         df_pipe_T = pd.DataFrame(pipe_T_data)
         df_pipe_mflow = pd.DataFrame(pipe_mflow_data)
-        df_node_dT = pd.DataFrame(node_dT_data)
+        df_pipe_dp = pd.DataFrame(pipes_dp_data)
 
         df_node.to_csv(os.path.join(sim_data_folder, 'Node_temp.csv'), index=False)
+        df_node_dT.to_csv(os.path.join(sim_data_folder,'Node_dT.csv'),index = False)
         df_pipe_T.to_csv(os.path.join(sim_data_folder,'Pipe_temp.csv'),index=False)
         df_pipe_mflow.to_csv(os.path.join(sim_data_folder,'Pipe_mflow.csv'), index =  False)
-        df_node_dT.to_csv(os.path.join(sim_data_folder,'Node_dT.csv'),index = False)
-
+        df_pipe_dp.to_csv(os.path.join(sim_data_folder,'Pipe_dp_friction.csv'), index = False)
+        
         # Network data incombination with the pipe properites
         Network_data = {}
 
@@ -465,6 +469,8 @@ class Simulation:
 
         # Saving the data corresponding to HEX and consumers
         HEX_data = {}
+        hex_dp_data = {}
+
         hex_folder = os.path.join(self.folder, 'hex_consumer_data')
         if not os.path.exists(hex_folder):
             os.makedirs(hex_folder)
@@ -482,8 +488,12 @@ class Simulation:
             HEX_data['Q_d'] = hex.consumer.Q_d
             HEX_data['Q_supply'] = hex.consumer.Q_supply
 
-            df_hex = pd.DataFrame(HEX_data)
+            hex_dp_data[f'{hex_key}'] = hex.pressure_drop() * hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].mflow**2
 
+            df_hex = pd.DataFrame(HEX_data)
+            df_hex_dp = pd.DataFrame(hex_dp_data)
+
+            df_hex_dp.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}_dp.csv'), index = False)
             df_hex.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}.csv'), index = False)
         
 

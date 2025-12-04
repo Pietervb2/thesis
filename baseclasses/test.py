@@ -314,7 +314,7 @@ class Test:
         consumer1 = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset,0)
         consumer2 = Consumer('Consumer 2',A1,A2,Period1,Period2,Phi1,Phi2,offset,tau)
 
-        pipe_data = Test.read_pipe_data('Pipe of DN50')
+        pipe_data = Test.read_pipe_data('DN40')
         hex_data = Test.read_hex_data('Standard hex constants dummy pressure')
 
         # Create network
@@ -367,8 +367,9 @@ class Test:
         """
         Initial test to see whether the incidence and loop matrix construction is working properly.
         """
-        pipe_data = Test.read_pipe_data('Pipe of DN50')
-        hex_data = Test.read_hex_data('Standard hex constants dummy pressure')
+        pipe_data_DN40 = Test.read_pipe_data('DN40')
+        pipe_data_DN20 = Test.read_pipe_data('DN20')
+        hex_data = Test.read_hex_data('Standard hex constants')
 
         A1 = 0.109*1.524
         A2 = 0.113*1.524
@@ -386,35 +387,35 @@ class Test:
         net = Network("Model step 7")
      
         net.add_node('Node 1', 0, 0, 0)
-        net.add_node('Node 2', 0, 0, 6)
-        net.add_node('Node 3', 0, 0, 12)
-        net.add_node('Node 4', 0, 0, 13)
-        net.add_node('Node 5', 2, 0, 13)
-        net.add_node('Node 6', 5, 0, 12)
-        net.add_node('Node 7', 5, 0, 11)
-        net.add_node('Node 8', 2, 0, 11)
-        net.add_node('Node 9', 5, 0, 6)
-        net.add_node('Node 10', 5, 0, 5)
-        net.add_node('Node 11', 2, 0, 5)
+        net.add_node('Node 2', 0, 0, 3)
+        net.add_node('Node 3', 0, 0, 6)
+        net.add_node('Node 4', 0, 0, 7)
+        net.add_node('Node 5', 2, 0, 7)
+        net.add_node('Node 6', 5, 0, 6)
+        net.add_node('Node 7', 5, 0, 5)
+        net.add_node('Node 8', 2, 0, 6)
+        net.add_node('Node 9', 5, 0, 3)
+        net.add_node('Node 10', 5, 0, 2)
+        net.add_node('Node 11', 2, 0, 2)
         net.add_node('Node 12', 2, 0, 0)
 
         pump_pressure = 50e3  # Pa
-        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data, pump_pressure)
+        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data_DN40, pump_pressure)
 
-        net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
-        net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
-        net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
-        net.add_pipe('Pipe 4', 'Node 4', 'Node 5', pipe_data)
-        net.add_pipe('Pipe 5', 'Node 5', 'Node 8', pipe_data)
-        net.add_pipe('Pipe 6', 'Node 3', 'Node 6', pipe_data)
-        net.add_pipe('Pipe 7', 'Node 7', 'Node 8', pipe_data)
-        net.add_pipe('Pipe 8', 'Node 2', 'Node 9', pipe_data)
-        net.add_pipe('Pipe 9', 'Node 8', 'Node 11', pipe_data)
-        net.add_pipe('Pipe 10', 'Node 10', 'Node 11', pipe_data)
-        net.add_pipe('Pipe 11', 'Node 11', 'Node 12', pipe_data)
+        net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data_DN40)
+        net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data_DN40)
+        net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data_DN40)
+        net.add_pipe('Pipe 4', 'Node 4', 'Node 5', pipe_data_DN40)
+        net.add_pipe('Pipe 5', 'Node 5', 'Node 8', pipe_data_DN40)
+        net.add_pipe('Pipe 6', 'Node 3', 'Node 6', pipe_data_DN40)
+        net.add_pipe('Pipe 7', 'Node 7', 'Node 8', pipe_data_DN40)
+        net.add_pipe('Pipe 8', 'Node 2', 'Node 9', pipe_data_DN40)
+        net.add_pipe('Pipe 9', 'Node 8', 'Node 11', pipe_data_DN40)
+        net.add_pipe('Pipe 10', 'Node 10', 'Node 11', pipe_data_DN40)
+        net.add_pipe('Pipe 11', 'Node 11', 'Node 12', pipe_data_DN40)
         
-        net.add_hex('Hex 1', 'Node 6', 'Node 7', hex_data, pipe_data, consumer1)
-        net.add_hex('Hex 2', 'Node 9', 'Node 10', hex_data, pipe_data, consumer2)
+        net.add_hex('Hex 1', 'Node 6', 'Node 7', hex_data, pipe_data_DN20, consumer1)
+        net.add_hex('Hex 2', 'Node 9', 'Node 10', hex_data, pipe_data_DN20, consumer2)
 
         # Simulation parameters
         dt = 60 # s
@@ -432,7 +433,7 @@ class Test:
 
     def test_incidence_and_loop_matrices():
         
-        pipe_data = Test.read_pipe_data('Pipe of DN50')
+        pipe_data = Test.read_pipe_data('Pipe of DN40')
         hex_data = Test.read_hex_data('Standard hex constants dummy pressure')
 
         A1 = 0.109*1.524
@@ -498,21 +499,35 @@ class Test:
 
     def test_NR():
 
-        pipe_data = Test.read_pipe_data('Pipe of DN50')
+        pipe_data = Test.read_pipe_data('DN40')
+        pipe_data_hex = Test.read_pipe_data('DN20')
+        hex_data = Test.read_hex_data('Standard hex constants')
 
         # Create network
         net = Network("NR test")
+
+        A1 = 0.109*1.524
+        A2 = 0.113*1.524
+        Period1 = 2*np.pi / 0.298
+        Period2 = 2*np.pi / 0.529
+        Phi1 = -1.949
+        Phi2 = -2.154
+        offset = 0.509*1.524
+        tau = 3600 
+
+        consumer1 = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset,0)
      
         net.add_node('Node 1', 0, 0, 0)
-        net.add_node('Node 2', 0, 2, 0)
-        net.add_node('Node 3', 3, 2, 0)
+        net.add_node('Node 2', 0, 3, 0)
+        net.add_node('Node 3', 3, 3, 0)
         net.add_node('Node 4', 3, 0, 0)
 
 
         net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
         net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
-        net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
-        net.add_pump('Pump 1', 'Node 4', 'Node 1', pipe_data, 1e5)
+        # net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
+        net.add_hex('Hex 1', 'Node 3', 'Node 4', hex_data, pipe_data_hex, consumer1)
+        net.add_pump('Pump 1', 'Node 4', 'Node 1', pipe_data, 4e4)
 
         # Simulation parameters
         dt = 60 # s
@@ -568,7 +583,6 @@ class Test:
         h_pipe_air = constants[pipe_data_set]['h_pipe_air'] # natural convection from pipe to surrounding air [W / m2 K]
 
         epsilon = constants[pipe_data_set]['epsilon'] # rougness of inner pipe [m]
-        Re = constants[pipe_data_set]['Re'] # Reynolds number [-]
 
         R = (
                 np.log(r_outer/r_inner)/(2*np.pi*k_pipe) # conduction pipe
@@ -578,7 +592,7 @@ class Test:
 
         K = 1/R # total thermal conductivity [W / m K]
 
-        pipe_data = [r_inner, r_outer, cp_pipe, rho_pipe, cp_insu, rho_insu, insu_thickness, K, epsilon, Re]
+        pipe_data = [r_inner, r_outer, cp_pipe, rho_pipe, cp_insu, rho_insu, insu_thickness, K, epsilon]
 
         return pipe_data
     

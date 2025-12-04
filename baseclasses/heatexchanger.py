@@ -110,8 +110,8 @@ class HeatExchanger(Node):
     
     def pressure_drop(self):
         """"
-        pressure drop over heat exchanger is stated as dp = K_hx * Q^2 / (rho A^2)
+        pressure drop over heat exchanger is stated as dp = rho * K_hx * Q^2 
         """
         
-        return self.K_hx 
+        return self.K_hx * 1000 # Assuming water density of 1000 kg/m3
 

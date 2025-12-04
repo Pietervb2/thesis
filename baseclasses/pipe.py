@@ -34,7 +34,7 @@ class Pipe:
         self.insu_thickness = pipe_data[6]
         self.K = pipe_data[7]
         self.epsilon = pipe_data[8]
-        self.Re = pipe_data[9]
+        # self.Re = pipe_data[9]
        
         # Physical constants       
         self.rho_water = 1e3 # [kg/m3] 
@@ -102,6 +102,7 @@ class Pipe:
 
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.mflow = np.ones(self.num_steps)
+        self.dp_friction = np.zeros(self.num_steps)
 
         # Save average time delay in pipe
         self.t_stay_array = np.ones(self.num_steps) 
@@ -216,7 +217,8 @@ class Pipe:
         """
 
         D = self.r_inner*2
-        log_term = ((self.epsilon/D)/3.7)**1.11 + (6.9/self.Re)
+        Re = 10e3 # TODO: update Re per sim Placeholder for Reynolds number [-], to be updated with flow velocity based calculation
+        log_term = ((self.epsilon/D)/3.7)**1.11 + (6.9/Re)
         f = (1 / (-1.8 * np.log10(log_term)))**2
 
         return 8 * f * self.L / (np.pi ** 2 * D ** 5 * self.rho_water)                                                    
@@ -228,14 +230,6 @@ class Pipe:
 
         return 9.81 * self.rho_water * self.delta_z
 
-    
-    def set_mflow_v(self, v_inflow, N):
-        """
-        Set the mass flow of the pipe based on the velocity
-        """
-
-        self.mflow_extended[N + self.hist_len] = v_inflow * self.inner_cs * self.rho_water
-    
     def set_T_in(self, T_inlet, N):
         """
         Set inlet temperature of the pipe
@@ -254,3 +248,11 @@ class Pipe:
         """
         
         self.mflow_extended[N + self.hist_len] = mflow
+
+    def set_dp_friction(self,N):
+
+        """
+        Set the frictional pressure drop at timestep N
+        """
+
+        self.dp_friction[N] = self.pressure_friction() * self.mflow[N]**2

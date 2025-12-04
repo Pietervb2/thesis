@@ -1,5 +1,5 @@
 {
-    "Pipe Testing variables":{
+    "District Heating and Cooling Book": {
         "comment_radius": "Inner and outer radius of the pipe [m]",
         "r_inner" : 0.08, 
         "r_outer" : 0.1,
@@ -18,26 +18,7 @@
         "insu_thickness": 0.013 
     },
 
-    "Pipe of District Heating and Cooling Book": {
-        "comment_radius": "Inner and outer radius of the pipe [m]",
-        "r_inner" : 0.08, 
-        "r_outer" : 0.1,
-        "comment_density": "Density of the pipe material and its insulation layer [kg/m^3]",
-        "rho_pipe": 8000,
-        "rho_insu" : 32,
-        "comment_cp": "Specific heat capacity of the pipe material and its insulation layer[J/kgK]",
-        "cp_pipe": 500, 
-        "cp_insu": 2500, 
-        "comment_k": "Heat conductivity of the pipe material and insulation layer [W/mK], heat conductivity of pipe is neglibible",
-        "k_pipe": 14.9, 
-        "k_insu": 0.04, 
-        "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/mK]",
-        "h_pipe_air": 5,
-        "comment_thickness": "Thickness of the insulation layer [m]",
-        "insu_thickness": 0.013 
-    },
-
-    "Pipe of experiment van der Heijden" : {
+    "Experiment van der Heijden" : {
         "comment_radius": "Inner and outer radius of the pipe [m]",
         "r_inner" : 0.02624, 
         "r_outer" : 0.02819, 
@@ -56,10 +37,10 @@
         "insu_thickness": 0.013 
     },
 
-        "Pipe of DN50" : {
+        "DN40" : {
         "comment_radius": "Inner and outer radius of the pipe [m]",
-        "r_inner" : 0.025, 
-        "r_outer" : 0.030, 
+        "r_inner" : 0.020, 
+        "r_outer" : 0.025, 
         "comment_density": "Density of the pipe material and its insulation layer [kg/m^3]",
         "rho_pipe": 8000, 
         "rho_insu" : 32, 
@@ -74,8 +55,26 @@
         "comment_thickness": "Thickness of the insulation layer [m]",
         "insu_thickness": 0.013,
         "comment_epsilon": "Rougness of inner pipe, value for commercial steel pipe [m]",
-        "epsilon" : 0.000045,
-        "comment_Re" : "Reynolds Number, indication of turbulence of flow [-]",
-        "Re" : 4000
+        "epsilon" : 0.045e-3
+    },
+        "DN20": {
+        "comment_radius": "Inner and outer radius of the pipe [m]",
+        "r_inner" : 0.01, 
+        "r_outer" : 0.015, 
+        "comment_density": "Density of the pipe material and its insulation layer [kg/m^3]",
+        "rho_pipe": 8000, 
+        "rho_insu" : 32, 
+        "comment_cp": "Specific heat capacity of the pipe material and its insulation layer[J/kgK]",
+        "cp_pipe": 500, 
+        "cp_insu": 2500, 
+        "comment_k": "Heat conductivity of the pipe material and insulation layer [W/mK], heat conductivity of pipe is neglibible",
+        "k_pipe": 14.9, 
+        "k_insu": 0.04, 
+        "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/m2 K]",
+        "h_pipe_air": 5,
+        "comment_thickness": "Thickness of the insulation layer [m]",
+        "insu_thickness": 0.013,
+        "comment_epsilon": "Rougness of inner pipe, value for commercial steel pipe [m]",
+        "epsilon" : 0.045e-3
     }
 }
