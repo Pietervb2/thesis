@@ -201,7 +201,7 @@ class Test:
         plots_folder = os.path.join(
                             base_dir,
                             "figures",
-                            "validation",
+                            "pipe_validation",
                             "exp_simulation_modelica" if file else "simulation_modelica",
                             sim_name if file else f'{sim_name}_nodes={number_of_nodes}',
                         )
@@ -393,7 +393,7 @@ class Test:
         net.add_node('Node 5', 2, 0, 7)
         net.add_node('Node 6', 5, 0, 6)
         net.add_node('Node 7', 5, 0, 5)
-        net.add_node('Node 8', 2, 0, 6)
+        net.add_node('Node 8', 2, 0, 5)
         net.add_node('Node 9', 5, 0, 3)
         net.add_node('Node 10', 5, 0, 2)
         net.add_node('Node 11', 2, 0, 2)
@@ -428,7 +428,8 @@ class Test:
         T_in = Test.generate_input_network(temp_type, total_time, dt)
 
         # Run simulation
-        sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)      
+        sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
+        # sim.plot_network(net)      
         sim.simulate_network(net, T_in, T_ambt, T_ambt)
 
     def test_incidence_and_loop_matrices():
@@ -542,7 +543,7 @@ class Test:
         # Run simulation
         sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)      
         sim.simulate_network(net, T_in, T_ambt, T_ambt)
-
+    
 ###########################################################
 # Help functions for the tests
 ###########################################################

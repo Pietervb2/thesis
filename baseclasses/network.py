@@ -93,7 +93,7 @@ class Network:
         node = Node(x, y, z, node_id)
         self.nodes[node_id] = node
 
-    def add_pipe(self, pipe_id : str, from_node : str, to_node : str, pipe_data : list) -> None:
+    def add_pipe(self, pipe_id : str, from_node : str, to_node : str, pipe_data : list, hex_pipe = False) -> None:
         """
         Add a pipe between two nodes.
         """
@@ -106,7 +106,7 @@ class Network:
             raise ValueError(f"{to_node} must exist in the network")
 
         delta_z, L = self.pipe_length(self.nodes[from_node], self.nodes[to_node])
-        pipe = Pipe(pipe_id, L, delta_z, pipe_data)
+        pipe = Pipe(pipe_id, L, delta_z, pipe_data, hex_pipe)
 
         # pipe_id = self._next_pipe_id
         self.pipes[pipe_id] = {
@@ -150,8 +150,8 @@ class Network:
         self.nodes[node_id] = hex
         self.hexs[node_id] = hex
         
-        self.add_pipe(pipe_in_id, from_node, node_id, pipe_data) # this pipe will contain a valve controlled by HEX
-        self.add_pipe(pipe_out_id, node_id, to_node, pipe_data)  
+        self.add_pipe(pipe_in_id, from_node, node_id, pipe_data, hex_pipe = True) # this pipe will contain a valve controlled by HEX
+        self.add_pipe(pipe_out_id, node_id, to_node, pipe_data, hex_pipe = True)  
   
     def add_pump(self, pump_id : str, from_node : str, to_node : str, pipe_data : list, dp_pump) -> None:
         """
@@ -267,11 +267,18 @@ class Network:
 
         self.hex_array = np.zeros(len(self.pipes))
         for hex_obj in self.hexs.values():
+            
+            # Put pressure drop of HEX on the inlet pipe
             pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
             j = self.pipe_map[pipe_id]
             self.hex_array[j] = hex_obj.pressure_drop()  # Convert to pressure drop [Pa]
 
     def res(self, mflow) -> np.ndarray:
+        """
+        Residual vector for Newton-Raphson method
+
+        F(mflow) = [continuity equations; loop head-loss equations] = 0
+        """
         
         incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
 
@@ -290,6 +297,9 @@ class Network:
         return F
     
     def jac(self, mflow) -> np.ndarray:
+        """
+        Jacobian matrix of the residual F(x) for Newton-Raphson method
+        """
         
         # Jacobian
         incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
@@ -327,7 +337,6 @@ class Network:
 
         # Extract results
         mflow = result.x
-        print(f'final error NR at timestep {N}: {np.linalg.norm(self.F(mflow))}')
 
         if not result.success:
             raise RuntimeError(f"Newton-Raphson did not converge at timestep = {N}, message: {result.message}")

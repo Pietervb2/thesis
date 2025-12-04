@@ -8,22 +8,23 @@ class Pipe:
             pipe_id : str, 
             pipe_length : float, 
             delta_z : float,
-            pipe_data : list[float]
+            pipe_data : list[float],
+            hex_pipe : bool = False
             ):
         """
         Initialize pipe.
 
         Args: 
-        pipe_length [m],
-        pipe_r_outer [m],
-        pipe_r_inner [m],
-        K: overall heat transmission coefficient [W/m2K]
-
-        #TODO: update
+        pipe_id : unique identifier for the pipe
+        pipe_length : length of the pipe [m]
+        delta_z : elevation difference of the pipe [m]
+        pipe_data : list of physical properties of the pipe and insulation
+        hex_pipe : boolean indicating if the pipe is connected to a heat exchanger
         """
         self.pipe_id = pipe_id 
         self.L = pipe_length
         self.delta_z = delta_z
+        self.hex_pipe = hex_pipe
 
         self.r_inner = pipe_data[0]
         self.r_outer = pipe_data[1]
@@ -102,7 +103,7 @@ class Pipe:
 
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
         self.mflow = np.ones(self.num_steps)
-        self.dp_friction = np.zeros(self.num_steps)
+        self.dp_friction_array = np.zeros(self.num_steps)
 
         # Save average time delay in pipe
         self.t_stay_array = np.ones(self.num_steps) 
@@ -212,21 +213,27 @@ class Pipe:
         Darcy Weisbach equation to calculate pressure drop in pipe
         Haaland method to determine frictor factor f
 
-        # TODO: might introduce formula for Reynolds number based on flow velocity
-        maybe influences the whole equation to calculate pressure drop for lower Reynolds numbers
+        #TODO: update Re per sim with flow velocity based calculation, but could lead to changing whole equation. 
         """
 
+        # Setting it to 0 creates problems for the Jacobian solving with Newton - Raphson
+        if self.hex_pipe:
+            return 0.001
+        
         D = self.r_inner*2
-        Re = 10e3 # TODO: update Re per sim Placeholder for Reynolds number [-], to be updated with flow velocity based calculation
+        Re = 10e3 
         log_term = ((self.epsilon/D)/3.7)**1.11 + (6.9/Re)
         f = (1 / (-1.8 * np.log10(log_term)))**2
-
+       
         return 8 * f * self.L / (np.pi ** 2 * D ** 5 * self.rho_water)                                                    
 
     def pressure_elevation(self):
         """
         Calculate pressure head due to elevation difference
         """
+
+        # if self.hex_pipe:
+        #     return 0
 
         return 9.81 * self.rho_water * self.delta_z
 
@@ -255,4 +262,4 @@ class Pipe:
         Set the frictional pressure drop at timestep N
         """
 
-        self.dp_friction[N] = self.pressure_friction() * self.mflow[N]**2
+        self.dp_friction_array[N] = self.pressure_friction() * self.mflow[N]**2
