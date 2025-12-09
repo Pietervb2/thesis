@@ -8,7 +8,11 @@
         "comment_F": "Correction factor [-]",
         "F" : 0.95,
         "comment_K_hx": "Pressure loss coefficient [kg/m2], assume 35kPa dp, at 0.24 kg/s mflow because of max heat transfer tap water 30kW",
-        "K_hx" : 600
+        "K_hx" : 20,
+        "comment_K_vs": "Hydrualic conductivity fully open valve [m3/h/bar^0.5]",
+        "K_vs" : 0.1,
+        "comment_K_v0": "Hydrualic conductivity valve at h=0.0 [-]",
+        "K_v0" : 0.002
     }
 }
 

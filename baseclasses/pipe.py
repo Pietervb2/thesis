@@ -218,7 +218,7 @@ class Pipe:
 
         # Setting it to 0 creates problems for the Jacobian solving with Newton - Raphson
         if self.hex_pipe:
-            return 0.001
+            return 0.1
         
         D = self.r_inner*2
         Re = 10e3 
@@ -229,14 +229,11 @@ class Pipe:
 
     def pressure_elevation(self):
         """
-        Calculate pressure head due to elevation difference
+        Calculate pressure head due to elevation difference. 
+        Also included for the pipes connected to the HEX, in contract to the friction pressure term. Because in loop elevation pressure will disappear. 
         """
-
-        # if self.hex_pipe:
-        #     return 0
-
         return 9.81 * self.rho_water * self.delta_z
-
+    
     def set_T_in(self, T_inlet, N):
         """
         Set inlet temperature of the pipe
@@ -256,10 +253,10 @@ class Pipe:
         
         self.mflow_extended[N + self.hist_len] = mflow
 
-    def set_dp_friction(self,N):
+    def save_dp_friction(self,N):
 
         """
         Set the frictional pressure drop at timestep N
         """
 
-        self.dp_friction_array[N] = self.pressure_friction() * self.mflow[N]**2
+        self.dp_friction_array[N] = self.pressure_friction() * self.mflow_extended[N + self.hist_len]**2

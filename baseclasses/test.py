@@ -370,6 +370,7 @@ class Test:
         pipe_data_DN40 = Test.read_pipe_data('DN40')
         pipe_data_DN20 = Test.read_pipe_data('DN20')
         hex_data = Test.read_hex_data('Standard hex constants')
+        pump_data = Test.read_pump_data('50kPa Pump')
 
         A1 = 0.109*1.524
         A2 = 0.113*1.524
@@ -399,8 +400,7 @@ class Test:
         net.add_node('Node 11', 2, 0, 2)
         net.add_node('Node 12', 2, 0, 0)
 
-        pump_pressure = 50e3  # Pa
-        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data_DN40, pump_pressure)
+        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data_DN40, pump_data)
 
         net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data_DN40)
         net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data_DN40)
@@ -609,10 +609,28 @@ class Test:
         As = constants[hex_data_set]['As'] # Heat transfer area [m2]
         F = constants[hex_data_set]['F'] # Correction factor [-]
         K_hx = constants[hex_data_set]['K_hx'] # Pressure loss coefficient [-]
+        K_vs = constants[hex_data_set]['K_vs'] # Hydrualic conductivity for valve [m3/s Pa^0.5]
+        K_v0 = constants[hex_data_set]['K_v0'] # Hydraulic conductivity for valve when closed[m3/s Pa^0.5]
 
-        hex_data = [U, As, F, K_hx]
+        hex_data = [U, As, F, K_hx, K_vs, K_v0]
 
         return hex_data
+    
+    def read_pump_data(pump_data_set):
+
+        thesis_dir = os.path.dirname(os.path.abspath(__file__))
+        constants_file = os.path.join(os.path.dirname(thesis_dir),'constants', 'constants_pump.json')
+
+        with open(constants_file) as f:
+            constants = json.load(f)
+
+        a = constants[pump_data_set]['a'] # Pump curve coefficients [a,b,c] for a quadratic curve
+        b = constants[pump_data_set]['b'] # 
+        c = constants[pump_data_set]['c'] #
+
+        pump_data = [a,b,c]
+
+        return pump_data
     
     def generate_input_one_pipe(temp_type, flow_type, total_time, dt):
 

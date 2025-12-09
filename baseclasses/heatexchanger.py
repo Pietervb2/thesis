@@ -9,10 +9,7 @@ class HeatExchanger(Node):
                  y,
                  z,
                  hex_id: str,
-                 U: float,
-                 As: float,
-                 F: float,
-                 K_hx: float,
+                 hex_data: list,
                  consumer: object):
         """"
         Args:
@@ -22,10 +19,12 @@ class HeatExchanger(Node):
             - K_hx: pressure loss coefficient [-]
         """
         super().__init__(x,y,z,hex_id)
-        self.U = U
-        self.As = As
-        self.F = F
-        self.K_hx = K_hx
+        self.U = hex_data[0]
+        self.As = hex_data[1]
+        self.F = hex_data[2]
+        self.K_hx = hex_data[3]
+        self.Kvs = hex_data[4]
+        self.Kv0 = hex_data[5]
 
         # Consumer connected to the heat exchanger
         self.consumer = consumer
@@ -38,6 +37,9 @@ class HeatExchanger(Node):
 
         super().initialize_node(num_steps, T_init, dt)
         self.consumer.initialize_consumer(num_steps, dt)
+
+        self.h = np.zeros(num_steps)
+        self.Kv = np.zeros(num_steps)
 
     
     def set_T(self, N):
@@ -56,6 +58,8 @@ class HeatExchanger(Node):
             # Set temperature per pipe
             for _, pipe in self.pipes_out.items():
                 pipe.set_T_in(self.T[N], N)
+
+        # self.update_valve(N)
 
     def NTU_method(self,N):
 
@@ -114,4 +118,44 @@ class HeatExchanger(Node):
         """
         
         return self.K_hx * 1000 # Assuming water density of 1000 kg/m3
+    
+    def equal_percentage_valve(self, h):
+
+        return (self.Kvs / self.Kv0)**(h-1) * self.Kvs
+    
+    def update_valve(self, N):
+        """
+        Update the valve position based on the consumer outlet temperature using a PI controller.
+        """
+
+        # TODO: dont forget to adjust the parameters for Kv to kg/s/sqrt(bar)
+        # Initial step 
+        if N == 0:
+            self.h[N] = 0.0
+            self.Kv[N] = self.equal_percentage_valve(self.h[N])
+            return
+
+        # # controller part
+        # mflow_min = 0.01
+        # if self.consumer.mflow[N] > mflow_min:
+            
+        #     # implement some PI controller to determine the valve lift
+        #     P_k = 
+        #     I_k = 
+        #     T_set_point = 55 # []
+        #     h = P_k * (T_set_point - self.consumer.Tc_out[N]) + I_k * ...
+
+        #     Kv = self.equal_percentage_valve(h)
+
+        #     self.h[N] = h
+        #     self.Kv[N] = Kv
+
+        # else:
+
+            # no change in valve position
+            self.h[N] = self.h[N-1]
+            self.Kv[N] = self.Kv[N-1]
+            
+
+
 

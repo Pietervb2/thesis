@@ -43,16 +43,6 @@ class Network:
 
         # NOTE: for now just visit all nodes and pipes. They are all given the initial temperature of the first node. 
         """
-        ### Hydraulics
-
-        # Determine incidence and loop matrix
-        self.build_incidence_matrix()
-        self.build_loop_matrix_from_incidence()
-        self.build_help_vectors_NR()
-
-        # Big matrix to save all the pipe mflows for faster access
-        self.Q_all = np.zeros([len(self.pipe_map),num_steps])
-     
         ### Thermodynamics
 
         # Initialize temperature arrays within nodes. And set input temperature for first node.
@@ -74,6 +64,16 @@ class Network:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow, T_in = T_in)
             else:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)      
+        
+                ### Hydraulics
+
+        # Determine incidence and loop matrix
+        self.build_incidence_matrix()
+        self.build_loop_matrix_from_incidence()
+        self.build_help_vectors_NR()
+
+        # Big matrices for faster access during simulation
+        self.mflow_all = np.zeros([len(self.pipe_map),num_steps])
       
     def add_node(self, node_id : str, x : float, y : float , z : float, data = None) -> None:
         """
@@ -141,7 +141,7 @@ class Network:
         y = (self.nodes[from_node].y + self.nodes[to_node].y) / 2
         z = (self.nodes[from_node].z + self.nodes[to_node].z) / 2
 
-        hex = HeatExchanger(x,y,z,node_id, hex_data[0], hex_data[1], hex_data[2], hex_data[3], consumer)
+        hex = HeatExchanger(x, y, z, node_id, hex_data, consumer)
 
         # Attach pipes to the heat exchanger and the nodes
         pipe_in_id = f'Pipe {node_id.split()[-1]}.1'
@@ -153,7 +153,7 @@ class Network:
         self.add_pipe(pipe_in_id, from_node, node_id, pipe_data, hex_pipe = True) # this pipe will contain a valve controlled by HEX
         self.add_pipe(pipe_out_id, node_id, to_node, pipe_data, hex_pipe = True)  
   
-    def add_pump(self, pump_id : str, from_node : str, to_node : str, pipe_data : list, dp_pump) -> None:
+    def add_pump(self, pump_id : str, from_node : str, to_node : str, pipe_data : list, pump_data) -> None:
         """
         Add pump between nodes. The pump is a pipe with an extra pressure element. 
         """
@@ -166,7 +166,7 @@ class Network:
             raise ValueError(f"{to_node} must exist in the network")
 
         delta_z, L = self.pipe_length(self.nodes[from_node], self.nodes[to_node])
-        pump = Pump(pump_id, L, delta_z, pipe_data, dp_pump)
+        pump = Pump(pump_id, L, delta_z, pipe_data, pump_data)
 
         self.pipes[pump_id] = {
             'from': from_node,
@@ -257,22 +257,27 @@ class Network:
             self.pressure_friction_vector[j] = pipe.pressure_friction()
             self.pressure_elevation_vector[j] = pipe.pressure_elevation()
 
-        # Vector of pump pressure per pipe
-        self.pump_array = np.zeros(len(self.pipes))
+        # dict of pump positions per pipe and its curve coeff
+        self.pump_coeff = np.zeros((len(self.pipes),3))
         for pump in self.pumps.values():
-            j = self.pipe_map[pump.pipe_id]
-            self.pump_array[j] = pump.pressure_head()
+            
+            pipe_id = pump.pipe_id
+            j = self.pipe_map[pipe_id]
+            self.pump_coeff[j,:] = [pump.a, pump.b, pump.c]  # Indicate presence of pump in this pipe
+            
 
         # Vector of pressure per HEX. Which will be mapped to the inlet pipe of the HEX.
-
-        self.hex_array = np.zeros(len(self.pipes))
+        self.pressure_hex_array = np.zeros(len(self.pipes))
+        self.Kv_array = np.zeros(len(self.pipes))
+        
         for hex_obj in self.hexs.values():
-            
+           
             # Put pressure drop of HEX on the inlet pipe
             pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
             j = self.pipe_map[pipe_id]
-            self.hex_array[j] = hex_obj.pressure_drop()  # Convert to pressure drop [Pa]
-
+            self.pressure_hex_array[j] = hex_obj.pressure_drop()  
+            self.Kv_array[j] = hex_obj.Kv[0]
+            
     def res(self, mflow) -> np.ndarray:
         """
         Residual vector for Newton-Raphson method
@@ -283,13 +288,21 @@ class Network:
         incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
 
         # Continuity and loop head-loss equations
+        # mflow = np.exp(xmflow)  # Ensure positive mass flows
+
         continuity = incidence_matrix_reduced @ mflow
-        friction_vector = self.pressure_friction_vector + self.hex_array  # Add pressure drop of HEXs
+        friction_vector = self.pressure_friction_vector + self.pressure_hex_array  # Add pressure drop of HEXs
         head_loss  = self.loop_matrix @ (friction_vector * mflow**2
                                         + self.pressure_elevation_vector)
 
         # Pump contribution (only in loop equations)
-        pump_term = self.loop_matrix @ self.pump_array
+
+        self.pump_pressure_curve =  self.pump_coeff[:,0] * mflow**2 + \
+                                            self.pump_coeff[:,1] * mflow + \
+                                            self.pump_coeff[:,2]
+        
+        
+        pump_term = self.loop_matrix @ self.pump_pressure_curve
 
         # Full residual vector
         F = np.concatenate([continuity, head_loss - pump_term])
@@ -303,7 +316,19 @@ class Network:
         
         # Jacobian
         incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
-        J = np.vstack([incidence_matrix_reduced, self.loop_matrix * (2 * self.pressure_friction_vector * mflow)])
+
+        pressure_vector = self.pressure_friction_vector + self.pressure_hex_array 
+        # +  1/(self.Kv_array * 1000)**2
+        
+        pump_curve_derivative = 2 * self.pump_coeff[:,0] * mflow + self.pump_coeff[:,1]
+        pump_term_derivative = self.loop_matrix @ np.diag(pump_curve_derivative)
+        J = np.vstack([incidence_matrix_reduced, 
+                       self.loop_matrix @ np.diag(2 * pressure_vector * mflow) - pump_term_derivative]) 
+        # debug
+        # mflow = np.exp(xmflow)  # Ensure positive mass flows
+        # J_m = self.loop_matrix @ np.diag(2 * pressure_vector * mflow)
+        # J_y = J_m @ np.diag(mflow)
+
 
         return J
 
@@ -321,33 +346,39 @@ class Network:
         6. Update mass flows: Q = Q + dQ
 
         """
-        # prepare pipe and loop data
+        
         pipe_ids = list(self.pipes.keys())
         p = len(pipe_ids)
 
         # Initial guess for the mflows in the pipes
-        Q0 = np.zeros(p)
+        mflow0 = np.zeros(p)
         if N == 0:
-            Q0[:] = 0.1
+            mflow0[:] = 0.01
         else:
-            Q0 = self.Q_all[:,N-1]    
+            mflow0 = self.mflow_all[:,N-1]
+
+        # Update pressure array valve positions      
+        for hex_obj in self.hexs.values():
+            pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
+            j = self.pipe_map[pipe_id]
+            self.Kv_array[j] = hex_obj.Kv[N]  # Update Kv value for the valve in the inlet pipe of the HEX   
       
         # Performs Newton-Raphson using scipy root function
-        result = root(self.res, Q0, jac = self.jac, method = 'hybr')
+        result = root(self.res, mflow0, jac = self.jac, method = 'hybr')
 
         # Extract results
+        # mflow = np.exp(result.x)
         mflow = result.x
-
         if not result.success:
             raise RuntimeError(f"Newton-Raphson did not converge at timestep = {N}, message: {result.message}")
         
-        self.Q_all[:,N] = mflow
+        self.mflow_all[:,N] = mflow
 
         # Assign flows to the pipes for timestep N
         for j, pipe_id in enumerate(pipe_ids):
             pipe = self.pipes[pipe_id]['pipe_instance']
             pipe.set_mflow(mflow[j],N)
-            pipe.set_dp_friction(N)
+            pipe.save_dp_friction(N)
 
     def set_T_network(self, T_ambt : float, N : int, no_cap = False):
             

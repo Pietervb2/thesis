@@ -1,0 +1,9 @@
+{
+    "50kPa Pump":{
+        "comment_curve": "Pump curve coefficients in the form of dp = a*mflow^2 + b*mflow + c, with dp in Pa and mflow in kg/s",
+        "a" : -4221.7159851,
+        "b" : -18568.07669405,    
+        "c" : 50000.0
+    }
+}
+

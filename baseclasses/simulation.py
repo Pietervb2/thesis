@@ -212,57 +212,6 @@ class Simulation:
         if not plot:
             plt.close(fig_pipe_flow)
 
-    def plot_network_old(self, network: Network, plot = False):
-
-        """
-        Plot the network showing nodes as points and pipes as lines.
-        Returns a matplotlib figure of the network.
-        """
-        # Create figure
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot nodes
-        for node_id, node in network.nodes.items():
-            ax.scatter(node.x, node.y, node.z, c='red', marker='o')
-            ax.text(node.x, node.y, node.z, node_id)
-
-        # Plot pipes
-        for pipe_id, pipe_info in network.pipes.items():
-            from_node = network.nodes[pipe_info['from']]
-            to_node = network.nodes[pipe_info['to']]
-
-            # Pipe endpoints
-            x_values = [from_node.x, to_node.x]
-            y_values = [from_node.y, to_node.y]
-            z_values = [from_node.z, to_node.z]
-
-            # Plot the pipe line
-            ax.plot(x_values, y_values, z_values, 'b-')
-
-            # Compute midpoint of the pipe
-            mid_x = (from_node.x + to_node.x) / 2
-            mid_y = (from_node.y + to_node.y) / 2
-            mid_z = (from_node.z + to_node.z) / 2
-
-            # Add pipe number at the midpoint
-            pipe_number = ' '.join(pipe_id.split()[1:])
-            ax.text(mid_x, mid_y, mid_z, f'{pipe_number}', color='red', fontsize=10)
-            
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        ax.set_title('Network Layout')
-
-        # Convert to Plotly figure and save as HTML
-        plotly_fig = tls.mpl_to_plotly(fig)
-        plotly_fig.write_html(self.folder + "/interactive_plot.html")
-
-        # plt.savefig(self.folder + '/network.png')
-
-        # if not plot:
-        #     plt.close(fig)
-
     def plot_network(self, network, plot=False):
         fig = go.Figure()
 
@@ -404,7 +353,9 @@ class Simulation:
 
         pipe_T_data = {}
         pipe_mflow_data = {}
-        pipes_dp_data = {}
+        pipe_vflow_data = {}
+        pipe_dp_data = {}
+        pipe_dp_head_data = {}
                        
         # Store time in all dicts
         node_data['time'] = self.time
@@ -426,9 +377,9 @@ class Simulation:
             pipe = pipe_info['pipe_instance']
             pipe_T_data[f'{pipe_id}'] = np.round(pipe.T,3)
             pipe_mflow_data[f'{pipe_id}'] = np.round(pipe.mflow,5)
-            pipes_dp_data[f'{pipe_id}'] = np.round(pipe.dp_friction_array,3)
-        
-        for pipe_id, pipe_info in network.pipes.items():
+            pipe_vflow_data[f'{pipe_id}'] = np.round(pipe.mflow / (1000 * pipe.inner_cs),5)
+            pipe_dp_data[f'{pipe_id}'] = np.round(pipe.dp_friction_array,3)       
+            pipe_dp_head_data[f'{pipe_id}'] = np.round(pipe.pressure_elevation(),3)
             node_from = pipe_info['from']
             node_to = pipe_info['to']
             node_dT_data[f'dT {node_from.split()[1]}_{node_to.split()[1]}'] = np.round(network.nodes[node_from].T - network.nodes[node_to].T,3)
@@ -438,14 +389,17 @@ class Simulation:
         df_node_dT = pd.DataFrame(node_dT_data)
         df_pipe_T = pd.DataFrame(pipe_T_data)
         df_pipe_mflow = pd.DataFrame(pipe_mflow_data)
-        df_pipe_dp = pd.DataFrame(pipes_dp_data)
+        df_pipe_dp = pd.DataFrame(pipe_dp_data)
+        df_pipe_dp_head = pd.DataFrame(pipe_dp_head_data, index = [0])
+        df_pipe_vflow = pd.DataFrame(pipe_vflow_data)
 
         df_node.to_csv(os.path.join(sim_data_folder, 'Node_temp.csv'), index=False)
         df_node_dT.to_csv(os.path.join(sim_data_folder,'Node_dT.csv'),index = False)
         df_pipe_T.to_csv(os.path.join(sim_data_folder,'Pipe_temp.csv'),index=False)
         df_pipe_mflow.to_csv(os.path.join(sim_data_folder,'Pipe_mflow.csv'), index =  False)
         df_pipe_dp.to_csv(os.path.join(sim_data_folder,'Pipe_dp_friction.csv'), index = False)
-        
+        df_pipe_dp_head.to_csv(os.path.join(sim_data_folder,'Pipe_dp_head.csv'), index = False)
+        df_pipe_vflow.to_csv(os.path.join(sim_data_folder,'Pipe_vflow.csv'), index = False)
         # Network data incombination with the pipe properites
         Network_data = {}
 
