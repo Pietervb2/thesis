@@ -275,7 +275,7 @@ class Network:
             # Put pressure drop of HEX on the inlet pipe
             pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
             j = self.pipe_map[pipe_id]
-            self.pressure_hex_array[j] = hex_obj.pressure_drop()  
+            self.pressure_hex_array[j] = hex_obj.Kp_rho
             self.Kv_array[j] = hex_obj.Kv[0]
             
     def res(self, mflow) -> np.ndarray:
@@ -296,7 +296,6 @@ class Network:
                                         + self.pressure_elevation_vector)
 
         # Pump contribution (only in loop equations)
-
         self.pump_pressure_curve =  self.pump_coeff[:,0] * mflow**2 + \
                                             self.pump_coeff[:,1] * mflow + \
                                             self.pump_coeff[:,2]
@@ -322,8 +321,10 @@ class Network:
         
         pump_curve_derivative = 2 * self.pump_coeff[:,0] * mflow + self.pump_coeff[:,1]
         pump_term_derivative = self.loop_matrix @ np.diag(pump_curve_derivative)
+
         J = np.vstack([incidence_matrix_reduced, 
                        self.loop_matrix @ np.diag(2 * pressure_vector * mflow) - pump_term_derivative]) 
+        
         # debug
         # mflow = np.exp(xmflow)  # Ensure positive mass flows
         # J_m = self.loop_matrix @ np.diag(2 * pressure_vector * mflow)
@@ -353,7 +354,7 @@ class Network:
         # Initial guess for the mflows in the pipes
         mflow0 = np.zeros(p)
         if N == 0:
-            mflow0[:] = 0.01
+            mflow0[:] = 0.1
         else:
             mflow0 = self.mflow_all[:,N-1]
 
@@ -367,10 +368,13 @@ class Network:
         result = root(self.res, mflow0, jac = self.jac, method = 'hybr')
 
         # Extract results
-        # mflow = np.exp(result.x)
+
         mflow = result.x
         if not result.success:
             raise RuntimeError(f"Newton-Raphson did not converge at timestep = {N}, message: {result.message}")
+        
+        elif not (mflow > 0).all():
+            raise RuntimeError('Newton-Raphson converges to a mass flow with negative values')
         
         self.mflow_all[:,N] = mflow
 
@@ -390,9 +394,10 @@ class Network:
             self.pipes_finished = []
 
             # Done by hand as no inflow pipe connected to node, gets Pipe 1. But now name is not hard coded.
-            first_pipe = next(iter(self.pipes.values()))['pipe_instance'] 
+            first_pipe = self.pipes['Pipe 1']['pipe_instance']
+            first_node = self.nodes['Node 1'] 
             
-            # first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
+            first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
             first_pipe.bnode_method(T_ambt, N, no_cap = no_cap)
 
             self.pipes_finished.append(first_pipe.pipe_id)
@@ -487,6 +492,7 @@ class Network:
         Assumes each pipe instance has an attribute 'L' for length.
         """
         return sum(pipe_data['pipe_instance'].L for pipe_data in self.pipes.values())  
+    
 
 
 if __name__ == "__main__":

@@ -60,13 +60,18 @@ class Consumer:
         if self.Q_d[self.Q_d < 0] != 0:
             raise ValueError("Heat demand cannot be negative. Please check the parameters.")
         
-        # Pre-calculate mass flow rates based on heat demand. 
-        # Assuming 20 K temperature difference over HEX on consumer side.
+        # # Pre-calculate mass flow rates based on heat demand. 
+        # # Assuming 20 K temperature difference over HEX on consumer side.
 
-        delta_T = 20  # Temperature difference [K]
-        c_p = 4186    # Specific heat capacity of water [J/(kg·K)]
+        # delta_T = 20  # Temperature difference [K]
+        # c_p = 4186    # Specific heat capacity of water [J/(kg·K)]
 
-        self.mflow = self.Q_d / (c_p * delta_T) 
+        # self.mflow = self.Q_d / (c_p * delta_T) 
+
+        # Scale it to the mflow / mflow_max = Q / Qmax
+        mflow_max = 0.19 # kg/s
+
+        self.mflow = 0.19 * self.Q_d / max(self.Q_d)
 
     def __repr__(self):
         return f"Consumer(consumer_id={self.consumer_id}, A1={self.A1}, A2={self.A2}, Period1={self.Period1}, Period2={self.Period2}, phi1={self.phi1}, phi2={self.phi2})"

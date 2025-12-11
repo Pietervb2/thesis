@@ -442,7 +442,7 @@ class Simulation:
             HEX_data['Q_d'] = hex.consumer.Q_d
             HEX_data['Q_supply'] = hex.consumer.Q_supply
 
-            hex_dp_data[f'{hex_key}'] = (hex.pressure_drop() * hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].mflow**2).astype(int)
+            hex_dp_data[f'{hex_key}'] = (hex.Kp_rho * hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].mflow**2).astype(int)
 
             df_hex = pd.DataFrame(HEX_data)
             df_hex.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}.csv'), index = False)

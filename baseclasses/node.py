@@ -51,6 +51,7 @@ class Node:
         Sets the node temperature and the temperature of the outgoing pipes.
         # TODO: maybe it need to put in the new flow at N + 1
         """         
+
         sum_T_flow = 0
         sum_m_inflow = 0
         for _, pipe in self.pipes_in.items():

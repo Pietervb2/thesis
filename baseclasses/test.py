@@ -370,52 +370,13 @@ class Test:
         pipe_data_DN40 = Test.read_pipe_data('DN40')
         pipe_data_DN20 = Test.read_pipe_data('DN20')
         hex_data = Test.read_hex_data('Standard hex constants')
-        pump_data = Test.read_pump_data('50kPa Pump')
-
-        A1 = 0.109*1.524
-        A2 = 0.113*1.524
-        Period1 = 2*np.pi / 0.298
-        Period2 = 2*np.pi / 0.529
-        Phi1 = -1.949
-        Phi2 = -2.154
-        offset = 0.509*1.524
-        tau = 3600 
-
-        consumer1 = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset,0)
-        consumer2 = Consumer('Consumer 2',A1,A2,Period1,Period2,Phi1,Phi2,offset,tau)
-
+        pump_data = Test.read_pump_data('50kPa Pump constant')
+     
         # Create network
         net = Network("Model step 7")
-     
-        net.add_node('Node 1', 0, 0, 0)
-        net.add_node('Node 2', 0, 0, 3)
-        net.add_node('Node 3', 0, 0, 6)
-        net.add_node('Node 4', 0, 0, 7)
-        net.add_node('Node 5', 2, 0, 7)
-        net.add_node('Node 6', 5, 0, 6)
-        net.add_node('Node 7', 5, 0, 5)
-        net.add_node('Node 8', 2, 0, 5)
-        net.add_node('Node 9', 5, 0, 3)
-        net.add_node('Node 10', 5, 0, 2)
-        net.add_node('Node 11', 2, 0, 2)
-        net.add_node('Node 12', 2, 0, 0)
-
-        net.add_pump('Pump 1', 'Node 12', 'Node 1', pipe_data_DN40, pump_data)
-
-        net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data_DN40)
-        net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data_DN40)
-        net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data_DN40)
-        net.add_pipe('Pipe 4', 'Node 4', 'Node 5', pipe_data_DN40)
-        net.add_pipe('Pipe 5', 'Node 5', 'Node 8', pipe_data_DN40)
-        net.add_pipe('Pipe 6', 'Node 3', 'Node 6', pipe_data_DN40)
-        net.add_pipe('Pipe 7', 'Node 7', 'Node 8', pipe_data_DN40)
-        net.add_pipe('Pipe 8', 'Node 2', 'Node 9', pipe_data_DN40)
-        net.add_pipe('Pipe 9', 'Node 8', 'Node 11', pipe_data_DN40)
-        net.add_pipe('Pipe 10', 'Node 10', 'Node 11', pipe_data_DN40)
-        net.add_pipe('Pipe 11', 'Node 11', 'Node 12', pipe_data_DN40)
-        
-        net.add_hex('Hex 1', 'Node 6', 'Node 7', hex_data, pipe_data_DN20, consumer1)
-        net.add_hex('Hex 2', 'Node 9', 'Node 10', hex_data, pipe_data_DN20, consumer2)
+        number_consumers = 5
+        pipe_data_list = [pipe_data_DN40] * number_consumers
+        Test.network_builder(net, pipe_data_list, pipe_data_DN20, hex_data, pump_data, number_consumers, use_overflow = False)
 
         # Simulation parameters
         dt = 60 # s
@@ -430,6 +391,42 @@ class Test:
         # Run simulation
         sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
         # sim.plot_network(net)      
+        sim.simulate_network(net, T_in, T_ambt, T_ambt)
+    
+    def model_network_Rutger():
+        
+        """
+        Replicate network of whcih Rutger send data from
+        """
+
+        pipe_data_DN20 = Test.read_pipe_data('DN20')
+        pipe_data_DN25 = Test.read_pipe_data('DN25')
+        pipe_data_DN32 = Test.read_pipe_data('DN32')
+        pipe_data_DN40 = Test.read_pipe_data('DN40')
+
+        hex_data = Test.read_hex_data('Standard hex constants')
+        pump_data = Test.read_pump_data('50kPa Pump constant')
+     
+        # Create network
+        net = Network("Network Rutger")
+        
+        number_consumers = 23
+        pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
+        
+        Test.network_builder(net, pipe_data_list, pipe_data_DN20, hex_data, pump_data, number_consumers, use_overflow = False)
+
+        # Simulation parameters
+        dt = 60 # s
+        total_time = 24 * 3600 # h
+        T_ambt = 20
+
+        # Input profiles
+        temp_type = 'constant'
+        
+        T_in = Test.generate_input_network(temp_type, total_time, dt)
+
+        # Run simulation
+        sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
         sim.simulate_network(net, T_in, T_ambt, T_ambt)
 
     def test_incidence_and_loop_matrices():
@@ -543,7 +540,33 @@ class Test:
         # Run simulation
         sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)      
         sim.simulate_network(net, T_in, T_ambt, T_ambt)
-    
+
+    def test_network_builder():
+
+        net = Network('Consumer builder')
+        pipe_data_set = 'DN40'
+        Hex_data = 'Standard hex constants'
+        pipe_data_hex_set = 'DN20'
+        pump_data_set = '50kPa Pump'
+        Test.network_builder(net, pipe_data_set,Hex_data,pipe_data_hex_set,pump_data_set,5)
+
+        # Simulation parameters
+        dt = 60 # s
+        total_time = 24 * 3600 # h
+        T_ambt = 20
+
+        # Input profiles
+        temp_type = 'constant'
+        
+        # Run simulation
+        sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
+        sim.plot_network(net) 
+         
+        # pipe_data_DN40 = Test.read_pipe_data('DN40')
+        # pipe_data_DN20 = Test.read_pipe_data('DN20')
+        # hex_data = Test.read_hex_data('Standard hex constants')
+        # pump_data = Test.read_pump_data('50kPa Pump')
+
 ###########################################################
 # Help functions for the tests
 ###########################################################
@@ -608,11 +631,11 @@ class Test:
         U = constants[hex_data_set]['U'] # Overall heat transfer coefficient [W/m2K]
         As = constants[hex_data_set]['As'] # Heat transfer area [m2]
         F = constants[hex_data_set]['F'] # Correction factor [-]
-        K_hx = constants[hex_data_set]['K_hx'] # Pressure loss coefficient [-]
+        Kp = constants[hex_data_set]['Kp'] # Pressure loss coefficient [-]
         K_vs = constants[hex_data_set]['K_vs'] # Hydrualic conductivity for valve [m3/s Pa^0.5]
         K_v0 = constants[hex_data_set]['K_v0'] # Hydraulic conductivity for valve when closed[m3/s Pa^0.5]
 
-        hex_data = [U, As, F, K_hx, K_vs, K_v0]
+        hex_data = [U, As, F, Kp, K_vs, K_v0]
 
         return hex_data
     
@@ -704,9 +727,91 @@ class Test:
 
         return T_in
     
+    def network_builder(net : Network, 
+                        pipe_data_list : dict, 
+                        pipe_hex_data, 
+                        hex_data, 
+                        pump_data,
+                        number_of_consumers,
+                        use_overflow = True):
+        
+        # Add heat exchangers and connecting pipes based on number of consumers
+        A1 = 0.109*1.524
+        A2 = 0.113*1.524
+        Period1 = 2*np.pi / 0.298
+        Period2 = 2*np.pi / 0.529
+        Phi1 = -1.949
+        Phi2 = -2.154
+        offset = 0.509*1.524
+        tau = 0 
+
+        consumer = Consumer('Consumer 1', A1, A2, Period1, Period2, Phi1, Phi2, offset, tau) 
+
+        net.add_node('Node 1', 0, 0, 0)
+        net.add_node('Node 2', 0, 0, 3)
+        net.add_node('Node 3', 2, 0, 3)
+        net.add_node('Node 4', 2, 0, 2)
+        net.add_node('Node 5', 1, 0, 2)
+        net.add_node('Node 6', 1, 0, 0)
+
+        net.add_pump('Pump 1', 'Node 6', 'Node 1', pipe_data_list[0], pump_data)
+        net.add_pipe('Pipe 1','Node 1', 'Node 2', pipe_data_list[0])
+        net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data_list[0])
+        net.add_pipe('Pipe 3', 'Node 4', 'Node 5', pipe_data_list[0])
+        net.add_pipe('Pipe 4', 'Node 5', 'Node 6', pipe_data_list[0])
+                
+        net.add_hex('Hex 1', 'Node 3', 'Node 4', hex_data, pipe_hex_data, consumer)
+        
+        for i in range(0,number_of_consumers-1):
+            
+            tau = i * 3600/6
+            consumer = Consumer(f'Consumer {2+i}', A1, A2, Period1, Period2, Phi1, Phi2, offset, tau) 
+            
+            if i == 0:
+                previous_supply_node = f'Node {i*4+2}'
+                previous_return_node = f'Node {i*4+5}'
+            else:
+                previous_supply_node = f'Node {i*4+3}'
+                previous_return_node = f'Node {i*4+6}'
+
+            supply_node =  f'Node {i*4+7}'
+            above_hex_node = f'Node {i*4+8}'
+            under_hex_node = f'Node {i*4+9}'
+            return_node = f'Node {i*4+10}'
+
+            pipe_data = pipe_data_list[i+1]
+
+            net.add_node(supply_node, 0, 0, 3*(i+2))
+            net.add_node(above_hex_node, 2, 0, 3*(i+2))     
+            net.add_node(under_hex_node, 2, 0, 3*(i+2)-1) 
+            net.add_node(return_node, 1, 0, 3*(i+2)-1)
+
+            net.add_pipe(f'Pipe {i*4 + 5}', previous_supply_node, supply_node, pipe_data) # needs to be connected to node from previous consumer
+            net.add_pipe(f'Pipe {i*4 + 6}',supply_node,above_hex_node,pipe_data)
+            net.add_pipe(f'Pipe {i*4 + 7}',under_hex_node,return_node,pipe_data)
+            net.add_pipe(f'Pipe {i*4 + 8}',return_node,previous_return_node,pipe_data) # needs to be connected to node from previous consumer
+
+            net.add_hex(f'Hex {i+2}', above_hex_node, under_hex_node, hex_data, pipe_data, consumer)
+
+        # add overflow
+
+        if use_overflow:
+            overflow_node_supply = f'Node {i*4+11}'
+            overflow_node_return = f'Node {i*4+12}'
+
+            net.add_node(overflow_node_supply, 0, 0, 3*(i+2)+1)
+            net.add_node(overflow_node_return, 1, 0, 3*(i+2)+1)
+
+            net.add_pipe(f'Pipe {i*4 + 9}' , supply_node, overflow_node_supply, pipe_data)
+            net.add_pipe(f'Pipe {i*4 + 10}', overflow_node_supply, overflow_node_return, pipe_data)
+            net.add_pipe(f'Pipe {i*4 + 11}', overflow_node_return, return_node, pipe_data)
+
+        return net
+    
 if __name__ == "__main__":
 
-    Test.model_step_7()
-
+    # Test.model_network_Rutger()
+    # Test.model_step_7()
+    # Test.test_network_builder()
     # Test.test_NR()
     # Test.test_incidence_and_loop_matrices()

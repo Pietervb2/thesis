@@ -16,13 +16,13 @@ class HeatExchanger(Node):
             - U: Overall heat transmission coefficient [W / m2 K]
             - As: total transfer area [m2]
             - F: correction factor [-]
-            - K_hx: pressure loss coefficient [-]
+            - Kp: pressure loss coefficient [-]
         """
         super().__init__(x,y,z,hex_id)
         self.U = hex_data[0]
         self.As = hex_data[1]
         self.F = hex_data[2]
-        self.K_hx = hex_data[3]
+        self.Kp_rho = hex_data[3] * 1000 # Assuming water density of 1000 kg/m3
         self.Kvs = hex_data[4]
         self.Kv0 = hex_data[5]
 
@@ -111,14 +111,7 @@ class HeatExchanger(Node):
         self.consumer.Q_supply[N] = (Tc_out - Tc_in) * mflow_c * pipe.c_water
 
         return Tc_out, Th_out
-    
-    def pressure_drop(self):
-        """"
-        pressure drop over heat exchanger is stated as dp = rho * K_hx * Q^2 
-        """
-        
-        return self.K_hx * 1000 # Assuming water density of 1000 kg/m3
-    
+      
     def equal_percentage_valve(self, h):
 
         return (self.Kvs / self.Kv0)**(h-1) * self.Kvs
