@@ -400,26 +400,36 @@ class Simulation:
         df_pipe_dp.to_csv(os.path.join(sim_data_folder,'Pipe_dp_friction.csv'), index = False)
         df_pipe_dp_head.to_csv(os.path.join(sim_data_folder,'Pipe_dp_head.csv'), index = False)
         df_pipe_vflow.to_csv(os.path.join(sim_data_folder,'Pipe_vflow.csv'), index = False)
-        # Network data incombination with the pipe properites
-        Network_data = {}
+        
+        # Pipe properties 
+        filename = os.path.join(self.folder, "pipe_data.csv")
 
-        Network_data['#nodes'] = len(network.nodes)
-        Network_data['#pipes'] = len(network.pipes)
+        rows = []   # temporary list of row dicts
 
-        pipe = next(iter(network.pipes.values()))['pipe_instance']
-        Network_data['pipe_r_outer'] = pipe.r_outer
-        Network_data['pipe_r_inner'] = pipe.r_inner
-        Network_data['K'] = pipe.K
-        Network_data["rho_pipe"] = pipe.rho_pipe
-        Network_data["rho_insu"] = pipe.rho_insu 
-        Network_data["cp_pipe"] = pipe.cp_pipe
-        Network_data["cp_insu"] = pipe.cp_insu
-        Network_data["insu_thickness"] = pipe.insu_thickness
+        # Build row for each pipe
+        for pipe_id, pipe_info in network.pipes.items():
 
-        Index = [1]
+            pipe = pipe_info['pipe_instance']
 
-        df_pipes = pd.DataFrame(Network_data, index = Index)
-        df_pipes.to_csv(os.path.join(self.folder, 'pipe_data.csv'), index=False)
+            row = {
+                "pipe_id": pipe_id,
+                "pipe_r_outer": pipe.r_outer,
+                "pipe_r_inner": pipe.r_inner,
+                "K": np.round(pipe.K,4),
+                "rho_pipe": pipe.rho_pipe,
+                "rho_insu": pipe.rho_insu,
+                "cp_pipe": pipe.cp_pipe,
+                "cp_insu": pipe.cp_insu,
+                "insu_thickness": pipe.insu_thickness,
+            }
+
+            rows.append(row)
+
+        # Convert to a small DataFrame
+        df = pd.DataFrame(rows)
+
+      # This overwrites the previous file completely
+        df.to_csv(filename, index=False)
 
         # Saving the data corresponding to HEX and consumers
         HEX_data = {}
