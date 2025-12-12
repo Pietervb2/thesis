@@ -543,12 +543,17 @@ class Test:
 
     def test_network_builder():
 
-        net = Network('Consumer builder')
-        pipe_data_set = 'DN40'
-        Hex_data = 'Standard hex constants'
-        pipe_data_hex_set = 'DN20'
-        pump_data_set = '50kPa Pump'
-        Test.network_builder(net, pipe_data_set,Hex_data,pipe_data_hex_set,pump_data_set,5)
+        pipe_data_DN40 = Test.read_pipe_data('DN40')
+        pipe_data_DN20 = Test.read_pipe_data('DN20')
+        hex_data = Test.read_hex_data('Standard hex constants')
+        pump_data = Test.read_pump_data('50kPa Pump constant')
+     
+        # Create network
+        net = Network("Network builder")
+        number_consumers = 5
+        pipe_data_list = [pipe_data_DN40] * number_consumers
+
+        Test.network_builder(net, pipe_data_list,pipe_data_DN20, hex_data,pump_data,number_consumers)
 
         # Simulation parameters
         dt = 60 # s
@@ -561,11 +566,6 @@ class Test:
         # Run simulation
         sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
         sim.plot_network(net) 
-         
-        # pipe_data_DN40 = Test.read_pipe_data('DN40')
-        # pipe_data_DN20 = Test.read_pipe_data('DN20')
-        # hex_data = Test.read_hex_data('Standard hex constants')
-        # pump_data = Test.read_pump_data('50kPa Pump')
 
 ###########################################################
 # Help functions for the tests
@@ -812,6 +812,6 @@ if __name__ == "__main__":
 
     # Test.model_network_Rutger()
     # Test.model_step_7()
-    # Test.test_network_builder()
+    Test.test_network_builder()
     # Test.test_NR()
     # Test.test_incidence_and_loop_matrices()
