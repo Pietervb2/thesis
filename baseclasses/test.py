@@ -374,9 +374,9 @@ class Test:
      
         # Create network
         net = Network("Model step 7")
-        number_consumers = 5
+        number_consumers = 2
         pipe_data_list = [pipe_data_DN40] * number_consumers
-        Test.network_builder(net, pipe_data_list, pipe_data_DN20, hex_data, pump_data, number_consumers, use_overflow = False)
+        Test.network_builder(net, pipe_data_list, pipe_data_DN20, hex_data, pump_data, number_consumers)
 
         # Simulation parameters
         dt = 60 # s
@@ -413,7 +413,7 @@ class Test:
         number_consumers = 23
         pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
         
-        Test.network_builder(net, pipe_data_list, pipe_data_DN20, hex_data, pump_data, number_consumers, use_overflow = False)
+        Test.network_builder(net, pipe_data_list, pipe_data_DN20, hex_data, pump_data, number_consumers)
 
         # Simulation parameters
         dt = 60 # s
@@ -810,8 +810,8 @@ class Test:
     
 if __name__ == "__main__":
 
-    # Test.model_network_Rutger()
+    Test.model_network_Rutger()
     # Test.model_step_7()
-    Test.test_network_builder()
+    # Test.test_network_builder()
     # Test.test_NR()
     # Test.test_incidence_and_loop_matrices()
