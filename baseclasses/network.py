@@ -288,8 +288,6 @@ class Network:
         incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
 
         # Continuity and loop head-loss equations
-        # mflow = np.exp(xmflow)  # Ensure positive mass flows
-
         continuity = incidence_matrix_reduced @ mflow
         friction_vector = self.pressure_friction_vector + self.pressure_hex_array  # Add pressure drop of HEXs
         head_loss  = self.loop_matrix @ (friction_vector * np.abs(mflow)*mflow
@@ -322,7 +320,7 @@ class Network:
         pump_curve_derivative = 2 * self.pump_coeff[:,0] * mflow + self.pump_coeff[:,1]
         pump_term_derivative = self.loop_matrix @ np.diag(pump_curve_derivative)
 
-        # d/dmflow mflow = |mflow| + mflow * mflow / (|mflow| + 0.01)
+        # d/dmflow |mflow|*mflow = |mflow| + mflow * mflow / |mflow|
         deriv = np.abs(mflow) + mflow * mflow/np.abs(mflow)
         J = np.vstack([incidence_matrix_reduced, 
                        self.loop_matrix @ np.diag(2 * pressure_vector * deriv) - pump_term_derivative]) 

@@ -413,7 +413,7 @@ class Test:
         number_consumers = 23
         pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
         
-        Test.network_builder(net, pipe_data_list, pipe_data_DN20, hex_data, pump_data, number_consumers, use_overflow = False)
+        Test.network_builder(net, pipe_data_list, pipe_data_DN20, hex_data, pump_data, number_consumers)
 
         # Simulation parameters
         dt = 60 # s

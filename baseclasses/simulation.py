@@ -82,7 +82,7 @@ class Simulation:
 
         # Plot outcome and save figure
         self.plot_network(network, plot = plot_network)
-        self.plot_node_temperature_network(network, T_in, plot = plot_nodes_T)
+        self.plot_node_temperature_network(network, plot = plot_nodes_T)
         self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
         self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
@@ -92,7 +92,7 @@ class Simulation:
 
         plt.show()  
 
-    def plot_node_temperature_network(self, network: Network, T_in, plot = False):
+    def plot_node_temperature_network(self, network: Network, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
@@ -120,14 +120,16 @@ class Simulation:
         plt.savefig(self.folder + '/node_temperatures.png')
 
         fig_T_in = plt.figure()
-        plt.plot(self.time, T_in)
-        plt.title('Inlet temperature at first node')     
+        plt.plot(self.time, network.nodes['Node 1'].T, label = 'Supply temperature')
+        plt.plot(self.time, network.nodes['Node 6'].T, label = 'Return temperature')
+        plt.title('Supply and Return Temperature')     
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
+        plt.legend()
         plt.grid(True)
 
         # Create directory if it doesn't exist
-        plt.savefig(self.folder + '/inlet_temperature.png')
+        plt.savefig(self.folder + '/supply_return_temperature.png')
 
         if not plot:
             plt.close(fig_node_T)
