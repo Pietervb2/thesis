@@ -1,5 +1,5 @@
 from node import Node
-from pipe import Pipe
+
 import numpy as np
 
 class HeatExchanger(Node):
@@ -10,6 +10,7 @@ class HeatExchanger(Node):
                  z,
                  hex_id: str,
                  hex_data: list,
+                 h_initial: float,
                  consumer: object):
         """"
         Args:
@@ -17,6 +18,8 @@ class HeatExchanger(Node):
             - As: total transfer area [m2]
             - F: correction factor [-]
             - Kp: pressure loss coefficient [-]
+            - Kvs: hydraulic conductivity of fully open valve [m3/h/bar^0.5]
+            - Kv0: hydraulic conductivity of closed valve [m3/h/bar^0.5]
         """
         super().__init__(x,y,z,hex_id)
         self.U = hex_data[0]
@@ -24,7 +27,7 @@ class HeatExchanger(Node):
         self.F = hex_data[2]
         self.Kp_rho = hex_data[3] * 1000 # Assuming water density of 1000 kg/m3
         self.Kvs = hex_data[4]
-        self.Kv0 = hex_data[5]
+        self.h_initial = h_initial # Initial position of valve
 
         # Consumer connected to the heat exchanger
         self.consumer = consumer
@@ -38,8 +41,8 @@ class HeatExchanger(Node):
         super().initialize_node(num_steps, T_init, dt)
         self.consumer.initialize_consumer(num_steps, dt)
 
-        self.h = np.zeros(num_steps)
-        self.Kv = np.zeros(num_steps)
+        self.h = np.ones(num_steps)*self.h_initial
+        self.Kv = np.ones(num_steps)*self.equal_percentage_valve(self.h_initial)
 
     
     def set_T(self, N):
@@ -59,7 +62,7 @@ class HeatExchanger(Node):
             for _, pipe in self.pipes_out.items():
                 pipe.set_T_in(self.T[N], N)
 
-        # self.update_valve(N)
+        self.update_valve(N, Tc_out)
 
     def NTU_method(self,N):
 
@@ -75,7 +78,7 @@ class HeatExchanger(Node):
         """
 
         # Get inlet temperatures and mass flow rates
-        pipe = self.pipes_in[f'Pipe {self.node_id.split()[-1]}.1'] #Assuming single inlet pipe
+        pipe = self.pipes_in[f'Pipe {self.node_id.split()[-1]}.3'] #Assuming single inlet pipe
         Th_in = pipe.T[N]
         mflow_h = pipe.get_mflow(N)
 
@@ -113,21 +116,28 @@ class HeatExchanger(Node):
         return Tc_out, Th_out
       
     def equal_percentage_valve(self, h):
+        """
+        Returns Kv value of the valve following the formula for an equal percentage valve, based on the valve displacement.
+        For valve displacement lower than h_star Kv does not follow the standard form of the function. It becomes unpredictable. For this region we simply assume a linear behavior.
+        """        
+        Kv0 = self.Kvs/50
+        Kvleak = self.Kvs/2000
+        h_star = 0.05
 
-        return (self.Kvs / self.Kv0)**(h-1) * self.Kvs
+        if h < h_star:
+            Kv_star = (self.Kvs/Kv0) ** (h_star-1) * self.Kvs
+            Kv = Kvleak + h*(Kv_star - Kvleak)/h_star
+        else:
+            Kv = (self.Kvs/Kv0) ** (h-1) * self.Kvs
+        return Kv
     
-    def update_valve(self, N):
+    def update_valve(self, N, Tc_out):
         """
         Update the valve position based on the consumer outlet temperature using a PI controller.
         """
 
         # TODO: dont forget to adjust the parameters for Kv to kg/s/sqrt(bar)
         # Initial step 
-        if N == 0:
-            self.h[N] = 0.0
-            self.Kv[N] = self.equal_percentage_valve(self.h[N])
-            return
-
         # # controller part
         # mflow_min = 0.01
         # if self.consumer.mflow[N] > mflow_min:
@@ -143,11 +153,10 @@ class HeatExchanger(Node):
         #     self.h[N] = h
         #     self.Kv[N] = Kv
 
-        # else:
-
-            # no change in valve position
-            self.h[N] = self.h[N-1]
-            self.Kv[N] = self.Kv[N-1]
+        # NOTE: not updating yet
+        # no change in valve position
+        self.h[N] = self.h[N]
+        self.Kv[N] = self.Kv[N]
             
 
 

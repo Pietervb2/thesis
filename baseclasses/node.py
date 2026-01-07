@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from pipe import Pipe
 
 class Node:
 
@@ -49,7 +48,6 @@ class Node:
     def set_T(self, N):
         """
         Sets the node temperature and the temperature of the outgoing pipes.
-        # TODO: maybe it need to put in the new flow at N + 1
         """         
 
         sum_T_flow = 0

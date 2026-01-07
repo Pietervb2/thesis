@@ -9,8 +9,6 @@ from pathlib import Path
 from scipy.signal import square
 from typing import Union
 
-from node import Node
-from pipe import Pipe
 from network import Network
 
 
@@ -120,8 +118,8 @@ class Simulation:
         plt.savefig(self.folder + '/node_temperatures.png')
 
         fig_T_in = plt.figure()
-        plt.plot(self.time, network.nodes['Node 1'].T, label = 'Supply temperature')
-        plt.plot(self.time, network.nodes['Node 6'].T, label = 'Return temperature')
+        plt.plot(self.time, network.nodes['Node 1.1'].T, label = 'Supply temperature')
+        plt.plot(self.time, network.nodes['Node 1.6'].T, label = 'Return temperature')
         plt.title('Supply and Return Temperature')     
         plt.xlabel(f'Time (s), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
@@ -328,7 +326,7 @@ class Simulation:
         ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
 
         plt.xlabel(f'Time (hours), dt = {self.dt}')
-        plt.ylabel('Heat Demand (W)')
+        plt.ylabel('Heat (W)')
         plt.legend()
         plt.grid(True)
         plt.savefig(self.folder + '/HEAT.png')
@@ -436,6 +434,7 @@ class Simulation:
         # Saving the data corresponding to HEX and consumers
         HEX_data = {}
         hex_dp_data = {}
+        hex_valve_data = {}
 
         hex_folder = os.path.join(self.folder, 'hex_consumer_data')
         if not os.path.exists(hex_folder):
@@ -446,22 +445,29 @@ class Simulation:
             hex = network.hexs[hex_key]
 
             HEX_data['Tc_in'] = hex.consumer.Tc_in
-            HEX_data['Th_in'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].T
+            HEX_data['Th_in'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.3'].T
             HEX_data['Tc_out'] = hex.consumer.Tc_out
             HEX_data['Th_out'] = hex.T
-            HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].mflow
+            HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.3'].mflow
             HEX_data['mflow_sec'] = hex.consumer.mflow           
             HEX_data['Q_d'] = hex.consumer.Q_d
             HEX_data['Q_supply'] = hex.consumer.Q_supply
 
-            hex_dp_data[f'{hex_key}'] = (hex.Kp_rho * hex.pipes_in[f'Pipe {hex_key.split()[-1]}.1'].mflow**2).astype(int)
+            hex_mflow = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.3'].mflow
+            hex_dp_data[f'{hex_key}'] = (hex.Kp_rho * hex_mflow**2).astype(int)
+
+            hex_valve_data[f'Kv {hex_key}'] = hex.Kv
+            hex_valve_data[f'h {hex_key}'] = hex.h
+            hex_valve_data[f'dP {hex_key}'] = ((hex_mflow/hex.Kv) ** 2).astype(int)  
 
             df_hex = pd.DataFrame(HEX_data)
             df_hex.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}.csv'), index = False)
-
+       
         df_hex_dp = pd.DataFrame(hex_dp_data)
         df_hex_dp.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_dp.csv'), index = False)
 
+        df_hex_valve_data = pd.DataFrame(hex_valve_data)
+        df_hex_valve_data.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_valve_data.csv'), index = False)
 
 if __name__ == "__main__":
     pass 

@@ -49,7 +49,7 @@ class Network:
         for i, node in enumerate(self.nodes.values()):
             
             if i == 0:
-                self.nodes['Node 1'].T = T_in
+                self.nodes['Node 1.1'].T = T_in
             else:
                 node.initialize_node(num_steps, T_init_water, dt)
 
@@ -124,7 +124,7 @@ class Network:
 
         # self._next_pipe_id += 1
 
-    def add_hex(self, node_id : str, from_node : str, to_node : str, hex_data : list, pipe_data : list, consumer : object) -> None:
+    def add_hex(self, node_id : str, from_node : str, to_node : str, hex_data : list, pipe_data : list, h_initial : float, consumer : object) -> None:
         """
         Add a heat exchanger between two nodes.
         """
@@ -141,11 +141,11 @@ class Network:
         y = (self.nodes[from_node].y + self.nodes[to_node].y) / 2
         z = (self.nodes[from_node].z + self.nodes[to_node].z) / 2
 
-        hex = HeatExchanger(x, y, z, node_id, hex_data, consumer)
+        hex = HeatExchanger(x, y, z, node_id, hex_data, h_initial, consumer)
 
         # Attach pipes to the heat exchanger and the nodes
-        pipe_in_id = f'Pipe {node_id.split()[-1]}.1'
-        pipe_out_id = f'Pipe {node_id.split()[-1]}.2'
+        pipe_in_id = f'Pipe {node_id.split()[-1]}.3'
+        pipe_out_id = f'Pipe {node_id.split()[-1]}.4'
         
         self.nodes[node_id] = hex
         self.hexs[node_id] = hex
@@ -228,6 +228,7 @@ class Network:
 
         # compute all fundamental cycles
         cycles = nx.cycle_basis(G.to_undirected())
+        cycles = sorted(cycles,key=len) # now it has the same order as the HEX
 
         # loop matrix
         self.loop_matrix = np.zeros((len(cycles), len(pipe_ids)))
@@ -241,6 +242,7 @@ class Network:
                 elif G.has_edge(v, u):    # opposite direction edge, but set it to +1 as all directions are fixed
                     e = G[v][u]['col']
                     self.loop_matrix[i, e] = +1
+        
 
     def build_help_vectors_NR(self):
 
@@ -267,16 +269,17 @@ class Network:
             
 
         # Vector of pressure per HEX. Which will be mapped to the inlet pipe of the HEX.
-        self.pressure_hex_array = np.zeros(len(self.pipes))
-        self.Kv_array = np.zeros(len(self.pipes))
+        self.Kp_array = np.zeros(len(self.pipes))
+        self.inv_Kv_array = np.zeros(len(self.pipes))
         
         for hex_obj in self.hexs.values():
            
             # Put pressure drop of HEX on the inlet pipe
             pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
             j = self.pipe_map[pipe_id]
-            self.pressure_hex_array[j] = hex_obj.Kp_rho
-            self.Kv_array[j] = hex_obj.Kv[0]
+
+            self.Kp_array[j] = hex_obj.Kp_rho
+            self.inv_Kv_array[j] = 1/hex_obj.Kv[0]
             
     def res(self, mflow) -> np.ndarray:
         """
@@ -289,7 +292,11 @@ class Network:
 
         # Continuity and loop head-loss equations
         continuity = incidence_matrix_reduced @ mflow
-        friction_vector = self.pressure_friction_vector + self.pressure_hex_array  # Add pressure drop of HEXs
+
+        friction_vector = self.pressure_friction_vector + \
+                                self.Kp_array + \
+                                self.inv_Kv_array ** 2
+
         head_loss  = self.loop_matrix @ (friction_vector * np.abs(mflow)*mflow
                                         + self.pressure_elevation_vector)
 
@@ -314,8 +321,9 @@ class Network:
         # Jacobian
         incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
 
-        pressure_vector = self.pressure_friction_vector + self.pressure_hex_array 
-        # +  1/(self.Kv_array * 1000)**2
+        pressure_vector = self.pressure_friction_vector \
+                        + self.Kp_array \
+                        +  self.inv_Kv_array ** 2
         
         pump_curve_derivative = 2 * self.pump_coeff[:,0] * mflow + self.pump_coeff[:,1]
         pump_term_derivative = self.loop_matrix @ np.diag(pump_curve_derivative)
@@ -356,7 +364,7 @@ class Network:
         for hex_obj in self.hexs.values():
             pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
             j = self.pipe_map[pipe_id]
-            self.Kv_array[j] = hex_obj.Kv[N]  # Update Kv value for the valve in the inlet pipe of the HEX   
+            self.inv_Kv_array[j] = 1/hex_obj.Kv[N]  # Update Kv value for the valve in the inlet pipe of the HEX   
       
         # Performs Newton-Raphson using scipy root function
         result = root(self.res, mflow0, jac = self.jac, method = 'hybr')
@@ -387,9 +395,9 @@ class Network:
             # List of pipes for which the bnode method is performed.
             self.pipes_finished = []
 
-            # Done by hand as no inflow pipe connected to node, gets Pipe 1. But now name is not hard coded.
-            first_pipe = self.pipes['Pipe 1']['pipe_instance']
-            first_node = self.nodes['Node 1'] 
+            # Done by hand as no inflow pipe connected to node, gets Pipe 1. 
+            first_pipe = self.pipes['Pipe 1.1']['pipe_instance']
+            first_node = self.nodes['Node 1.1'] 
             
             first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
             first_pipe.bnode_method(T_ambt, N, no_cap = no_cap)
@@ -421,7 +429,7 @@ class Network:
 
             if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
 
-                if next_node_id == 'Node 1':
+                if next_node_id == 'Node 1.1':
                     continue    # Skip first node as its temperature is already set.
 
                 next_node.set_T(N)      # here the inlet temperature for the pipe is set coming from the node. 

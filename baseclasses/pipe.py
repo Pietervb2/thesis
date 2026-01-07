@@ -224,6 +224,8 @@ class Pipe:
         Re = 10e3 
         log_term = ((self.epsilon/D)/3.7)**1.11 + (6.9/Re)
         f = (1 / (-1.8 * np.log10(log_term)))**2
+
+        # print(f'Pipe f {f}')
        
         return 8 * f * self.L / (np.pi ** 2 * D ** 5 * self.rho_water)                                                    
 
