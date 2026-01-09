@@ -370,14 +370,24 @@ def model_step_7():
     pipe_data_DN40 = read_pipe_data('DN40')
     pipe_data_DN20 = read_pipe_data('DN20')
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('10kPa Pump constant')
+    pump_data = read_pump_data('20kPa Pump constant')
     
     # Create network
-    net = Network("2 consumers with overflow normal, 10kPa")
+    net = Network("2 consumers without overflow normal, 20kPa")
 
     number_consumers = 2
     pipe_data_list = [pipe_data_DN40] * number_consumers
-    h_initial_list = [1,0]
+    h_initial_list = [1,1]
+
+    heat_type1 = 'shower'
+    heat_type2 = 'shower'
+    start_time1 = 8 #h
+    start_time2 = 19 #h
+
+    consumer1 = Consumer('Consumer 1',heat_type1, start_time1)
+    consumer2 = Consumer('Consumer 2',heat_type2, start_time2)
+
+    consumer_list = [consumer1, consumer2]
 
     network_builder(net, 
                     pipe_data_list, 
@@ -385,12 +395,12 @@ def model_step_7():
                     hex_data,
                     h_initial_list, 
                     pump_data, 
-                    number_consumers, 
-                    use_overflow = True)
+                    consumer_list, 
+                    use_overflow = False)
 
     # Simulation parameters
     dt = 60 # s
-    total_time = 24 * 3600 # h
+    total_time = 24 * 3600 # s
     T_ambt = 20
 
     # Input profiles
@@ -415,14 +425,28 @@ def model_network_Rutger():
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('50kPa Pump constant')
+    pump_data = read_pump_data('60kPa Pump constant')
     
     # Create network
-    net = Network("Network Rutger")
-    
-    number_consumers = 23
+    net = Network("Network Rutger all valves closed")
+
+    heat_type1 = 'shower'
+    heat_type2 = 'shower'
+    start_time1 = 8 #h
+    start_time2 = 19 #h
+
+    consumer_list = []
+    for i in range(23):
+        
+        if i <=9:
+            consumer = Consumer(f'Consumer {i+1}',heat_type1, start_time1)
+        else:
+            consumer = Consumer(f'Consumer {i+1}',heat_type2, start_time2)
+        consumer_list.append(consumer)
+
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
-    h_initial_list = np.linspace(0,1,number_consumers)
+    # h_initial_list = np.linspace(0,1,len(consumer_list))
+    h_initial_list = np.zeros(len(consumer_list)) # all closed
     
     network_builder(net, 
                     pipe_data_list,
@@ -430,7 +454,7 @@ def model_network_Rutger():
                     hex_data,
                     h_initial_list, 
                     pump_data, 
-                    number_consumers,
+                    consumer_list,
                     use_overflow = False)
 
     # Simulation parameters
@@ -606,9 +630,21 @@ def test_Rutger_data():
     # Create network
     net = Network("Network Rutger")
 
-    number_consumers = 23
-    pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
-    h_initial_list = [0]*23
+    heat_type1 = 'shower'
+    heat_type2 = 'shower'
+    start_time1 = 8 #h
+    start_time2 = 19 #h
+
+    consumer_list = []
+    for i in range(23):  
+        if i <=9:
+            consumer = Consumer(f'Consumer {i+1}',heat_type1, start_time1)
+        else:
+            consumer = Consumer(f'Consumer {i+1}',heat_type2, start_time2)
+        consumer_list.append(consumer)
+
+    pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3 
+    h_initial_list = [0]*len(consumer_list)
 
     network_builder(net, 
                     pipe_data_list,
@@ -616,7 +652,7 @@ def test_Rutger_data():
                     hex_data,
                     h_initial_list, 
                     pump_data, 
-                    number_consumers,
+                    consumer_list,
                     use_overflow = False)
     
     # Initialize with dummy variables
@@ -656,7 +692,7 @@ def test_Rutger_data():
             radius = net.pipes[f'Pipe {i+1}.1']['pipe_instance'].r_inner
             mflow = np.pi * radius ** 2 * average_v[i] * 1000
             mflow_array[i*6+1:(i+1)*6+1] = mflow
-    # print("mass flow array:", mflow_array)
+    print("mass flow array:", mflow_array)
 
     # Calculate pressure losses in loops without taking the valves into account
     friction_vector = net.pressure_friction_vector + \
@@ -742,12 +778,12 @@ def read_hex_data(hex_data_set):
 
     U = constants[hex_data_set]['U'] # Overall heat transfer coefficient [W/m2K]
     As = constants[hex_data_set]['As'] # Heat transfer area [m2]
-    F = constants[hex_data_set]['F'] # Correction factor [-]
+    # F = constants[hex_data_set]['F'] # Correction factor [-]
     Kp = constants[hex_data_set]['Kp'] # Pressure loss coefficient [-]
     K_vs = constants[hex_data_set]['K_vs'] # Hydrualic conductivity for valve [m3/s Pa^0.5]
     # K_vleak = constants[hex_data_set]['K_vleak'] # Hydraulic conductivity for valve when closed[m3/s Pa^0.5]
 
-    hex_data = [U, As, F, Kp, K_vs]
+    hex_data = [U, As, Kp, K_vs]
 
     return hex_data
 
@@ -791,25 +827,18 @@ def generate_input_network(temp_type, total_time, dt):
     return T_in
 
 def network_builder(net : Network, 
-                        pipe_data_list : dict, 
-                        pipe_hex_data, 
-                        hex_data,
-                        h_initial_list, 
-                        pump_data,
-                        number_of_consumers,
-                        use_overflow = True):
+                    pipe_data_list : list, 
+                    pipe_hex_data, 
+                    hex_data,
+                    h_initial_list, 
+                    pump_data,
+                    consumer_list,
+                    use_overflow = True):
         
         # Add heat exchangers and connecting pipes based on number of consumers
-        A1 = 0.109*1.524
-        A2 = 0.113*1.524
-        Period1 = 2*np.pi / 0.298
-        Period2 = 2*np.pi / 0.529
-        Phi1 = -1.949
-        Phi2 = -2.154
-        offset = 0.509*1.524
-        tau = 0 
 
-        consumer = Consumer('Consumer 1', A1, A2, Period1, Period2, Phi1, Phi2, offset, tau) 
+        number_of_consumers = len(consumer_list)
+
 
         net.add_node('Node 1.1', 0, 0, 0)
         net.add_node('Node 1.2', 0, 0, 3)
@@ -823,7 +852,7 @@ def network_builder(net : Network,
         net.add_pipe('Pipe 1.1','Node 1.1', 'Node 1.2', pipe_data_list[0])
         net.add_pipe('Pipe 1.2', 'Node 1.2', 'Node 1.3', pipe_data_list[0])
 
-        net.add_hex('Hex 1', 'Node 1.3', 'Node 1.4', hex_data, pipe_hex_data, h_initial_list[0], consumer)
+        net.add_hex('Hex 1', 'Node 1.3', 'Node 1.4', hex_data, pipe_hex_data, h_initial_list[0], consumer_list[0])
 
         net.add_pipe('Pipe 1.5', 'Node 1.4', 'Node 1.5', pipe_data_list[0])
         net.add_pipe('Pipe 1.6', 'Node 1.5', 'Node 1.6', pipe_data_list[0])
@@ -831,8 +860,7 @@ def network_builder(net : Network,
         
         for i in range(2,number_of_consumers+1):
             
-            tau = i * 3600/6
-            consumer = Consumer(f'Consumer {2+i}', A1, A2, Period1, Period2, Phi1, Phi2, offset, tau) 
+            consumer = consumer_list[i-1]
             
             if i == 2:
                 previous_supply_node = f'Node {i-1}.2'
@@ -867,7 +895,6 @@ def network_builder(net : Network,
             net.add_pipe(f'Pipe {i}.5',under_hex_node,return_node,pipe_data)
             net.add_pipe(f'Pipe {i}.6',return_node,previous_return_node,pipe_data) # needs to be connected to node from previous consumer
 
-
         # add overflow
 
         if use_overflow:
@@ -888,6 +915,3 @@ if __name__ == "__main__":
     model_network_Rutger()
     # test_Rutger_data()
     # model_step_7()
-    # test_network_builder()
-    # test_NR()
-    # test_incidence_and_loop_matrices()

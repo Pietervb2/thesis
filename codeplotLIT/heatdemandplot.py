@@ -53,3 +53,35 @@ plt.xlabel('Time (h)')
 plt.legend()
 plt.grid()
 plt.show()
+
+
+# def smooth_peak(x, x0, sigma, A=1):
+#     return A * np.exp(-(x - x0)**2 / (2*sigma**2))
+
+# # Create a time vector for one day (24 hours) with 1-minute intervals
+# t = np.linspace(0, 24*3600, 24*3600)  # time in seconds
+
+# # Create a heat demand profile with two peaks (morning and evening)
+# y_pre_fit = smooth_peak(t, 8*3600, 0.07*3600) 
+
+# # + smooth_peak(t, 19*3600, 0.15*3600)  # units: W
+
+# total_area = np.trapz(y_pre_fit, t)  # units: y * hours
+
+# scaling_factor = 18e6 / (total_area)  # scaling factor to reach 65 MJ
+# y = y_pre_fit * scaling_factor  # scaled heat demand profile
+# plt.plot(t, y)
+# plt.title("One day heat demand profile (scaled to 18 MJ)")
+# plt.xlabel("Time (hours)")
+# plt.ylabel("Heat Demand (W)")
+
+# ax = plt.gca()
+# ax.set_xlim(0, 24 * 3600)  # limits in seconds
+# ticks_seconds = np.arange(0, 25, 4) * 3600
+# ax.set_xticks(ticks_seconds)
+# ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
+# plt.grid()
+# plt.show()
+
+# print(f'Total energy demand over the day: {np.trapz(60*1e3*y, t)/1e6} MJ')  # Convert kW*min to MJ

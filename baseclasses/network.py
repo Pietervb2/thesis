@@ -243,7 +243,6 @@ class Network:
                     e = G[v][u]['col']
                     self.loop_matrix[i, e] = +1
         
-
     def build_help_vectors_NR(self):
 
         """

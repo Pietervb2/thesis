@@ -5,39 +5,20 @@ class Consumer:
 
     def __init__(self, 
                  consumer_id: str,
-                 A1: float,
-                 A2: float,
-                 Period1: float,
-                 Period2: float,
-                 phi1: float,
-                 phi2: float, 
-                 offset: float,
-                 tau: float):
+                 demand_type: int,
+                 start_time: float,
+                   ):
         
         """
         Args:
-            - consumer_id: unique id of the consumer [-]
-            - A1: Amplitude of first sinusoidal component [W]
-            - A2: Amplitude of second sinusoidal component [W]
-            - Period1: Period of first sinusoidal component [s]
-            - Period2: Period of second sinusoidal component [s]
-            - phi1: Phase shift of first sinusoidal component [rad]
-            - phi2: Phase shift of second sinusoidal component [rad]
-            - offset: Offset of the sinusoidal components [W]
-            - tau: Time constant of the consumer [s]
+            - consumer_id: Unique identifier for the consumer [-]
+            - demand_type: Type of heat demand profile 
+            - start_time: Time when the consumer starts demanding heat [s]
 
-        The periods of the sinusoidal components are fitted to 24h, based on the demand curve used in https://ieeexplore.ieee.org/document/10981678. 
-        That's why they are multplied by 3600 to convert hours to seconds in initialize_consumer.
         """
         self.consumer_id = consumer_id
-        self.A1 = A1
-        self.A2 = A2
-        self.Period1 = Period1
-        self.Period2 = Period2  
-        self.phi1 = phi1
-        self.phi2 = phi2
-        self.offset = offset
-        self.tau = tau
+        self.demand_type = demand_type
+        self.start_time = start_time
 
     def initialize_consumer(self, num_steps: int, dt: float) -> None:
         """
@@ -48,37 +29,60 @@ class Consumer:
             - num_steps: number of time steps in the simulation [-]
         """
         
-        self.Tc_in = np.ones(num_steps)*35 # Cold side inlet temperature [C]. #TODO: for now it is constant. Need to check the constant value. 
-        self.Tc_out = np.ones(num_steps) # Cold side outlet temperature [C]
+        self.Tc_in = np.ones(num_steps)*10 # Cold side inlet temperature [C]. #TODO: for now it is constant. Need to check the constant value. 
+        self.Tc_out = np.zeros(num_steps) # Cold side outlet temperature [C]
         self.Q_supply = np.zeros(num_steps)  # Supplied heat [W]
 
-        time = np.arange(0,num_steps*dt,dt)
-
-        self.Q_d = 1e3*(self.A1 * np.sin(2 * np.pi / (self.Period1*3600) * (time-self.tau) + self.phi1) +\
-                         self.A2 * np.sin(2 * np.pi / (self.Period2*3600) * (time-self.tau) + self.phi2) + self.offset)  # Heat demand [W]
+        self.generate_heat_demand(num_steps,dt)
 
         if self.Q_d[self.Q_d < 0] != 0:
             raise ValueError("Heat demand cannot be negative. Please check the parameters.")
         
-        # # Pre-calculate mass flow rates based on heat demand. 
-        # # Assuming 20 K temperature difference over HEX on consumer side.
+        # Pre-calculate mass flow rates based on heat demand. Only for tap water. 
+        # Which is always 10 degrees, and we always want 60 degrees so dT = 50
 
-        # delta_T = 20  # Temperature difference [K]
-        # c_p = 4186    # Specific heat capacity of water [J/(kg·K)]
+        delta_T = 50  # Temperature difference [K]
+        c_p = 4186    # Specific heat capacity of water [J/(kg·K)]
 
-        # self.mflow = self.Q_d / (c_p * delta_T) 
+        self.mflow = self.Q_d / (c_p * delta_T) 
 
-        # Scale it to the mflow / mflow_max = Q / Qmax
-        mflow_max = 0.19 # kg/s
+        # # Scale it to the mflow / mflow_max = Q / Qmax
+        # mflow_max = 0.15 # kg/s
 
-        self.mflow = 0.19 * self.Q_d / max(self.Q_d)
+        # self.mflow = mflow_max * self.Q_d / max(self.Q_d)
+        self.mflow[self.mflow < 1e-2] = 0  # Set very small mass flow rates to zero
+
+    def generate_heat_demand(self,num_steps, dt):
+
+        #NOTE: later extend to the posibility of multiple shower in a day. 
+
+        t = np.arange(0,num_steps*dt,dt)
+
+
+        if self.demand_type == 'shower':
+
+            # Time intervals
+            t1_start, t1_end = self.start_time*3600, (self.start_time + 0.05)*3600
+            t2_start, t2_end = t1_end, (self.start_time + 0.1)*3600
+            t3_start, t3_end = t2_end, (self.start_time + 0.164)*3600
+
+            # Heat demand height
+            h1, h2, h3 = 20e3, 25e3, 30e3
+
+            # Heat demand
+            self.Q_d = np.zeros_like(t)
+
+            # Drie blockgolven naast elkaar
+            self.Q_d[(t >= t1_start) & (t < t1_end)] = h1
+            self.Q_d[(t >= t2_start) & (t < t2_end)] = h2
+            self.Q_d[(t >= t3_start) & (t < t3_end)] = h3
+        
+        else:
+            raise KeyError(f"Wrong heat demand input type for {self.consumer_id}")
 
     def __repr__(self):
         return f"Consumer(consumer_id={self.consumer_id}, A1={self.A1}, A2={self.A2}, Period1={self.Period1}, Period2={self.Period2}, phi1={self.phi1}, phi2={self.phi2})"
 
                
 if __name__ == "__main__":
-    consumer = Consumer("Consumer_1", 1000, 500, 3600, 7200, 0, np.pi/4, 2)
-    time = 1800  # Example time in seconds
-    heat_demand = consumer.get_heat_demand(time)
-    print(consumer)
+    pass

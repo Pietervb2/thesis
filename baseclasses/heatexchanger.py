@@ -24,9 +24,8 @@ class HeatExchanger(Node):
         super().__init__(x,y,z,hex_id)
         self.U = hex_data[0]
         self.As = hex_data[1]
-        self.F = hex_data[2]
-        self.Kp_rho = hex_data[3] * 1000 # Assuming water density of 1000 kg/m3
-        self.Kvs = hex_data[4]
+        self.Kp_rho = hex_data[2] * 1000 # Assuming water density of 1000 kg/m3
+        self.Kvs = hex_data[3]
         self.h_initial = h_initial # Initial position of valve
 
         # Consumer connected to the heat exchanger
@@ -105,7 +104,7 @@ class HeatExchanger(Node):
         else:
             epsilon = NTU / (1 + NTU)
 
-        Q = self.F * epsilon * Cmin * (Th_in - Tc_in)
+        Q = epsilon * Cmin * (Th_in - Tc_in)
 
         Tc_out = Tc_in + Q / Cc
         Th_out = Th_in - Q / Ch
