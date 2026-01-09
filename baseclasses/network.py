@@ -277,7 +277,7 @@ class Network:
             pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
             j = self.pipe_map[pipe_id]
 
-            self.Kp_array[j] = hex_obj.Kp_rho
+            self.Kp_array[j] = hex_obj.Kp_rho_dp
             self.inv_Kv_array[j] = 1/hex_obj.Kv[0]
             
     def res(self, mflow) -> np.ndarray:
@@ -337,7 +337,7 @@ class Network:
     def set_mflow_network(self, N : int):
 
         """
-        Impelement Newton-Raphson to solve for mass flows in the network.
+        Impelement root finding function to solve for mass flows in the network.
 
         Steps:
         1. Set up initial guess for mass flows in all pipes

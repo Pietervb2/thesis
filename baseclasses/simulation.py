@@ -452,9 +452,12 @@ class Simulation:
             HEX_data['mflow_sec'] = hex.consumer.mflow           
             HEX_data['Q_d'] = hex.consumer.Q_d
             HEX_data['Q_supply'] = hex.consumer.Q_supply
+            HEX_data['h'] = hex.h
+            HEX_data['Integral term'] = hex.I_array
+
 
             hex_mflow = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.3'].mflow
-            hex_dp_data[f'{hex_key}'] = (hex.Kp_rho * hex_mflow**2).astype(int)
+            hex_dp_data[f'{hex_key}'] = (hex.Kp_rho_dp * hex_mflow**2).astype(int)
 
             hex_valve_data[f'Kv {hex_key}'] = hex.Kv
             hex_valve_data[f'h {hex_key}'] = hex.h

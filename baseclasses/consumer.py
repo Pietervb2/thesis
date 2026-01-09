@@ -46,39 +46,41 @@ class Consumer:
 
         self.mflow = self.Q_d / (c_p * delta_T) 
 
-        # # Scale it to the mflow / mflow_max = Q / Qmax
-        # mflow_max = 0.15 # kg/s
-
-        # self.mflow = mflow_max * self.Q_d / max(self.Q_d)
         self.mflow[self.mflow < 1e-2] = 0  # Set very small mass flow rates to zero
 
-    def generate_heat_demand(self,num_steps, dt):
+    def generate_heat_demand(self, num_steps, dt):
 
-        #NOTE: later extend to the posibility of multiple shower in a day. 
+        #NOTE: later extend to the posibility of multiple showers in a day. 
 
         t = np.arange(0,num_steps*dt,dt)
+        self.Q_d = np.zeros_like(t)
 
+        for i in range(len(self.demand_type)):
 
-        if self.demand_type == 'shower':
+            demand_type = self.demand_type[i]
+            start_time = self.start_time[i]
 
-            # Time intervals
-            t1_start, t1_end = self.start_time*3600, (self.start_time + 0.05)*3600
-            t2_start, t2_end = t1_end, (self.start_time + 0.1)*3600
-            t3_start, t3_end = t2_end, (self.start_time + 0.164)*3600
+            if demand_type == 'shower':
 
-            # Heat demand height
-            h1, h2, h3 = 20e3, 25e3, 30e3
+                # Time intervals
+                t1_start, t1_end = start_time*3600, (start_time + 0.05)*3600
+                t2_start, t2_end = t1_end, (start_time + 0.1)*3600
+                t3_start, t3_end = t2_end, (start_time + 0.164)*3600
 
-            # Heat demand
-            self.Q_d = np.zeros_like(t)
+                # Heat demand height
+                h1, h2, h3 = 20e3, 25e3, 30e3
 
-            # Drie blockgolven naast elkaar
-            self.Q_d[(t >= t1_start) & (t < t1_end)] = h1
-            self.Q_d[(t >= t2_start) & (t < t2_end)] = h2
-            self.Q_d[(t >= t3_start) & (t < t3_end)] = h3
-        
-        else:
-            raise KeyError(f"Wrong heat demand input type for {self.consumer_id}")
+                Q_d = np.zeros_like(t)
+
+                # Drie blockgolven naast elkaar
+                Q_d[(t >= t1_start) & (t < t1_end)] = h1
+                Q_d[(t >= t2_start) & (t < t2_end)] = h2
+                Q_d[(t >= t3_start) & (t < t3_end)] = h3
+
+                self.Q_d += Q_d
+            
+            else:
+                raise KeyError(f"Wrong heat demand input type for {self.consumer_id}")
 
     def __repr__(self):
         return f"Consumer(consumer_id={self.consumer_id}, A1={self.A1}, A2={self.A2}, Period1={self.Period1}, Period2={self.Period2}, phi1={self.phi1}, phi2={self.phi2})"

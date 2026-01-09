@@ -377,12 +377,12 @@ def model_step_7():
 
     number_consumers = 2
     pipe_data_list = [pipe_data_DN40] * number_consumers
-    h_initial_list = [1,1]
+    h_initial_list = [0,0]
 
-    heat_type1 = 'shower'
-    heat_type2 = 'shower'
-    start_time1 = 8 #h
-    start_time2 = 19 #h
+    heat_type1 = ['shower', 'shower']
+    heat_type2 = ['shower']
+    start_time1 = [8,18] #h
+    start_time2 = [19] #h
 
     consumer1 = Consumer('Consumer 1',heat_type1, start_time1)
     consumer2 = Consumer('Consumer 2',heat_type2, start_time2)
@@ -428,7 +428,7 @@ def model_network_Rutger():
     pump_data = read_pump_data('60kPa Pump constant')
     
     # Create network
-    net = Network("Network Rutger all valves closed")
+    net = Network("Network Rutger all valves open")
 
     heat_type1 = 'shower'
     heat_type2 = 'shower'
@@ -446,7 +446,7 @@ def model_network_Rutger():
 
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
     # h_initial_list = np.linspace(0,1,len(consumer_list))
-    h_initial_list = np.zeros(len(consumer_list)) # all closed
+    h_initial_list = np.ones(len(consumer_list)) # all open
     
     network_builder(net, 
                     pipe_data_list,
@@ -778,12 +778,14 @@ def read_hex_data(hex_data_set):
 
     U = constants[hex_data_set]['U'] # Overall heat transfer coefficient [W/m2K]
     As = constants[hex_data_set]['As'] # Heat transfer area [m2]
-    # F = constants[hex_data_set]['F'] # Correction factor [-]
-    Kp = constants[hex_data_set]['Kp'] # Pressure loss coefficient [-]
+    Kp_dp = constants[hex_data_set]['Kp_dp'] # Pressure loss coefficient [-]
     K_vs = constants[hex_data_set]['K_vs'] # Hydrualic conductivity for valve [m3/s Pa^0.5]
+    Kp = constants[hex_data_set]['Kp'] # Proportional gain coefficient for valve [-]
+    Ki = constants[hex_data_set]['Ki'] # Integral gain coefficient for valve [-]
+
     # K_vleak = constants[hex_data_set]['K_vleak'] # Hydraulic conductivity for valve when closed[m3/s Pa^0.5]
 
-    hex_data = [U, As, Kp, K_vs]
+    hex_data = [U, As, Kp_dp, K_vs, Kp, Ki]
 
     return hex_data
 
@@ -912,6 +914,6 @@ def network_builder(net : Network,
     
 if __name__ == "__main__":
 
-    model_network_Rutger()
+    # model_network_Rutger()
     # test_Rutger_data()
-    # model_step_7()
+    model_step_7()

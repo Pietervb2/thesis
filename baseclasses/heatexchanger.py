@@ -17,15 +17,21 @@ class HeatExchanger(Node):
             - U: Overall heat transmission coefficient [W / m2 K]
             - As: total transfer area [m2]
             - F: correction factor [-]
-            - Kp: pressure loss coefficient [-]
+            - Kp_rho_dp: pressure loss coefficient [-]
             - Kvs: hydraulic conductivity of fully open valve [m3/h/bar^0.5]
             - Kv0: hydraulic conductivity of closed valve [m3/h/bar^0.5]
+            - h_initial: initial valve position (0-1) [-]
+            - Kp: Proportional gain of the PI controller [-]
+            - Ki: Integral gain of the PI controller [-]
+
         """
         super().__init__(x,y,z,hex_id)
         self.U = hex_data[0]
         self.As = hex_data[1]
-        self.Kp_rho = hex_data[2] * 1000 # Assuming water density of 1000 kg/m3
+        self.Kp_rho_dp = hex_data[2] * 1000 # Assuming water density of 1000 kg/m3
         self.Kvs = hex_data[3]
+        self.Kp = hex_data[4] 
+        self.Ki = hex_data[5] 
         self.h_initial = h_initial # Initial position of valve
 
         # Consumer connected to the heat exchanger
@@ -42,6 +48,10 @@ class HeatExchanger(Node):
 
         self.h = np.ones(num_steps)*self.h_initial
         self.Kv = np.ones(num_steps)*self.equal_percentage_valve(self.h_initial)
+
+        self.dt = dt # For PI controller
+        self.I_array = np.zeros(num_steps)
+        self.I = 0  # Integral term for PI controller
 
     
     def set_T(self, N):
@@ -61,7 +71,7 @@ class HeatExchanger(Node):
             for _, pipe in self.pipes_out.items():
                 pipe.set_T_in(self.T[N], N)
 
-        self.update_valve(N, Tc_out)
+        self.update_valve(N)
 
     def NTU_method(self,N):
 
@@ -86,6 +96,8 @@ class HeatExchanger(Node):
 
         if mflow_h < 1e-6 or mflow_c < 1e-6:
             # If either mass flow rate is zero, no heat exchange occurs
+            self.consumer.Tc_out[N] = Tc_in
+            self.consumer.Q_supply[N] = 0
             return Tc_in, Th_in
 
         # Heat capacity rates
@@ -130,33 +142,37 @@ class HeatExchanger(Node):
             Kv = (self.Kvs/Kv0) ** (h-1) * self.Kvs
         return Kv
     
-    def update_valve(self, N, Tc_out):
+    def update_valve(self, N):
         """
         Update the valve position based on the consumer outlet temperature using a PI controller.
         """
+        if N < len(self.h)-1:
+            if self.consumer.mflow[N] > 0:
+                
+                # implement PI controller to determine the valve lift
 
-        # TODO: dont forget to adjust the parameters for Kv to kg/s/sqrt(bar)
-        # Initial step 
-        # # controller part
-        # mflow_min = 0.01
-        # if self.consumer.mflow[N] > mflow_min:
-            
-        #     # implement some PI controller to determine the valve lift
-        #     P_k = 
-        #     I_k = 
-        #     T_set_point = 55 # []
-        #     h = P_k * (T_set_point - self.consumer.Tc_out[N]) + I_k * ...
+                T_set_point = 60 # Temperature set point for the tapwater outlet [C]
+                dT = (T_set_point - self.consumer.Tc_out[N])
+                
+                self.I += dT * self.dt
+                h = self.Kp * dT + self.Ki * self.I
+                
+                h = min(1,max(0,h)) # As h is scaled to 0-1
 
-        #     Kv = self.equal_percentage_valve(h)
+                # Anti-windup 
+                if (h == 0 and dT < 0) or (h == 1 and dT > 0):
+                    self.I -= dT * self.dt  # unwind integral
 
-        #     self.h[N] = h
-        #     self.Kv[N] = Kv
+                Kv = self.equal_percentage_valve(h)
 
-        # NOTE: not updating yet
-        # no change in valve position
-        self.h[N] = self.h[N]
-        self.Kv[N] = self.Kv[N]
-            
+                self.h[N+1] = h
+                self.Kv[N+1] = Kv
+                self.I_array[N] = self.I
+            else:
+                # no change in valve position
+                self.h[N+1] = 0
+                self.Kv[N+1] = self.equal_percentage_valve(0)
+                
 
 
 
