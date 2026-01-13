@@ -30,7 +30,7 @@ class Node:
 
     def connect_pipe_to_node(self, pipe_id, pipe, direction):
         """
-        Function that adds an pipe to the node.
+        Function that adds a pipe to the node.
 
         Args:
             pipe_id : id of the pipe
@@ -82,5 +82,4 @@ class Node:
 
 
 if __name__ == "__main__":
-
     pass

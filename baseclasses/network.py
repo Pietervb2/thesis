@@ -278,8 +278,34 @@ class Network:
             j = self.pipe_map[pipe_id]
 
             self.Kp_array[j] = hex_obj.Kp_rho_dp
-            self.inv_Kv_array[j] = 1/hex_obj.Kv[0]
-            
+            self.inv_Kv_array[j] = 1/hex_obj.Kv[0] # Not necessary but for reverse engineering Rutger's data I left it here.
+
+    def update_valves(self,N : int):
+        """
+        Build a boolean mask for pipes that are connected to a heat exchanger with an open valve.
+        """
+        active_pipes = np.ones(len(self.pipes), dtype=bool)
+        flow_above = False # To keep risers when a valve above is open.        
+        for i,hex_obj in reversed((list(enumerate(self.hexs.values())))):
+
+            if hex_obj.h[N] > 0: # NOTE add also a check for the bypass valve
+                flow_above = True
+                pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
+                j = self.pipe_map[pipe_id]
+                self.inv_Kv_array[j] = 1/hex_obj.Kv[N] 
+            else:
+                if flow_above: # Keep riser
+                    suffixes = (2, 3, 4, 5)
+                else: 
+                    suffixes = (1,2,3,4,5,6)
+
+                pipe_ids = (f"Pipe {i+1}.{k}" for k in suffixes)
+                j = [self.pipe_map[pid] for pid in pipe_ids]
+
+                active_pipes[j] = False
+
+        return active_pipes
+
     def res(self, mflow) -> np.ndarray:
         """
         Residual vector for Newton-Raphson method
@@ -296,7 +322,7 @@ class Network:
                                 self.Kp_array + \
                                 self.inv_Kv_array ** 2
 
-        head_loss  = self.loop_matrix @ (friction_vector * np.abs(mflow)*mflow
+        head_loss  = self.loop_matrix_adjusted @ (friction_vector * np.abs(mflow)*mflow
                                         + self.pressure_elevation_vector)
 
         # Pump contribution (only in loop equations)
@@ -305,7 +331,7 @@ class Network:
                                             self.pump_coeff[:,2]
         
         
-        pump_term = self.loop_matrix @ self.pump_pressure_curve
+        pump_term = self.loop_matrix_adjusted @ self.pump_pressure_curve
 
         # Full residual vector
         F = np.concatenate([continuity, head_loss - pump_term])
@@ -325,12 +351,12 @@ class Network:
                         +  self.inv_Kv_array ** 2
         
         pump_curve_derivative = 2 * self.pump_coeff[:,0] * mflow + self.pump_coeff[:,1]
-        pump_term_derivative = self.loop_matrix @ np.diag(pump_curve_derivative)
+        pump_term_derivative = self.loop_matrix_adjusted @ np.diag(pump_curve_derivative)
 
         # d/dmflow |mflow|*mflow = |mflow| + mflow * mflow / |mflow|
         deriv = np.abs(mflow) + mflow * mflow/np.abs(mflow)
         J = np.vstack([incidence_matrix_reduced, 
-                       self.loop_matrix @ np.diag(2 * pressure_vector * deriv) - pump_term_derivative]) 
+                       self.loop_matrix_adjusted @ np.diag(2 * pressure_vector * deriv) - pump_term_derivative]) 
         
         return J
 
@@ -349,7 +375,7 @@ class Network:
 
         """
         
-        pipe_ids = list(self.pipes.keys())
+        pipe_ids = np.array(list(self.pipes.keys()))
         p = len(pipe_ids)
 
         # Initial guess for the mflows in the pipes
@@ -359,12 +385,8 @@ class Network:
         else:
             mflow0 = self.mflow_all[:,N-1]
 
-        # Update pressure array valve positions      
-        for hex_obj in self.hexs.values():
-            pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
-            j = self.pipe_map[pipe_id]
-            self.inv_Kv_array[j] = 1/hex_obj.Kv[N]  # Update Kv value for the valve in the inlet pipe of the HEX   
-      
+        active_mask = self.update_valves(N)
+
         # Performs Newton-Raphson using scipy root function
         result = root(self.res, mflow0, jac = self.jac, method = 'hybr')
 
@@ -375,7 +397,7 @@ class Network:
             raise RuntimeError(f"The root finder did not converge at timestep = {N}, message: {result.message}")
         
         elif not (mflow > 0).all():
-            raise RuntimeError('Newton-Raphson converges to a mass flow with negative values')
+            raise RuntimeError(f'Newton-Raphson converges to a mass flow with negative values at timestep {N}')
         
         self.mflow_all[:,N] = mflow
 

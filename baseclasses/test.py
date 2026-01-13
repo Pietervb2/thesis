@@ -1,6 +1,7 @@
 from network import Network 
 from simulation import Simulation
 from consumer import Consumer
+from pipe import Pipe
 
 from scipy.signal import square
 from sklearn.metrics import root_mean_squared_error
@@ -373,7 +374,7 @@ def model_step_7():
     pump_data = read_pump_data('20kPa Pump constant')
     
     # Create network
-    net = Network("2 consumers without overflow normal, 20kPa")
+    net = Network("2 consumers without overflow normal, 20kPa, no Kvleak")
 
     number_consumers = 2
     pipe_data_list = [pipe_data_DN40] * number_consumers
@@ -428,7 +429,7 @@ def model_network_Rutger():
     pump_data = read_pump_data('60kPa Pump curve')
     
     # Create network
-    net = Network("Network Rutger actuating valves, Kvleak500")
+    net = Network("Network Rutger actuating valves, no Kvleak")
 
     heat_demand_type1 = ['shower']
     heat_demand_type2 = ['shower']
@@ -539,39 +540,44 @@ def test_incidence_and_loop_matrices():
 
 def test_NR():
 
-    pipe_data = read_pipe_data('DN40')
-    pipe_data_hex = read_pipe_data('DN20')
+    """
+    Initial test to see whether the incidence and loop matrix construction is working properly.
+    """
+    pipe_data_DN40 = read_pipe_data('DN40')
+    pipe_data_DN20 = read_pipe_data('DN20')
     hex_data = read_hex_data('Standard hex constants')
-
-    # Create network
-    net = Network("NR test")
-
-    A1 = 0.109*1.524
-    A2 = 0.113*1.524
-    Period1 = 2*np.pi / 0.298
-    Period2 = 2*np.pi / 0.529
-    Phi1 = -1.949
-    Phi2 = -2.154
-    offset = 0.509*1.524
-    tau = 3600 
-
-    consumer1 = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset,0)
+    pump_data = read_pump_data('20kPa Pump constant')
     
-    net.add_node('Node 1', 0, 0, 0)
-    net.add_node('Node 2', 0, 3, 0)
-    net.add_node('Node 3', 3, 3, 0)
-    net.add_node('Node 4', 3, 0, 0)
+    # Create network
+    net = Network("Test closing valves no overflow")
 
+    number_consumers = 3
+    pipe_data_list = [pipe_data_DN40] * number_consumers
+    h_initial_list = [1,0,1]
 
-    net.add_pipe('Pipe 1', 'Node 1', 'Node 2', pipe_data)
-    net.add_pipe('Pipe 2', 'Node 2', 'Node 3', pipe_data)
-    # net.add_pipe('Pipe 3', 'Node 3', 'Node 4', pipe_data)
-    net.add_hex('Hex 1', 'Node 3', 'Node 4', hex_data, pipe_data_hex, consumer1)
-    net.add_pump('Pump 1', 'Node 4', 'Node 1', pipe_data, 4e4)
+    heat_type1 = ['nothing']
+    heat_type2 = ['nothing']
+    start_time1 = [8] #h
+    start_time2 = [19] #h
+
+    consumer1 = Consumer('Consumer 1',heat_type1, start_time1)
+    consumer2 = Consumer('Consumer 2',heat_type2, start_time2)
+    consumer3 = Consumer('Consumer 3',heat_type2, start_time2)
+
+    consumer_list = [consumer1, consumer2, consumer3]
+
+    network_builder(net, 
+                    pipe_data_list, 
+                    pipe_data_DN20, 
+                    hex_data,
+                    h_initial_list, 
+                    pump_data, 
+                    consumer_list, 
+                    use_overflow = False)
 
     # Simulation parameters
     dt = 60 # s
-    total_time = 24 * 3600 # h
+    total_time = 24 * 3600 # s
     T_ambt = 20
 
     # Input profiles
@@ -580,7 +586,8 @@ def test_NR():
     T_in = generate_input_network(temp_type, total_time, dt)
 
     # Run simulation
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)      
+    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
+    # sim.plot_network(net)      
     sim.simulate_network(net, T_in, T_ambt, T_ambt)
 
 def test_network_builder():
@@ -743,17 +750,14 @@ def read_pipe_data(pipe_data_set):
 
     r_inner = constants[pipe_data_set]['r_inner'] # [m]
     r_outer = constants[pipe_data_set]['r_outer'] # [m]
-    # K = constants[pipe_data_set]['K']
     rho_pipe = constants[pipe_data_set]['rho_pipe'] # [kg / m3]
-    cp_pipe = constants[pipe_data_set]['cp_pipe']  # [J / kg K]
     rho_insu = constants[pipe_data_set]['rho_insu'] # [kg / m3]
+    cp_pipe = constants[pipe_data_set]['cp_pipe']  # [J / kg K]
     cp_insu = constants[pipe_data_set]['cp_insu']  # [J/ kg K]
-    insu_thickness = constants[pipe_data_set]['insu_thickness'] # [m]
-
     k_pipe = constants[pipe_data_set]['k_pipe'] # thermal conductivity pipe [W / m K]
     k_insu = constants[pipe_data_set]['k_insu'] # thermal conductivity insulation [W / m K]
     h_pipe_air = constants[pipe_data_set]['h_pipe_air'] # natural convection from pipe to surrounding air [W / m2 K]
-
+    insu_thickness = constants[pipe_data_set]['insu_thickness'] # [m]
     epsilon = constants[pipe_data_set]['epsilon'] # rougness of inner pipe [m]
 
     R = (
@@ -764,7 +768,7 @@ def read_pipe_data(pipe_data_set):
 
     K = 1/R # total thermal conductivity [W / m K]
 
-    pipe_data = [r_inner, r_outer, cp_pipe, rho_pipe, cp_insu, rho_insu, insu_thickness, K, epsilon]
+    pipe_data = [r_inner, r_outer, rho_pipe, rho_insu, cp_pipe, cp_insu, insu_thickness, K, epsilon]
 
     return pipe_data
 
@@ -914,6 +918,17 @@ def network_builder(net : Network,
     
 if __name__ == "__main__":
 
-    model_network_Rutger()
+    # pipe_data = read_pipe_data('DN40')
+
+    # pipe_test = Pipe("Pipe 1", 100, 5, pipe_data)
+    # num_steps = 100
+    # pipe_test.bnode_init(60, num_steps, 60, 60, 1)
+    # for i in range(num_steps): 
+    #     pipe_test.set_mflow(0,i)
+    #     pipe_test.bnode_method(20, i)
+    #     print(f'Time step {i}, T_out = {pipe_test.T[i]:.2f} C')
+
+    # model_network_Rutger()
     # test_Rutger_data()
     # model_step_7()
+    test_NR()

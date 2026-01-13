@@ -146,7 +146,10 @@ class HeatExchanger(Node):
         """
         Update the valve position based on the consumer outlet temperature using a PI controller.
         """
-        if N < len(self.h)-1:
+
+        if N < len(self.h)-1: # to prevent index out of range
+
+            # Only update valve position if there is flow
             if self.consumer.mflow[N] > 0:
                 
                 # implement PI controller to determine the valve lift
@@ -171,7 +174,7 @@ class HeatExchanger(Node):
             else:
                 # no change in valve position
                 self.h[N+1] = 0
-                self.Kv[N+1] = self.equal_percentage_valve(0)
+                self.Kv[N+1] = 0
                 
 
 

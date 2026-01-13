@@ -28,10 +28,11 @@ class Pipe:
 
         self.r_inner = pipe_data[0]
         self.r_outer = pipe_data[1]
-        self.cp_pipe = pipe_data[2]
-        self.rho_pipe = pipe_data[3]
-        self.cp_insu = pipe_data[4]
-        self.rho_insu = pipe_data[5]
+        self.rho_pipe = pipe_data[2]
+        self.rho_insu = pipe_data[3]
+        self.cp_pipe = pipe_data[4]
+        self.cp_insu = pipe_data[5]
+
         self.insu_thickness = pipe_data[6]
         self.K = pipe_data[7]
         self.epsilon = pipe_data[8]
@@ -125,59 +126,87 @@ class Pipe:
         Returns:
         T_N: Temperature of water flowing from the pipe at time step N
         """
-        
         N_hist = N + self.hist_len
         mflow_ex, T_in_ex = self.mflow_extended, self.T_in_extended
         self.mflow[N] = self.mflow_extended[N_hist]
-        
-        # Find smallest integer n and corresponding R
-        n, R = 0, 0
-        while True:
-            R = sum(mflow_ex[N_hist-n:N_hist+1] * self.dt)
-            if R > self.L * self.inner_cs * self.rho_water:
-                break
-            n += 1
-        
-        # Find smallest integer m
-        m = 0
-        while True:
-            sum_term = sum(mflow_ex[N_hist-m:N_hist+1] * self.dt)
-            if sum_term > self.L * self.inner_cs * self.rho_water + mflow_ex[N_hist] * self.dt:
-                break
-            m += 1
-        
-        # Compute Y and S
-        Y = sum(mflow_ex[N_hist-m+1:N_hist-n] * T_in_ex[N_hist-m+1:N_hist-n] * self.dt)
-        S = sum(mflow_ex[N_hist - m + 1:N_hist + 1] * self.dt) if m > n else R
-         
-        # Compute the lossless output temperature T_N
-        lossless = (
-            (R - self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-n]
-            + Y
-            + (mflow_ex[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-m]
-            ) / (mflow_ex[N_hist] * self.dt)
-        self.T_lossless[N] = lossless      
 
-        # Take into account the heat capacity of the steel pipe
-        # Assume equilibrium in dt between the temperature of the pipe and the water
-        prev_Tpipe = self.T_pipe[N-1] if N > 0 else self.T_pipe[N]
-        self.T_cap[N] = (
-            mflow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
-            + self.C_whole_pipe * prev_Tpipe
-            ) / (self.C_whole_pipe + mflow_ex[N_hist] * self.c_water * self.dt)
+        if mflow_ex[N_hist] != 0:
+                                   
+            # Find smallest integer n and corresponding R
+            n, R = 0, 0
+            while True:
+                R = sum(mflow_ex[N_hist-n:N_hist+1] * self.dt)
+                if R > self.L * self.inner_cs * self.rho_water:
+                    break
+                n += 1
+            
+            # Find smallest integer m
+            m = 0
+            while True:
+                sum_term = sum(mflow_ex[N_hist-m:N_hist+1] * self.dt)
+                if sum_term > self.L * self.inner_cs * self.rho_water + mflow_ex[N_hist] * self.dt:
+                    break
+                m += 1
+            
+            # Compute Y and S
+            Y = sum(mflow_ex[N_hist-m+1:N_hist-n] * T_in_ex[N_hist-m+1:N_hist-n] * self.dt)
+            S = sum(mflow_ex[N_hist - m + 1:N_hist + 1] * self.dt) if m > n else R
+            
+            # Compute the lossless output temperature T_N
 
-        # Update temperature pipe wall
-        self.T_pipe[N] = self.T_cap[N] 
+            lossless = (
+                (R - self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-n]
+                + Y
+                + (mflow_ex[N_hist] * self.dt - S + self.L * self.inner_cs * self.rho_water) * T_in_ex[N_hist-m]
+                ) / (mflow_ex[N_hist] * self.dt)
+            self.T_lossless[N] = lossless      
 
-        # Determine average delay in the pipe
-        t_stay = self.average_delay_bnode(n,m,R,S,mflow_ex,N_hist)
-        self.t_stay_array[N] = t_stay
+            # Take into account the heat capacity of the steel pipe
+            # Assume equilibrium in dt between the temperature of the pipe and the water
+            prev_Tpipe = self.T_pipe[N-1] if N > 0 else self.T_pipe[N]
+            self.T_cap[N] = (
+                mflow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
+                + self.C_whole_pipe * prev_Tpipe
+                ) / (self.C_whole_pipe + mflow_ex[N_hist] * self.c_water * self.dt)
 
-        # Final outlet water temperature including heat loss to ambient
-        ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
+            # Update temperature pipe wall
+            self.T_pipe[N] = self.T_cap[N] 
 
-        decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
-        self.T[N] = T_ambt + (ref_T - T_ambt) * decay    
+            # Determine average delay in the pipe
+            t_stay = self.average_delay_bnode(n,m,R,S,mflow_ex,N_hist)
+            self.t_stay_array[N] = t_stay
+
+            # Final outlet water temperature including heat loss to ambient
+            ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
+
+            decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+            self.T[N] = T_ambt + (ref_T - T_ambt) * decay    
+
+        else:
+            # Incase there is no mass flow the bnode method needs to be treated differently           
+            if N == 0:
+                # no flow, so output temp is set equal to initial temperature of the water. Which can be found in the input history
+                self.T_lossless[N] = self.T_in_extended[N_hist-1] 
+                self.T_cap[N] = self.T_in_extended[N_hist-1]  
+                self.T[N] = self.T_in_extended[N_hist-1]
+            else:
+                self.T_lossless[N] = self.T_lossless[N-1]  # no flow, so output temp remains the same as previous time step
+                self.T_cap[N] = self.T_cap[N-1]
+                
+                # Update temperature pipe wall
+                self.T_pipe[N] = self.T_cap[N]
+                
+                # Update time stay in pipe
+                t_stay = self.dt + self.t_stay_array[N-1]
+                self.t_stay_array[N] = t_stay
+                
+                # Final outlet water temperature including heat loss to ambient
+                ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
+
+                decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
+                self.T[N] = T_ambt + (ref_T - T_ambt) * decay   
+       
+
 
     def average_delay_bnode(self,n,m,R,S,mflow_ex,N):
         """    
@@ -262,3 +291,7 @@ class Pipe:
         """
 
         self.dp_friction_array[N] = self.pressure_friction() * self.mflow_extended[N + self.hist_len]**2
+
+
+if __name__ == "__main__":
+    pass
