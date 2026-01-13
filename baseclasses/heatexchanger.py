@@ -132,7 +132,7 @@ class HeatExchanger(Node):
         For valve displacement lower than h_star Kv does not follow the standard form of the function. It becomes unpredictable. For this region we simply assume a linear behavior.
         """        
         Kv0 = self.Kvs/50
-        Kvleak = self.Kvs/2000
+        Kvleak = self.Kvs/500
         h_star = 0.05
 
         if h < h_star:

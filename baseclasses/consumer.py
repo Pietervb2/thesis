@@ -79,8 +79,12 @@ class Consumer:
 
                 self.Q_d += Q_d
             
+            elif demand_type == "nothing":
+                Q_d = np.zeros_like(t)
+                self.Q_d += Q_d
+
             else:
-                raise KeyError(f"Wrong heat demand input type for {self.consumer_id}")
+                raise KeyError(f"Wrong heat demand input type for {self.consumer_id}, key was {demand_type}")
 
     def __repr__(self):
         return f"Consumer(consumer_id={self.consumer_id}, A1={self.A1}, A2={self.A2}, Period1={self.Period1}, Period2={self.Period2}, phi1={self.phi1}, phi2={self.phi2})"

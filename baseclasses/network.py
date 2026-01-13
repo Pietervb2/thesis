@@ -372,7 +372,7 @@ class Network:
 
         mflow = result.x
         if not result.success:
-            raise RuntimeError(f"Newton-Raphson did not converge at timestep = {N}, message: {result.message}")
+            raise RuntimeError(f"The root finder did not converge at timestep = {N}, message: {result.message}")
         
         elif not (mflow > 0).all():
             raise RuntimeError('Newton-Raphson converges to a mass flow with negative values')

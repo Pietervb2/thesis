@@ -425,28 +425,28 @@ def model_network_Rutger():
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('60kPa Pump constant')
+    pump_data = read_pump_data('60kPa Pump curve')
     
     # Create network
-    net = Network("Network Rutger all valves open")
+    net = Network("Network Rutger actuating valves, Kvleak500")
 
-    heat_type1 = 'shower'
-    heat_type2 = 'shower'
-    start_time1 = 8 #h
-    start_time2 = 19 #h
+    heat_demand_type1 = ['shower']
+    heat_demand_type2 = ['shower']
+    start_time1 = np.linspace(8,8.4,10)
+    start_time2 = np.linspace(19,19.4,13) #h
 
     consumer_list = []
     for i in range(23):
         
-        if i <=9:
-            consumer = Consumer(f'Consumer {i+1}',heat_type1, start_time1)
+        if i == 9:
+            consumer = Consumer(f'Consumer {i+1}',heat_demand_type1, [start_time1[0]])
         else:
-            consumer = Consumer(f'Consumer {i+1}',heat_type2, start_time2)
+            consumer = Consumer(f'Consumer {i+1}',['nothing'], [start_time2[i-10]])
         consumer_list.append(consumer)
 
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
     # h_initial_list = np.linspace(0,1,len(consumer_list))
-    h_initial_list = np.ones(len(consumer_list)) # all open
+    h_initial_list = np.zeros(len(consumer_list)) # all closed
     
     network_builder(net, 
                     pipe_data_list,
@@ -914,6 +914,6 @@ def network_builder(net : Network,
     
 if __name__ == "__main__":
 
-    # model_network_Rutger()
+    model_network_Rutger()
     # test_Rutger_data()
-    model_step_7()
+    # model_step_7()

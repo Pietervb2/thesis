@@ -12,6 +12,6 @@
         "comment_Kp": "Proportional gain of the PI controller [-]",
         "Kp": 0.02,
         "comment_Ki": "Integral gain of the PI controller [-]",
-        "Ki": 1e-5
+        "Ki": 0.001
     }
 }
