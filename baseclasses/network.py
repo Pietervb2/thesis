@@ -2,6 +2,7 @@ from node import Node
 from pipe import Pipe
 from heatexchanger import HeatExchanger
 from pump import Pump
+from valve import Valve
 
 from scipy.optimize import root
 from typing import Union
@@ -64,8 +65,11 @@ class Network:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow, T_in = T_in)
             else:
                 pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)      
+
+        for valve in self.valves.values():
+            valve.initialize_valve(num_steps, dt)
         
-                ### Hydraulics
+        ### Hydraulics
 
         # Determine incidence and loop matrix
         self.build_incidence_matrix()
@@ -106,6 +110,7 @@ class Network:
             raise ValueError(f"{to_node} must exist in the network")
 
         delta_z, L = self.pipe_length(self.nodes[from_node], self.nodes[to_node])
+           
         pipe = Pipe(pipe_id, L, delta_z, pipe_data, hex_pipe)
 
         # pipe_id = self._next_pipe_id
@@ -121,6 +126,7 @@ class Network:
 
         in_node = self.nodes[to_node]
         in_node.connect_pipe_to_node(pipe_id, pipe, 'incoming') 
+        
 
         # self._next_pipe_id += 1
 
@@ -141,7 +147,7 @@ class Network:
         y = (self.nodes[from_node].y + self.nodes[to_node].y) / 2
         z = (self.nodes[from_node].z + self.nodes[to_node].z) / 2
 
-        hex = HeatExchanger(x, y, z, node_id, hex_data, h_initial, consumer)
+        hex = HeatExchanger(x, y, z, node_id, hex_data, consumer)
 
         # Attach pipes to the heat exchanger and the nodes
         pipe_in_id = f'Pipe {node_id.split()[-1]}.3'
@@ -152,6 +158,12 @@ class Network:
         
         self.add_pipe(pipe_in_id, from_node, node_id, pipe_data, hex_pipe = True) # this pipe will contain a valve controlled by HEX
         self.add_pipe(pipe_out_id, node_id, to_node, pipe_data, hex_pipe = True)  
+
+        # Create valve and couple it to the hex
+        valve_id = node_id.replace('Hex','Valve')
+        valve_data = hex_data[-3:]
+        valve = Valve(valve_id, pipe_in_id, valve_data, h_initial, hex=hex)
+        self.valves[valve_id] = valve
   
     def add_pump(self, pump_id : str, from_node : str, to_node : str, pipe_data : list, pump_data) -> None:
         """
@@ -182,6 +194,20 @@ class Network:
 
         in_node = self.nodes[to_node]
         in_node.connect_pipe_to_node(pump_id, pump, 'incoming') 
+
+    def add_overflow(self, overflow_id : str, from_node: str, to_node: str, pipe_data: list, valve_data : list, h_initial : float, node) -> None:
+        """
+        Add overflow valve at the top of the network.
+        """
+
+        if overflow_id in self.pipes.keys():
+            raise ValueError(f"Overflow valve with id {overflow_id} already exists in the network")
+
+        valve_id = 'Overflow valve'
+        overflow_valve = Valve(valve_id, overflow_id, valve_data, h_initial, node = node)
+        self.valves[valve_id] = overflow_valve
+
+        self.add_pipe(overflow_id, from_node, to_node, pipe_data)
 
     def build_incidence_matrix(self):
 
@@ -266,7 +292,6 @@ class Network:
             j = self.pipe_map[pipe_id]
             self.pump_coeff[j,:] = [pump.a, pump.b, pump.c]  # Indicate presence of pump in this pipe
             
-
         # Vector of pressure per HEX. Which will be mapped to the inlet pipe of the HEX.
         self.Kp_array = np.zeros(len(self.pipes))
         self.inv_Kv_array = np.zeros(len(self.pipes))
@@ -276,35 +301,74 @@ class Network:
             # Put pressure drop of HEX on the inlet pipe
             pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
             j = self.pipe_map[pipe_id]
-
             self.Kp_array[j] = hex_obj.Kp_rho_dp
-            self.inv_Kv_array[j] = 1/hex_obj.Kv[0] # Not necessary but for reverse engineering Rutger's data I left it here.
+        
+        for valve in self.valves.values():
+            j = self.pipe_map[valve.pipe_id]
+            self.inv_Kv_array[j] = 1/valve.Kv[0] # Not necessary but for reverse engineering Rutger's data I left it here.
 
     def update_valves(self,N : int):
         """
-        Build a boolean mask for pipes that are connected to a heat exchanger with an open valve.
+        Build a boolean mask for pipes that are connected to a heat exchanger with an open valve. 
+        And update valve positions
         """
         active_pipes = np.ones(len(self.pipes), dtype=bool)
-        flow_above = False # To keep risers when a valve above is open.        
-        for i,hex_obj in reversed((list(enumerate(self.hexs.values())))):
+        open_loop = []
+        flow_above = False # To keep risers when a valve above or the overflow is open.
 
-            if hex_obj.h[N] > 0: # NOTE add also a check for the bypass valve
-                flow_above = True
-                pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
-                j = self.pipe_map[pipe_id]
-                self.inv_Kv_array[j] = 1/hex_obj.Kv[N] 
-            else:
-                if flow_above: # Keep riser
-                    suffixes = (2, 3, 4, 5)
-                else: 
-                    suffixes = (1,2,3,4,5,6)
+        for i, valve in reversed((list(enumerate(self.valves.values())))):
+                
+                valve.update_valve(N)
+                if valve.h[N] > 0:
+                    flow_above = True
+                    j = self.pipe_map[valve.pipe_id]
+                    self.inv_Kv_array[j] = 1/valve.Kv[N]
+                    open_loop.append(i) 
 
-                pipe_ids = (f"Pipe {i+1}.{k}" for k in suffixes)
-                j = [self.pipe_map[pid] for pid in pipe_ids]
+                else:
+                    if 'Overflow' in valve.valve_id:
+                        suffixes = (1,2,3)
+                        pipe_ids = (f"Overflow {k}" for k in suffixes)
+                        j = [self.pipe_map[pid] for pid in pipe_ids]
+                        active_pipes[j] = False
+                    else:
+                        if flow_above: # Keep riser
+                            suffixes = (2, 3, 4, 5)
+                        else: 
+                            suffixes = (1,2,3,4,5,6)
 
-                active_pipes[j] = False
+                        pipe_ids = (f"Pipe {i+1}.{k}" for k in suffixes)
+                        j = [self.pipe_map[pid] for pid in pipe_ids]
+                        active_pipes[j] = False
 
-        return active_pipes
+        # # Check the overflow valve first
+        # if self.overflow.h[N] > 0:
+        #     flow_above = True
+        # else:
+        #     suffixes = (7,8,9)
+        #     pipe_ids = (f"Pipe {len(self.hexs)}.{k}" for k in suffixes)
+        #     j = [self.pipe_map[pid] for pid in pipe_ids]
+        #     active_pipes[j] = False
+        #     open_loop.append(len(self.hexs))  
+
+        # for i,hex_obj in reversed((list(enumerate(self.hexs.values())))):
+        #     if hex_obj.h[N] > 0: 
+        #         flow_above = True
+        #         pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
+        #         j = self.pipe_map[pipe_id]
+        #         self.inv_Kv_array[j] = 1/hex_obj.Kv[N] 
+        #         open_loop.append(i) # Store closed hex index for loop matrix reduction
+        #     else:
+        #         if flow_above: # Keep riser
+        #             suffixes = (2, 3, 4, 5)
+        #         else: 
+        #             suffixes = (1,2,3,4,5,6)
+
+        #         pipe_ids = (f"Pipe {i+1}.{k}" for k in suffixes)
+        #         j = [self.pipe_map[pid] for pid in pipe_ids]
+        #         active_pipes[j] = False
+            
+        return active_pipes, np.array(open_loop)
 
     def res(self, mflow) -> np.ndarray:
         """
@@ -313,25 +377,25 @@ class Network:
         F(mflow) = [continuity equations; loop head-loss equations] = 0
         """
         
-        incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
+        # incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
 
         # Continuity and loop head-loss equations
-        continuity = incidence_matrix_reduced @ mflow
+        continuity = self.incidence_matrix_active @ mflow
 
-        friction_vector = self.pressure_friction_vector + \
-                                self.Kp_array + \
-                                self.inv_Kv_array ** 2
+        # friction_vector = self.pressure_friction_vector + \
+        #                         self.Kp_array + \
+        #                         self.inv_Kv_array ** 2
 
-        head_loss  = self.loop_matrix_adjusted @ (friction_vector * np.abs(mflow)*mflow
-                                        + self.pressure_elevation_vector)
+        head_loss  = self.loop_matrix_active @ (self.friction_vector_active * np.abs(mflow)*mflow
+                                        + self.pressure_elevation_vector_active)
 
         # Pump contribution (only in loop equations)
-        self.pump_pressure_curve =  self.pump_coeff[:,0] * mflow**2 + \
-                                            self.pump_coeff[:,1] * mflow + \
-                                            self.pump_coeff[:,2]
+        self.pump_pressure_curve =  self.pump_coeff_active[:,0] * mflow**2 + \
+                                            self.pump_coeff_active[:,1] * mflow + \
+                                            self.pump_coeff_active[:,2]
         
         
-        pump_term = self.loop_matrix_adjusted @ self.pump_pressure_curve
+        pump_term = self.loop_matrix_active @ self.pump_pressure_curve
 
         # Full residual vector
         F = np.concatenate([continuity, head_loss - pump_term])
@@ -343,20 +407,20 @@ class Network:
         Jacobian matrix of the residual F(x) for Newton-Raphson method
         """
         
-        # Jacobian
-        incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
+        # # Jacobian
+        # incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
 
-        pressure_vector = self.pressure_friction_vector \
-                        + self.Kp_array \
-                        +  self.inv_Kv_array ** 2
+        # friction_vector = self.pressure_friction_vector \
+        #                 + self.Kp_array \
+        #                 +  self.inv_Kv_array ** 2
         
-        pump_curve_derivative = 2 * self.pump_coeff[:,0] * mflow + self.pump_coeff[:,1]
-        pump_term_derivative = self.loop_matrix_adjusted @ np.diag(pump_curve_derivative)
+        pump_curve_derivative = 2 * self.pump_coeff_active[:,0] * mflow + self.pump_coeff_active[:,1]
+        pump_term_derivative = self.loop_matrix_active @ np.diag(pump_curve_derivative)
 
         # d/dmflow |mflow|*mflow = |mflow| + mflow * mflow / |mflow|
         deriv = np.abs(mflow) + mflow * mflow/np.abs(mflow)
-        J = np.vstack([incidence_matrix_reduced, 
-                       self.loop_matrix_adjusted @ np.diag(2 * pressure_vector * deriv) - pump_term_derivative]) 
+        J = np.vstack([self.incidence_matrix_active, 
+                       self.loop_matrix_active @ np.diag(2 * self.friction_vector_active * deriv) - pump_term_derivative]) 
         
         return J
 
@@ -374,7 +438,6 @@ class Network:
         6. Update mass flows: Q = Q + dQ
 
         """
-        
         pipe_ids = np.array(list(self.pipes.keys()))
         p = len(pipe_ids)
 
@@ -385,26 +448,52 @@ class Network:
         else:
             mflow0 = self.mflow_all[:,N-1]
 
-        active_mask = self.update_valves(N)
+        active_mask, open_hex = self.update_valves(N)
 
+        # In case all valves are closed, mflow is simply zero so skip hydraulic calculation
+        if open_hex.size == 0:
+            return
+
+        # Reduce and create active incidence matrix
+        self.incidence_matrix_red = self.incidence_matrix[1:,:]
+        incidence_matrix_active = self.incidence_matrix_red[:, active_mask]
+        self.incidence_matrix_active = incidence_matrix_active[~np.all(incidence_matrix_active == 0, axis=1), :]  # Remove zero rows (disconnected nodes)
+   
+        # Loop matrix active
+        L_active = self.loop_matrix[:, active_mask]
+        self.loop_matrix_active = L_active[open_hex[::-1], :] # reverse of open hex as it is then in ascending order
+
+        # Adjust all vectors to active pipes
+        friction_vector = self.pressure_friction_vector + \
+                        self.Kp_array + \
+                        self.inv_Kv_array ** 2
+        self.friction_vector_active = friction_vector[active_mask]
+        
+        self.pressure_elevation_vector_active = self.pressure_elevation_vector[active_mask]
+        self.pump_coeff_active = self.pump_coeff[active_mask, :]
+        mflow0_active = mflow0[active_mask]
+        
         # Performs Newton-Raphson using scipy root function
-        result = root(self.res, mflow0, jac = self.jac, method = 'hybr')
+        result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr')
+        print("consumer id:", id(self.hexs['Hex 1'].consumer), "N:", N, "Tc_out:", self.hexs['Hex 1'].consumer.Tc_out[:10])
+
+        # print()
 
         # Extract results
-
-        mflow = result.x
+        mflow_active = result.x
+        # mflow = mflow0
         if not result.success:
             raise RuntimeError(f"The root finder did not converge at timestep = {N}, message: {result.message}")
         
-        elif not (mflow > 0).all():
+        elif not (mflow_active > 0).all():
             raise RuntimeError(f'Newton-Raphson converges to a mass flow with negative values at timestep {N}')
         
-        self.mflow_all[:,N] = mflow
+        self.mflow_all[active_mask,N] = mflow_active
 
         # Assign flows to the pipes for timestep N
-        for j, pipe_id in enumerate(pipe_ids):
+        for j, pipe_id in enumerate(pipe_ids[active_mask]):
             pipe = self.pipes[pipe_id]['pipe_instance']
-            pipe.set_mflow(mflow[j],N)
+            pipe.set_mflow(mflow_active[j],N)
             pipe.save_dp_friction(N)
 
     def set_T_network(self, T_ambt : float, N : int, no_cap = False):

@@ -9,7 +9,7 @@ class Pipe:
             pipe_length : float, 
             delta_z : float,
             pipe_data : list[float],
-            hex_pipe : bool = False
+            hex_pipe : bool = False,
             ):
         """
         Initialize pipe.
@@ -103,7 +103,7 @@ class Pipe:
         self.T_pipe = np.ones(self.num_steps) * T_init_pipe  
 
         # Initialize flow array without history to save the eventual flow and temperature in the pipe
-        self.mflow = np.ones(self.num_steps)
+        self.mflow = np.zeros(self.num_steps)
         self.dp_friction_array = np.zeros(self.num_steps)
 
         # Save average time delay in pipe
@@ -205,9 +205,7 @@ class Pipe:
 
                 decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs) ) # NOTE: I used here the outer cross section   
                 self.T[N] = T_ambt + (ref_T - T_ambt) * decay   
-       
-
-
+      
     def average_delay_bnode(self,n,m,R,S,mflow_ex,N):
         """    
         Source: Maurer. J, Comparison of discrete dynamic pipeline models for operational optimization of District Heating Networks. 2021
@@ -243,19 +241,15 @@ class Pipe:
         Haaland method to determine frictor factor f
 
         #TODO: update Re per sim with flow velocity based calculation, but could lead to changing whole equation. 
-        """
-
-        # Setting it to 0 creates problems for the Jacobian solving with Newton - Raphson
+        """      
+        # Pipe pressure loss over HEX already in Kp term of HEX. And setting to 0 gives problem for the jacobian
         if self.hex_pipe:
             return 0.1
         
         D = self.r_inner*2
         Re = 10e3 
         log_term = ((self.epsilon/D)/3.7)**1.11 + (6.9/Re)
-        f = (1 / (-1.8 * np.log10(log_term)))**2
-
-        # print(f'Pipe f {f}')
-       
+        f = (1 / (-1.8 * np.log10(log_term)))**2       
         return 8 * f * self.L / (np.pi ** 2 * D ** 5 * self.rho_water)                                                    
 
     def pressure_elevation(self):
@@ -287,7 +281,7 @@ class Pipe:
     def save_dp_friction(self,N):
 
         """
-        Set the frictional pressure drop at timestep N
+        Total pressure drop over the pipe due to friction and valves.
         """
 
         self.dp_friction_array[N] = self.pressure_friction() * self.mflow_extended[N + self.hist_len]**2

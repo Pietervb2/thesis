@@ -52,20 +52,23 @@ class Node:
 
         sum_T_flow = 0
         sum_m_inflow = 0
+        sum_T = 0
         for _, pipe in self.pipes_in.items():
             
             m_inflow = pipe.get_mflow(N)
             sum_T_flow += pipe.T[N] * m_inflow
             sum_m_inflow += m_inflow
-        try:    
+
+            sum_T += pipe.T[N]
+
+        if sum_m_inflow == 0:
+            self.T[N] = sum_T/len(self.pipes_in)            
+        else:   
             self.T[N] = sum_T_flow / sum_m_inflow # set the node temperature
 
             # Set temperature per pipe
             for _, pipe in self.pipes_out.items():
                 pipe.set_T_in(self.T[N], N)
-
-        except(ZeroDivisionError):
-            print(f"No ingoing mass flow in node  = {self.node_id}")
             
 
     def get_T(self, N):

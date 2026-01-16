@@ -435,42 +435,62 @@ class Simulation:
         HEX_data = {}
         hex_dp_data = {}
         hex_valve_data = {}
+        overflow_data = {}
 
         hex_folder = os.path.join(self.folder, 'hex_consumer_data')
         if not os.path.exists(hex_folder):
             os.makedirs(hex_folder)
 
-        for hex_key in network.hexs.keys():
+        for hexs in network.hexs.values():
+            test = hexs.consumer
+
+        for valve_key in network.valves.keys():
             
-            hex = network.hexs[hex_key]
+            valve = network.valves[valve_key]
+            hex_key = valve_key.replace("Valve", "Hex")
 
-            HEX_data['Tc_in'] = hex.consumer.Tc_in
-            HEX_data['Th_in'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.3'].T
-            HEX_data['Tc_out'] = hex.consumer.Tc_out
-            HEX_data['Th_out'] = hex.T
-            HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.3'].mflow
-            HEX_data['mflow_sec'] = hex.consumer.mflow           
-            HEX_data['Q_d'] = hex.consumer.Q_d
-            HEX_data['Q_supply'] = hex.consumer.Q_supply
-            HEX_data['h'] = hex.h
-            HEX_data['Integral term'] = hex.I_array
+            if valve.hex is not None:
+
+                hex = valve.hex
+                
+                HEX_data['Tc_in'] = hex.consumer.Tc_in
+                HEX_data['Th_in'] = hex.pipes_in[f'Pipe {valve_key.split()[-1]}.3'].T
+                HEX_data['Tc_out'] = hex.consumer.Tc_out
+                HEX_data['Th_out'] = hex.T
+                HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {valve_key.split()[-1]}.3'].mflow
+                HEX_data['mflow_sec'] = hex.consumer.mflow           
+                HEX_data['Q_d'] = hex.consumer.Q_d
+                HEX_data['Q_supply'] = hex.consumer.Q_supply
+                HEX_data['h'] = valve.h
+                HEX_data['Integral term'] = valve.I_array
 
 
-            hex_mflow = hex.pipes_in[f'Pipe {hex_key.split()[-1]}.3'].mflow
-            hex_dp_data[f'{hex_key}'] = (hex.Kp_rho_dp * hex_mflow**2).astype(int)
+                hex_mflow = hex.pipes_in[f'Pipe {valve_key.split()[-1]}.3'].mflow
+                hex_dp_data[f'{valve_key}'] = (hex.Kp_rho_dp * hex_mflow**2).astype(int)
 
-            hex_valve_data[f'Kv {hex_key}'] = hex.Kv
-            hex_valve_data[f'h {hex_key}'] = hex.h
-            hex_valve_data[f'dP {hex_key}'] = ((hex_mflow/hex.Kv) ** 2).astype(int)  
+                hex_valve_data[f'Kv {valve_key}'] = valve.Kv
+                hex_valve_data[f'h {valve_key}'] = valve.h
 
-            df_hex = pd.DataFrame(HEX_data)
-            df_hex.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}.csv'), index = False)
-       
-        df_hex_dp = pd.DataFrame(hex_dp_data)
-        df_hex_dp.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_dp.csv'), index = False)
+                dp = np.full_like(hex_mflow, np.nan, dtype=float)
+                mask = valve.Kv != 0
+                dp[mask] = (hex_mflow[mask] / valve.Kv[mask])**2
+                hex_valve_data[f'dP {valve_key}'] = dp
 
-        df_hex_valve_data = pd.DataFrame(hex_valve_data)
-        df_hex_valve_data.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_valve_data.csv'), index = False)
+                df_hex = pd.DataFrame(HEX_data)
+                df_hex.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}.csv'), index = False)
+                   
+            else:
+                overflow_data['Kv'] = valve.Kv
+                overflow_data['h'] = valve.h
+                overflow_data['T'] = valve.node.T
 
+            df_hex_dp = pd.DataFrame(hex_dp_data)
+            df_hex_dp.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_dp.csv'), index = False)
+
+            df_hex_valve_data = pd.DataFrame(hex_valve_data)
+            df_hex_valve_data.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_valve_data.csv'), index = False)
+
+            df_overflow = pd.DataFrame(hex_dp_data)
+            df_overflow.to_csv(os.path.join(self.folder,'hex_consumer_data','overflow.csv'), index = False)
 if __name__ == "__main__":
     pass 

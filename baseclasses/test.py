@@ -547,16 +547,18 @@ def test_NR():
     pipe_data_DN20 = read_pipe_data('DN20')
     hex_data = read_hex_data('Standard hex constants')
     pump_data = read_pump_data('20kPa Pump constant')
+    overflow_data = read_overflow_data('Overflow')
     
     # Create network
-    net = Network("Test closing valves no overflow")
+    net = Network("Test closing valves with overflow")
 
-    number_consumers = 3
+    overflow_pos = 0
+    number_consumers = 2
     pipe_data_list = [pipe_data_DN40] * number_consumers
-    h_initial_list = [1,0,1]
+    h_initial_list = [0,1] + [overflow_pos]
 
     heat_type1 = ['nothing']
-    heat_type2 = ['nothing']
+    heat_type2 = ['shower']
     start_time1 = [8] #h
     start_time2 = [19] #h
 
@@ -564,16 +566,17 @@ def test_NR():
     consumer2 = Consumer('Consumer 2',heat_type2, start_time2)
     consumer3 = Consumer('Consumer 3',heat_type2, start_time2)
 
-    consumer_list = [consumer1, consumer2, consumer3]
+    consumer_list = [consumer1,consumer2]
 
     network_builder(net, 
                     pipe_data_list, 
                     pipe_data_DN20, 
                     hex_data,
                     h_initial_list, 
-                    pump_data, 
+                    pump_data,
                     consumer_list, 
-                    use_overflow = False)
+                    overflow_data = overflow_data,
+                    use_overflow = True)
 
     # Simulation parameters
     dt = 60 # s
@@ -808,7 +811,22 @@ def read_pump_data(pump_data_set):
     pump_data = [a,b,c]
 
     return pump_data
-    
+
+def read_overflow_data(overflow_data_set):
+
+    thesis_dir = os.path.dirname(os.path.abspath(__file__))
+    constants_file = os.path.join(os.path.dirname(thesis_dir),'constants', 'constants_overflow.json')
+
+    with open(constants_file) as f:
+        constants = json.load(f)
+
+    K_vs = constants[overflow_data_set]['K_vs'] # 
+    T_set = constants[overflow_data_set]['T_set'] # 
+
+    overflow_data = [K_vs, T_set]
+
+    return overflow_data
+
 def generate_input_network(temp_type, total_time, dt):
 
     """
@@ -839,6 +857,7 @@ def network_builder(net : Network,
                     h_initial_list, 
                     pump_data,
                     consumer_list,
+                    overflow_data = None,
                     use_overflow = True):
         
         # Add heat exchangers and connecting pipes based on number of consumers
@@ -910,9 +929,9 @@ def network_builder(net : Network,
             net.add_node(overflow_node_supply, 0, 0, 3*i+1)
             net.add_node(overflow_node_return, 1, 0, 3*i+1)
 
-            net.add_pipe(f'Pipe {i}.7' , supply_node, overflow_node_supply, pipe_data)
-            net.add_pipe(f'Pipe {i}.8', overflow_node_supply, overflow_node_return, pipe_data)
-            net.add_pipe(f'Pipe {i}.9', overflow_node_return, return_node, pipe_data)
+            net.add_overflow(f'Overflow 1' , supply_node, overflow_node_supply, pipe_data, overflow_data, h_initial_list[-1], net.nodes[overflow_node_supply])
+            net.add_pipe(f'Overflow 2', overflow_node_supply, overflow_node_return, pipe_data)
+            net.add_pipe(f'Overflow 3', overflow_node_return, return_node, pipe_data)
 
         return net
     

@@ -10,7 +10,6 @@ class HeatExchanger(Node):
                  z,
                  hex_id: str,
                  hex_data: list,
-                 h_initial: float,
                  consumer: object):
         """"
         Args:
@@ -20,7 +19,6 @@ class HeatExchanger(Node):
             - Kp_rho_dp: pressure loss coefficient [-]
             - Kvs: hydraulic conductivity of fully open valve [m3/h/bar^0.5]
             - Kv0: hydraulic conductivity of closed valve [m3/h/bar^0.5]
-            - h_initial: initial valve position (0-1) [-]
             - Kp: Proportional gain of the PI controller [-]
             - Ki: Integral gain of the PI controller [-]
 
@@ -32,7 +30,6 @@ class HeatExchanger(Node):
         self.Kvs = hex_data[3]
         self.Kp = hex_data[4] 
         self.Ki = hex_data[5] 
-        self.h_initial = h_initial # Initial position of valve
 
         # Consumer connected to the heat exchanger
         self.consumer = consumer
@@ -45,15 +42,7 @@ class HeatExchanger(Node):
 
         super().initialize_node(num_steps, T_init, dt)
         self.consumer.initialize_consumer(num_steps, dt)
-
-        self.h = np.ones(num_steps)*self.h_initial
-        self.Kv = np.ones(num_steps)*self.equal_percentage_valve(self.h_initial)
-
-        self.dt = dt # For PI controller
-        self.I_array = np.zeros(num_steps)
-        self.I = 0  # Integral term for PI controller
-
-    
+   
     def set_T(self, N):
         """
         Overriding function in Node Class. 
@@ -62,16 +51,14 @@ class HeatExchanger(Node):
         """         
 
         Tc_out, Th_out = HeatExchanger.NTU_method(self,N)
-        
-        for _, pipe in self.pipes_in.items():
             
-            self.T[N] = Th_out
+        self.T[N] = Th_out
+        if self.node_id == 'Hex 1':
+            print("consumer id:", id(self.consumer), "N:", N, "Tc_out:", self.consumer.Tc_out[:10])
 
-            # Set temperature per pipe
-            for _, pipe in self.pipes_out.items():
-                pipe.set_T_in(self.T[N], N)
-
-        self.update_valve(N)
+        # Set temperature per pipe
+        for _, pipe_in in self.pipes_out.items():
+            pipe_in.set_T_in(self.T[N], N)
 
     def NTU_method(self,N):
 
@@ -121,61 +108,16 @@ class HeatExchanger(Node):
         Tc_out = Tc_in + Q / Cc
         Th_out = Th_in - Q / Ch
 
+        Q_supply = (Tc_out - Tc_in) * mflow_c * pipe.c_water
         self.consumer.Tc_out[N] = Tc_out
-        self.consumer.Q_supply[N] = (Tc_out - Tc_in) * mflow_c * pipe.c_water
+        self.consumer.Q_supply[N] = Q_supply
+
+        # self.consumer.set_Tc_out(Tc_out,N)
+        # self.consumer.set_Q_supply(Q_supply,N)
+
+        print("consumer id:", id(self.consumer), "N:", N, "Tc_out:", self.consumer.Tc_out[N])
+
 
         return Tc_out, Th_out
       
-    def equal_percentage_valve(self, h):
-        """
-        Returns Kv value of the valve following the formula for an equal percentage valve, based on the valve displacement.
-        For valve displacement lower than h_star Kv does not follow the standard form of the function. It becomes unpredictable. For this region we simply assume a linear behavior.
-        """        
-        Kv0 = self.Kvs/50
-        Kvleak = self.Kvs/500
-        h_star = 0.05
-
-        if h < h_star:
-            Kv_star = (self.Kvs/Kv0) ** (h_star-1) * self.Kvs
-            Kv = Kvleak + h*(Kv_star - Kvleak)/h_star
-        else:
-            Kv = (self.Kvs/Kv0) ** (h-1) * self.Kvs
-        return Kv
     
-    def update_valve(self, N):
-        """
-        Update the valve position based on the consumer outlet temperature using a PI controller.
-        """
-
-        if N < len(self.h)-1: # to prevent index out of range
-
-            # Only update valve position if there is flow
-            if self.consumer.mflow[N] > 0:
-                
-                # implement PI controller to determine the valve lift
-
-                T_set_point = 60 # Temperature set point for the tapwater outlet [C]
-                dT = (T_set_point - self.consumer.Tc_out[N])
-                
-                self.I += dT * self.dt
-                h = self.Kp * dT + self.Ki * self.I
-                
-                h = min(1,max(0,h)) # As h is scaled to 0-1
-
-                # Anti-windup 
-                if (h == 0 and dT < 0) or (h == 1 and dT > 0):
-                    self.I -= dT * self.dt  # unwind integral
-
-                Kv = self.equal_percentage_valve(h)
-
-                self.h[N+1] = h
-                self.Kv[N+1] = Kv
-                self.I_array[N] = self.I
-            else:
-                # no change in valve position
-                self.h[N+1] = 0
-                self.Kv[N+1] = 0
-                
-
-
-
