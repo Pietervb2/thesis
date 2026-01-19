@@ -53,9 +53,7 @@ class HeatExchanger(Node):
         Tc_out, Th_out = HeatExchanger.NTU_method(self,N)
             
         self.T[N] = Th_out
-        if self.node_id == 'Hex 1':
-            print("consumer id:", id(self.consumer), "N:", N, "Tc_out:", self.consumer.Tc_out[:10])
-
+ 
         # Set temperature per pipe
         for _, pipe_in in self.pipes_out.items():
             pipe_in.set_T_in(self.T[N], N)
@@ -111,12 +109,6 @@ class HeatExchanger(Node):
         Q_supply = (Tc_out - Tc_in) * mflow_c * pipe.c_water
         self.consumer.Tc_out[N] = Tc_out
         self.consumer.Q_supply[N] = Q_supply
-
-        # self.consumer.set_Tc_out(Tc_out,N)
-        # self.consumer.set_Q_supply(Q_supply,N)
-
-        print("consumer id:", id(self.consumer), "N:", N, "Tc_out:", self.consumer.Tc_out[N])
-
 
         return Tc_out, Th_out
       

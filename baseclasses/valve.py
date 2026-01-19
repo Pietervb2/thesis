@@ -108,8 +108,8 @@ class Valve:
                 #     self.h[N+1] = 0
                 #     self.Kv[N+1] = 0
                 
-                self.h[N+1] = 0
-                self.Kv[N+1] = 0
+                self.h[N+1] = 1
+                self.Kv[N+1] = self.Kvs
 
 
                 

@@ -441,9 +441,6 @@ class Simulation:
         if not os.path.exists(hex_folder):
             os.makedirs(hex_folder)
 
-        for hexs in network.hexs.values():
-            test = hexs.consumer
-
         for valve_key in network.valves.keys():
             
             valve = network.valves[valve_key]
@@ -484,13 +481,15 @@ class Simulation:
                 overflow_data['h'] = valve.h
                 overflow_data['T'] = valve.node.T
 
+                df_overflow = pd.DataFrame(overflow_data)
+                df_overflow.to_csv(os.path.join(self.folder,'hex_consumer_data','overflow.csv'), index = False)
+
             df_hex_dp = pd.DataFrame(hex_dp_data)
             df_hex_dp.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_dp.csv'), index = False)
 
             df_hex_valve_data = pd.DataFrame(hex_valve_data)
             df_hex_valve_data.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_valve_data.csv'), index = False)
 
-            df_overflow = pd.DataFrame(hex_dp_data)
-            df_overflow.to_csv(os.path.join(self.folder,'hex_consumer_data','overflow.csv'), index = False)
+
 if __name__ == "__main__":
     pass 

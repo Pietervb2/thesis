@@ -72,8 +72,7 @@ class Network:
         ### Hydraulics
 
         # Determine incidence and loop matrix
-        self.build_incidence_matrix()
-        self.build_loop_matrix_from_incidence()
+        self.build_incidence_matrix_and_graph()
         self.build_help_vectors_NR()
 
         # Big matrices for faster access during simulation
@@ -209,7 +208,7 @@ class Network:
 
         self.add_pipe(overflow_id, from_node, to_node, pipe_data)
 
-    def build_incidence_matrix(self):
+    def build_incidence_matrix_and_graph(self):
 
         """
         Finding incidence matrix of the graph. Needed for Newton-Raphson implementation. 
@@ -232,13 +231,8 @@ class Network:
 
             self.incidence_matrix[self.node_map[from_node], self.pipe_map[pipe_id]] = -1
             self.incidence_matrix[self.node_map[to_node], self.pipe_map[pipe_id]] = 1
-    
-    def build_loop_matrix_from_incidence(self):
-        """
-        Obtain the loop matrix from the incidence matrix using networkx.
-        """
-
-        G = nx.DiGraph()
+        
+        self.G = nx.DiGraph()
 
         node_ids = list(self.nodes.keys())
         pipe_ids = list(self.pipes.keys())
@@ -250,31 +244,51 @@ class Network:
             # incidence matrix column: exactly +1 / −1 at endpoints
             tail = node_ids[np.where(A[:, e] == -1)[0][0]]
             head = node_ids[np.where(A[:, e] == +1)[0][0]]
-            G.add_edge(tail, head, id=edge_id, col=e)
+            self.G.add_edge(tail, head, id=edge_id, col=e)
 
+    def build_loop_matrix(self, graph):
+        """
+        Obtain the loop matrix from the graph of the network
+        """
         # compute all fundamental cycles
-        cycles = nx.cycle_basis(G.to_undirected())
-        cycles = sorted(cycles,key=len) # now it has the same order as the HEX
-
+        cycles = nx.cycle_basis(graph.to_undirected())
+       
         # loop matrix
-        self.loop_matrix = np.zeros((len(cycles), len(pipe_ids)))
+        self.loop_matrix_active = np.zeros((len(cycles), graph.number_of_edges()))
+
+        # Order of columns is important for the loop matrix as the other vectors are also scaled by the mask.
+        # So I force the original order of how the pipes are added on the loop matrix
+
+        list_of_edges = []
+        for u, v, data in graph.edges(data=True):
+            pipe_id = data["id"]
+            j = self.pipe_map[pipe_id]
+            list_of_edges.append((j,pipe_id))
+        
+        ordered_edges = sorted(list_of_edges)
+
+        pipe_to_index = {}
+        for idx in range(len(ordered_edges)):
+            edge = ordered_edges[idx][1]
+            pipe_to_index[edge] = idx
 
         for i, cycle in enumerate(cycles):
             # convert cycle (list of nodes) into list of directed edges
             for u, v in zip(cycle, cycle[1:] + [cycle[0]]):
-                if G.has_edge(u, v):      # aligned edge
-                    e = G[u][v]['col']
-                    self.loop_matrix[i, e] = +1
-                elif G.has_edge(v, u):    # opposite direction edge, but set it to +1 as all directions are fixed
-                    e = G[v][u]['col']
-                    self.loop_matrix[i, e] = +1
+                if graph.has_edge(u, v):      # aligned edge
+                    edge_id = graph[u][v]['id']
+                    e = pipe_to_index[edge_id]
+                    self.loop_matrix_active[i, e] = +1
+                elif graph.has_edge(v, u):    # opposite direction edge, but set it to +1 as all directions are fixed
+                    edge_id = graph[v][u]['id']
+                    e = pipe_to_index[edge_id]
+                    self.loop_matrix_active[i, e] = +1
         
     def build_help_vectors_NR(self):
 
         """
         Build head difference vectors for friction and elevation per pipe. And pump vector.
-        """
-    
+        """    
         self.pressure_friction_vector = np.zeros(len(self.pipes))
         self.pressure_elevation_vector = np.zeros(len(self.pipes))
        
@@ -286,8 +300,7 @@ class Network:
 
         # dict of pump positions per pipe and its curve coeff
         self.pump_coeff = np.zeros((len(self.pipes),3))
-        for pump in self.pumps.values():
-            
+        for pump in self.pumps.values():           
             pipe_id = pump.pipe_id
             j = self.pipe_map[pipe_id]
             self.pump_coeff[j,:] = [pump.a, pump.b, pump.c]  # Indicate presence of pump in this pipe
@@ -312,63 +325,38 @@ class Network:
         Build a boolean mask for pipes that are connected to a heat exchanger with an open valve. 
         And update valve positions
         """
-        active_pipes = np.ones(len(self.pipes), dtype=bool)
-        open_loop = []
-        flow_above = False # To keep risers when a valve above or the overflow is open.
-
-        for i, valve in reversed((list(enumerate(self.valves.values())))):
-                
-                valve.update_valve(N)
-                if valve.h[N] > 0:
-                    flow_above = True
-                    j = self.pipe_map[valve.pipe_id]
-                    self.inv_Kv_array[j] = 1/valve.Kv[N]
-                    open_loop.append(i) 
-
-                else:
-                    if 'Overflow' in valve.valve_id:
-                        suffixes = (1,2,3)
-                        pipe_ids = (f"Overflow {k}" for k in suffixes)
-                        j = [self.pipe_map[pid] for pid in pipe_ids]
-                        active_pipes[j] = False
-                    else:
-                        if flow_above: # Keep riser
-                            suffixes = (2, 3, 4, 5)
-                        else: 
-                            suffixes = (1,2,3,4,5,6)
-
-                        pipe_ids = (f"Pipe {i+1}.{k}" for k in suffixes)
-                        j = [self.pipe_map[pid] for pid in pipe_ids]
-                        active_pipes[j] = False
-
-        # # Check the overflow valve first
-        # if self.overflow.h[N] > 0:
-        #     flow_above = True
-        # else:
-        #     suffixes = (7,8,9)
-        #     pipe_ids = (f"Pipe {len(self.hexs)}.{k}" for k in suffixes)
-        #     j = [self.pipe_map[pid] for pid in pipe_ids]
-        #     active_pipes[j] = False
-        #     open_loop.append(len(self.hexs))  
-
-        # for i,hex_obj in reversed((list(enumerate(self.hexs.values())))):
-        #     if hex_obj.h[N] > 0: 
-        #         flow_above = True
-        #         pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
-        #         j = self.pipe_map[pipe_id]
-        #         self.inv_Kv_array[j] = 1/hex_obj.Kv[N] 
-        #         open_loop.append(i) # Store closed hex index for loop matrix reduction
-        #     else:
-        #         if flow_above: # Keep riser
-        #             suffixes = (2, 3, 4, 5)
-        #         else: 
-        #             suffixes = (1,2,3,4,5,6)
-
-        #         pipe_ids = (f"Pipe {i+1}.{k}" for k in suffixes)
-        #         j = [self.pipe_map[pid] for pid in pipe_ids]
-        #         active_pipes[j] = False
+        active_graph = self.G.copy()
+        for valve in self.valves.values():
             
-        return active_pipes, np.array(open_loop)
+            valve.update_valve(N)
+            if valve.h[N] > 0:
+                j = self.pipe_map[valve.pipe_id]
+                self.inv_Kv_array[j] = 1/valve.Kv[N]
+            else:
+                if 'Overflow' in valve.valve_id:
+                    pipe_id = valve.pipe_id
+                else:
+                    pipe_id = valve.pipe_id
+                    base, _ = pipe_id.split(".", 1)
+                    pipe_id = f"{base}.2"
+
+                from_node = self.pipes[pipe_id]['from']
+                to_node = self.pipes[pipe_id]['to']
+                active_graph.remove_edge(from_node,to_node)
+
+        source_node = 'Node 1.1'
+        reachable = nx.descendants(active_graph, source_node) | {source_node}
+        unreachable = set(active_graph.nodes()) - reachable
+        active_graph.remove_nodes_from(unreachable)
+
+        active_mask = np.zeros(len(self.pipes), dtype=bool)
+        edge_ids = [data["id"] for _, _, data in active_graph.edges(data=True)]
+
+        for edge_id in edge_ids:
+            j = self.pipe_map[edge_id]
+            active_mask[j] = True
+            
+        return active_graph, active_mask
 
     def res(self, mflow) -> np.ndarray:
         """
@@ -376,15 +364,8 @@ class Network:
 
         F(mflow) = [continuity equations; loop head-loss equations] = 0
         """
-        
-        # incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
-
         # Continuity and loop head-loss equations
         continuity = self.incidence_matrix_active @ mflow
-
-        # friction_vector = self.pressure_friction_vector + \
-        #                         self.Kp_array + \
-        #                         self.inv_Kv_array ** 2
 
         head_loss  = self.loop_matrix_active @ (self.friction_vector_active * np.abs(mflow)*mflow
                                         + self.pressure_elevation_vector_active)
@@ -405,15 +386,7 @@ class Network:
     def jac(self, mflow) -> np.ndarray:
         """
         Jacobian matrix of the residual F(x) for Newton-Raphson method
-        """
-        
-        # # Jacobian
-        # incidence_matrix_reduced = self.incidence_matrix[1:,:]  # Remove first row to account for reference node
-
-        # friction_vector = self.pressure_friction_vector \
-        #                 + self.Kp_array \
-        #                 +  self.inv_Kv_array ** 2
-        
+        """       
         pump_curve_derivative = 2 * self.pump_coeff_active[:,0] * mflow + self.pump_coeff_active[:,1]
         pump_term_derivative = self.loop_matrix_active @ np.diag(pump_curve_derivative)
 
@@ -443,15 +416,16 @@ class Network:
 
         # Initial guess for the mflows in the pipes
         mflow0 = np.zeros(p)
-        if N == 0:
+        if N == 0 or self.loop_matrix_active.shape[0] == 0: # As root doesn't solve for initial guess of zero, we check previous loop matrix
             mflow0[:] = 0.1
         else:
-            mflow0 = self.mflow_all[:,N-1]
+            mflow0 = self.mflow_all[:,N-1] + np.ones(p)*0.01 # 0.01 added as otherwise the solver doesn't converge
 
-        active_mask, open_hex = self.update_valves(N)
-
+        active_graph, active_mask = self.update_valves(N)
+        self.build_loop_matrix(active_graph)
+        
         # In case all valves are closed, mflow is simply zero so skip hydraulic calculation
-        if open_hex.size == 0:
+        if self.loop_matrix_active.shape[0] == 0:
             return
 
         # Reduce and create active incidence matrix
@@ -459,10 +433,6 @@ class Network:
         incidence_matrix_active = self.incidence_matrix_red[:, active_mask]
         self.incidence_matrix_active = incidence_matrix_active[~np.all(incidence_matrix_active == 0, axis=1), :]  # Remove zero rows (disconnected nodes)
    
-        # Loop matrix active
-        L_active = self.loop_matrix[:, active_mask]
-        self.loop_matrix_active = L_active[open_hex[::-1], :] # reverse of open hex as it is then in ascending order
-
         # Adjust all vectors to active pipes
         friction_vector = self.pressure_friction_vector + \
                         self.Kp_array + \
@@ -472,16 +442,12 @@ class Network:
         self.pressure_elevation_vector_active = self.pressure_elevation_vector[active_mask]
         self.pump_coeff_active = self.pump_coeff[active_mask, :]
         mflow0_active = mflow0[active_mask]
-        
+
         # Performs Newton-Raphson using scipy root function
         result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr')
-        print("consumer id:", id(self.hexs['Hex 1'].consumer), "N:", N, "Tc_out:", self.hexs['Hex 1'].consumer.Tc_out[:10])
-
-        # print()
 
         # Extract results
         mflow_active = result.x
-        # mflow = mflow0
         if not result.success:
             raise RuntimeError(f"The root finder did not converge at timestep = {N}, message: {result.message}")
         

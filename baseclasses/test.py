@@ -426,7 +426,9 @@ def model_network_Rutger():
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('60kPa Pump curve')
+    pump_data = read_pump_data('60kPa Pump constant')
+    overflow_data = read_overflow_data('Overflow')
+
     
     # Create network
     net = Network("Network Rutger actuating valves, no Kvleak")
@@ -438,16 +440,18 @@ def model_network_Rutger():
 
     consumer_list = []
     for i in range(23):
-        
-        if i == 9:
-            consumer = Consumer(f'Consumer {i+1}',heat_demand_type1, [start_time1[0]])
+        # consumer = Consumer(f'Consumer {i+1}',['shower'], [start_time1[8]])
+        if i<=9:
+            consumer = Consumer(f'Consumer {i+1}',heat_demand_type1, [start_time1[i]])
         else:
-            consumer = Consumer(f'Consumer {i+1}',['nothing'], [start_time2[i-10]])
+            consumer = Consumer(f'Consumer {i+1}',heat_demand_type2, [start_time2[i-13]])
+
         consumer_list.append(consumer)
 
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
-    # h_initial_list = np.linspace(0,1,len(consumer_list))
-    h_initial_list = np.zeros(len(consumer_list)) # all closed
+
+    overflow_pos = 1
+    h_initial_list = [0]*23 + [overflow_pos] # all closed
     
     network_builder(net, 
                     pipe_data_list,
@@ -456,7 +460,8 @@ def model_network_Rutger():
                     h_initial_list, 
                     pump_data, 
                     consumer_list,
-                    use_overflow = False)
+                    overflow_data = overflow_data,
+                    use_overflow = True)
 
     # Simulation parameters
     dt = 60 # s
@@ -552,21 +557,20 @@ def test_NR():
     # Create network
     net = Network("Test closing valves with overflow")
 
-    overflow_pos = 0
-    number_consumers = 2
+    overflow_pos = 1
+    number_consumers = 20
     pipe_data_list = [pipe_data_DN40] * number_consumers
-    h_initial_list = [0,1] + [overflow_pos]
+    h_initial_list = [0,1]*10 + [overflow_pos]
 
-    heat_type1 = ['nothing']
-    heat_type2 = ['shower']
+    heat_type1 = ['constant']
+    heat_type2 = ['nothing']
     start_time1 = [8] #h
     start_time2 = [19] #h
 
     consumer1 = Consumer('Consumer 1',heat_type1, start_time1)
     consumer2 = Consumer('Consumer 2',heat_type2, start_time2)
-    consumer3 = Consumer('Consumer 3',heat_type2, start_time2)
 
-    consumer_list = [consumer1,consumer2]
+    consumer_list = [consumer1,consumer2]*10
 
     network_builder(net, 
                     pipe_data_list, 
@@ -627,8 +631,11 @@ def test_network_builder():
     sim.plot_network(net) 
 
 def test_Rutger_data():
+    """
+    Try to find valve positions to replicate Rutgers data
+    No overflow valve is used! And simply assume that all valves are open.
+    """
 
-    # Try to find valve positions to replicate Rutgers data. 
     pipe_data_DN20 = read_pipe_data('DN20')
     pipe_data_DN25 = read_pipe_data('DN25')
     pipe_data_DN32 = read_pipe_data('DN32')
@@ -640,10 +647,10 @@ def test_Rutger_data():
     # Create network
     net = Network("Network Rutger")
 
-    heat_type1 = 'shower'
-    heat_type2 = 'shower'
-    start_time1 = 8 #h
-    start_time2 = 19 #h
+    heat_type1 = ['shower']
+    heat_type2 = ['shower']
+    start_time1 = [8] #h
+    start_time2 = [19] #h
 
     consumer_list = []
     for i in range(23):  
@@ -706,39 +713,58 @@ def test_Rutger_data():
 
     # Calculate pressure losses in loops without taking the valves into account
     friction_vector = net.pressure_friction_vector + \
-                            net.Kp_array                            
+                            net.Kp_array 
 
-    head_loss_without_valves  = net.loop_matrix @ (friction_vector * np.abs(mflow_array)*mflow_array)
+    net.build_loop_matrix(net.G)                           
+
+    head_loss_without_valves  = net.loop_matrix_active @ (friction_vector * np.abs(mflow_array)*mflow_array)
 
     # Pump contribution (only in loop equations)
     net.pump_pressure_curve =  net.pump_coeff[:,0] * mflow_array**2 + \
                                         net.pump_coeff[:,1] * mflow_array + \
                                         net.pump_coeff[:,2]
         
-    pump_term = net.loop_matrix @ net.pump_pressure_curve
+    pump_term = net.loop_matrix_active @ net.pump_pressure_curve
 
     # Loop residual without valves
     loop_res = pump_term - head_loss_without_valves 
     
     # determine valve positions
     valve_positions = (net.inv_Kv_array != 0).astype(int)
-    valve_flows_sq = net.loop_matrix @ (valve_positions * np.abs(mflow_array)*mflow_array)
+    valve_flows_sq = net.loop_matrix_active @ (valve_positions * np.abs(mflow_array)*mflow_array)
 
     inv_Kv_squared = loop_res / valve_flows_sq
     Kv = np.sqrt(1 / inv_Kv_squared)
-    print("Calculated Kv values for valves:",Kv)
+    Kv_rev = Kv[::-1]
 
+    print("Calculated Kv values for valves (from Hex 1 to Hex 23):",Kv_rev)
     # Validate Kv values
     for i, hex_obj in enumerate(net.hexs.values()):        
         pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
         j = net.pipe_map[pipe_id]
-        net.inv_Kv_array[j] = 1/Kv[i]
+        net.inv_Kv_array[j] = 1/Kv_rev[i]
 
     mflow0 = np.zeros(len(mflow_array))
     mflow0[:] = 0.1 
+
+    # Reduce and create active incidence matrix
+    net.incidence_matrix_red = net.incidence_matrix[1:,:]
+    net.incidence_matrix_active = net.incidence_matrix_red
+
+    # Adjust all vectors to active pipes
+    friction_vector = net.pressure_friction_vector + \
+                    net.Kp_array + \
+                    net.inv_Kv_array ** 2
+    net.friction_vector_active = friction_vector
+    
+    net.pressure_elevation_vector_active = net.pressure_elevation_vector
+    net.pump_coeff_active = net.pump_coeff
+
+    # Performs Newton-Raphson using scipy root function
     result = root(net.res, mflow0, jac = net.jac, method = 'hybr')
     diff = np.sum(result.x - mflow_array)
     print(f"Difference between supplied Rutgers values and root solution: {diff}")
+
 ###########################################################
 # Help functions for the tests
 ###########################################################
@@ -864,7 +890,6 @@ def network_builder(net : Network,
 
         number_of_consumers = len(consumer_list)
 
-
         net.add_node('Node 1.1', 0, 0, 0)
         net.add_node('Node 1.2', 0, 0, 3)
         net.add_node('Node 1.3', 2, 0, 3)
@@ -937,17 +962,7 @@ def network_builder(net : Network,
     
 if __name__ == "__main__":
 
-    # pipe_data = read_pipe_data('DN40')
-
-    # pipe_test = Pipe("Pipe 1", 100, 5, pipe_data)
-    # num_steps = 100
-    # pipe_test.bnode_init(60, num_steps, 60, 60, 1)
-    # for i in range(num_steps): 
-    #     pipe_test.set_mflow(0,i)
-    #     pipe_test.bnode_method(20, i)
-    #     print(f'Time step {i}, T_out = {pipe_test.T[i]:.2f} C')
-
-    # model_network_Rutger()
+    model_network_Rutger()
     # test_Rutger_data()
     # model_step_7()
-    test_NR()
+    # test_NR()
