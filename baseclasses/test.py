@@ -378,7 +378,6 @@ def model_step_7():
 
     number_consumers = 2
     pipe_data_list = [pipe_data_DN40] * number_consumers
-    h_initial_list = [0,0]
 
     heat_type1 = ['shower', 'shower']
     heat_type2 = ['shower']
@@ -394,7 +393,6 @@ def model_step_7():
                     pipe_data_list, 
                     pipe_data_DN20, 
                     hex_data,
-                    h_initial_list, 
                     pump_data, 
                     consumer_list, 
                     use_overflow = False)
@@ -426,12 +424,11 @@ def model_network_Rutger():
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('60kPa Pump constant')
+    pump_data = read_pump_data('45kPa Pump constant')
     overflow_data = read_overflow_data('Overflow')
 
-    
     # Create network
-    net = Network("Network Rutger actuating valves, no Kvleak")
+    net = Network("Network Rutger 45 kPa, actuating overflow")
 
     heat_demand_type1 = ['shower']
     heat_demand_type2 = ['shower']
@@ -440,7 +437,6 @@ def model_network_Rutger():
 
     consumer_list = []
     for i in range(23):
-        # consumer = Consumer(f'Consumer {i+1}',['shower'], [start_time1[8]])
         if i<=9:
             consumer = Consumer(f'Consumer {i+1}',heat_demand_type1, [start_time1[i]])
         else:
@@ -449,30 +445,28 @@ def model_network_Rutger():
         consumer_list.append(consumer)
 
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
-
-    overflow_pos = 1
-    h_initial_list = [0]*23 + [overflow_pos] # all closed
-    
-    network_builder(net, 
-                    pipe_data_list,
-                    pipe_data_DN20, 
-                    hex_data,
-                    h_initial_list, 
-                    pump_data, 
-                    consumer_list,
-                    overflow_data = overflow_data,
-                    use_overflow = True)
-
+   
     # Simulation parameters
     dt = 60 # s
     total_time = 24 * 3600 # h
     T_ambt = 20
 
-    # Input profiles
+    # Temperature input profile
     temp_type = 'constant'
-    
     T_in = generate_input_network(temp_type, total_time, dt)
 
+    h_overflow = np.zeros_like(T_in)
+
+    # Create Network
+    network_builder(net, 
+                pipe_data_list,
+                pipe_data_DN20, 
+                hex_data,
+                pump_data, 
+                consumer_list,
+                # h_overflow,
+                overflow_data = overflow_data,
+                )
     # Run simulation
     sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
     sim.simulate_network(net, T_in, T_ambt, T_ambt)
@@ -557,10 +551,8 @@ def test_NR():
     # Create network
     net = Network("Test closing valves with overflow")
 
-    overflow_pos = 1
     number_consumers = 20
     pipe_data_list = [pipe_data_DN40] * number_consumers
-    h_initial_list = [0,1]*10 + [overflow_pos]
 
     heat_type1 = ['constant']
     heat_type2 = ['nothing']
@@ -572,26 +564,28 @@ def test_NR():
 
     consumer_list = [consumer1,consumer2]*10
 
-    network_builder(net, 
-                    pipe_data_list, 
-                    pipe_data_DN20, 
-                    hex_data,
-                    h_initial_list, 
-                    pump_data,
-                    consumer_list, 
-                    overflow_data = overflow_data,
-                    use_overflow = True)
-
     # Simulation parameters
     dt = 60 # s
     total_time = 24 * 3600 # s
     T_ambt = 20
 
     # Input profiles
-    temp_type = 'constant'
-    
+    temp_type = 'constant'   
     T_in = generate_input_network(temp_type, total_time, dt)
 
+    h_overflow = np.zeros_like(T_in)
+
+    # Build network
+    network_builder(net, 
+                    pipe_data_list, 
+                    pipe_data_DN20, 
+                    hex_data,
+                    pump_data,
+                    consumer_list, 
+                    h_overflow,
+                    overflow_data = overflow_data,
+                    )
+    
     # Run simulation
     sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
     # sim.plot_network(net)      
@@ -608,15 +602,13 @@ def test_network_builder():
     net = Network("Network builder")
     number_consumers = 5
     pipe_data_list = [pipe_data_DN40] * number_consumers
-    h_initial_list = [1] * number_consumers
 
     network_builder(net, 
-                            pipe_data_list,
-                            pipe_data_DN20, 
-                            hex_data,
-                            h_initial_list,
-                            pump_data,
-                            number_consumers)
+                    pipe_data_list,
+                    pipe_data_DN20, 
+                    hex_data,
+                    pump_data,
+                    number_consumers)
 
     # Simulation parameters
     dt = 60 # s
@@ -661,13 +653,11 @@ def test_Rutger_data():
         consumer_list.append(consumer)
 
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3 
-    h_initial_list = [0]*len(consumer_list)
 
     network_builder(net, 
                     pipe_data_list,
                     pipe_data_DN20, 
                     hex_data,
-                    h_initial_list, 
                     pump_data, 
                     consumer_list,
                     use_overflow = False)
@@ -880,11 +870,11 @@ def network_builder(net : Network,
                     pipe_data_list : list, 
                     pipe_hex_data, 
                     hex_data,
-                    h_initial_list, 
                     pump_data,
                     consumer_list,
+                    h_overflow = None,
                     overflow_data = None,
-                    use_overflow = True):
+                ):
         
         # Add heat exchangers and connecting pipes based on number of consumers
 
@@ -902,7 +892,7 @@ def network_builder(net : Network,
         net.add_pipe('Pipe 1.1','Node 1.1', 'Node 1.2', pipe_data_list[0])
         net.add_pipe('Pipe 1.2', 'Node 1.2', 'Node 1.3', pipe_data_list[0])
 
-        net.add_hex('Hex 1', 'Node 1.3', 'Node 1.4', hex_data, pipe_hex_data, h_initial_list[0], consumer_list[0])
+        net.add_hex('Hex 1', 'Node 1.3', 'Node 1.4', hex_data, pipe_hex_data, consumer_list[0])
 
         net.add_pipe('Pipe 1.5', 'Node 1.4', 'Node 1.5', pipe_data_list[0])
         net.add_pipe('Pipe 1.6', 'Node 1.5', 'Node 1.6', pipe_data_list[0])
@@ -939,24 +929,21 @@ def network_builder(net : Network,
                         under_hex_node, 
                         hex_data, 
                         pipe_hex_data, 
-                        h_initial_list[i-1],
                         consumer)
             
             net.add_pipe(f'Pipe {i}.5',under_hex_node,return_node,pipe_data)
             net.add_pipe(f'Pipe {i}.6',return_node,previous_return_node,pipe_data) # needs to be connected to node from previous consumer
 
         # add overflow
+        overflow_node_supply = f'Node {i}.7'
+        overflow_node_return = f'Node {i}.8'
 
-        if use_overflow:
-            overflow_node_supply = f'Node {i}.7'
-            overflow_node_return = f'Node {i}.8'
+        net.add_node(overflow_node_supply, 0, 0, 3*i+1)
+        net.add_node(overflow_node_return, 1, 0, 3*i+1)
 
-            net.add_node(overflow_node_supply, 0, 0, 3*i+1)
-            net.add_node(overflow_node_return, 1, 0, 3*i+1)
-
-            net.add_overflow(f'Overflow 1' , supply_node, overflow_node_supply, pipe_data, overflow_data, h_initial_list[-1], net.nodes[overflow_node_supply])
-            net.add_pipe(f'Overflow 2', overflow_node_supply, overflow_node_return, pipe_data)
-            net.add_pipe(f'Overflow 3', overflow_node_return, return_node, pipe_data)
+        net.add_overflow(f'Overflow 1' , supply_node, overflow_node_supply, pipe_data, overflow_data, net.nodes[overflow_node_supply], h_overflow)
+        net.add_pipe(f'Overflow 2', overflow_node_supply, overflow_node_return, pipe_data)
+        net.add_pipe(f'Overflow 3', overflow_node_return, return_node, pipe_data)
 
         return net
     

@@ -54,6 +54,7 @@ class Simulation:
                          plot_nodes_dT = False,
                          plot_cap_influence = False,
                          plot_consumer_demand = False,
+                         plot_h_valves = False,
                          no_cap = False):
         """
         Simulate temperature dynamics for a network.
@@ -73,9 +74,7 @@ class Simulation:
             
             network.set_mflow_network(N)
             network.set_T_network(self.T_ambt, N, no_cap = no_cap)
-            # network.set_T_and_flow_network(self.T_ambt, N, no_cap = no_cap)
-
-        
+       
         print('Simulation finished')
 
         # Plot outcome and save figure
@@ -86,6 +85,7 @@ class Simulation:
         self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
         self.plot_cap_influence(network, plot = plot_cap_influence)
         self.plot_consumer_demand(network, plot = plot_consumer_demand)
+        self.plot_h_valves(network, plot = plot_h_valves)
         self.save_data(network, T_in) 
 
         plt.show()  
@@ -330,6 +330,35 @@ class Simulation:
         plt.legend()
         plt.grid(True)
         plt.savefig(self.folder + '/HEAT.png')
+
+        if not plot:
+            plt.close(fig)
+
+    def plot_h_valves(self, network: Network, plot = False):
+
+        fig = plt.figure(figsize=(10, 6))
+        plt.title("Valve displacement")
+        for valve in network.valves.values():
+
+            if 'Overflow' in valve.valve_id:
+                label = 'Ov'
+            else:
+                label = valve.valve_id.split(" ")[1] 
+
+            plt.plot(self.time, valve.h, label=label)      
+    
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
+        plt.xlabel(f'Time (hours), dt = {self.dt}')
+        plt.ylabel('Valve displacement (-)')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(self.folder + '/valve_displacement.png')
 
         if not plot:
             plt.close(fig)

@@ -25,5 +25,13 @@
         "a" : -34640.87585588,
         "b" : -4215.47448647,    
         "c" : 60000.0
+    },
+
+       "45kPa Pump constant":{
+        "comment_curve": "Pump curve coefficients in the form of dp = a*mflow^2 + b*mflow + c, with dp in Pa and mflow in kg/s",
+        "a" : 0,
+        "b" : 0,    
+        "c" : 45000.0
     }
+
 }

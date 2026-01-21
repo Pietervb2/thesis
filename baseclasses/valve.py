@@ -6,9 +6,9 @@ class Valve:
                  valve_id: str,
                  pipe_id: str,
                  valve_data : list,
-                 h_initial : float,                 
                  hex = None,
-                 node = None):
+                 node = None,
+                 h_overflow = None):
         """"
         Args:
             - Kvs: hydraulic conductivity of fully open valve [m3/h/bar^0.5]
@@ -21,24 +21,30 @@ class Valve:
         self.Kvs = valve_data[0]
 
         if hex is not None:
-            self.Ki = valve_data[1]
-            self.Kp = valve_data[2] 
+            self.Kp = valve_data[1]
+            self.Ki = valve_data[2]
+ 
         elif node is not None:
-            self.T_set_overflow = valve_data[1]        
+            self.T_set_overflow = valve_data[1]   
 
+        self.h_overflow = h_overflow  
+  
         self.hex = hex  # Heat exchanger controlling the valve
         self.node = node  # Node located at incoming side of pipe incase of overflow valve.
-
-        self.h_initial = h_initial # Initial position of valve
-    
+   
     def initialize_valve(self, num_steps, dt):
         """
         Initialize the valve parameters.
         """ 
 
-        self.h = np.ones(num_steps)*self.h_initial
-        self.Kv = np.ones(num_steps)*self.equal_percentage_valve(self.h_initial)
-
+        if self.h_overflow is None:
+            self.h = np.zeros(num_steps)
+            self.Kv = np.ones(num_steps)*1e-5 # a dummy variable in which way 1/Kv is not inf if we take 0 at the beginning of the simulation. 
+        else:
+            self.h = self.h_overflow
+            self.Kv = self.equal_percentage_valve(self.h)
+            
+       
         self.dt = dt # For PI controller
 
         if self.hex is not None: 
@@ -52,12 +58,6 @@ class Valve:
         For valve displacement lower than h_star Kv does not follow the standard form of the function. It becomes unpredictable. For this region we simply assume a linear behavior.
         """        
         Kv0 = self.Kvs/50
-        h_star = 0.05
-
-        # if h < h_star:
-        #     Kv_star = (self.Kvs/Kv0) ** (h_star-1) * self.Kvs
-        #     Kv = Kvleak + h*(Kv_star - Kvleak)/h_star
-        # else:
         Kv = (self.Kvs/Kv0) ** (h-1) * self.Kvs
         return Kv
     
@@ -72,16 +72,22 @@ class Valve:
 
                 # Only update valve position if there is flow
                 if self.hex.consumer.mflow[N] > 0:
+
+                    if self.valve_id == 'Valve 8':
+                        pass
                     
                     # implement PI controller to determine the valve lift
 
                     T_set_point = 60 # Temperature set point for the tapwater outlet [C]
-                    dT = (T_set_point - self.hex.consumer.Tc_out[N])
+                    dT = (T_set_point - self.hex.consumer.Tc_out[N-1])
                     
                     self.I += dT * self.dt
-                    h = self.Kp * dT + self.Ki * self.I
+                    delta_h = self.Kp * dT + self.Ki * self.I
+
+                    h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
                     
-                    h = min(1,max(0,h)) # As h is scaled to 0-1
+                    h = self.h[N-1] + delta_h
+                    h = min(1,max(h_star,h)) # As h is scaled to hstar-1
 
                     # Anti-windup 
                     if (h == 0 and dT < 0) or (h == 1 and dT > 0):
@@ -89,27 +95,31 @@ class Valve:
 
                     Kv = self.equal_percentage_valve(h)
 
-                    self.h[N+1] = h
-                    self.Kv[N+1] = Kv
+                    self.h[N] = h
+                    self.Kv[N] = Kv
                     self.I_array[N] = self.I
                 else:
                     # no change in valve position
-                    self.h[N+1] = 0
-                    self.Kv[N+1] = 0
+                    self.h[N] = 0
+                    self.Kv[N] = 0
             
             if self.node is not None:
+                if self.h_overflow is None:
+                    
+                    if N == 0:
+                        node_temp = self.node.T[N]
+                    else:
+                        node_temp = self.node.T[N-1]
+                    
+                    if N == 480:
+                        pass
 
-                # if self.node.T[N] < self.T_set_overflow:  # Overflow temperature set point
-                #     self.h[N+1] = 1  # Fully open
-                #     self.Kv[N+1] = self.Kvs
-
-                # else:
-                #     # no change in valve position
-                #     self.h[N+1] = 0
-                #     self.Kv[N+1] = 0
+                    if node_temp < self.T_set_overflow:  # Overflow temperature set point
+                        self.h[N] = 1  # Fully open
+                        self.Kv[N] = self.Kvs
+                    else:
+                        self.h[N] = 0
                 
-                self.h[N+1] = 1
-                self.Kv[N+1] = self.Kvs
 
 
                 

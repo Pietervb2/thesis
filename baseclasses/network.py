@@ -129,7 +129,7 @@ class Network:
 
         # self._next_pipe_id += 1
 
-    def add_hex(self, node_id : str, from_node : str, to_node : str, hex_data : list, pipe_data : list, h_initial : float, consumer : object) -> None:
+    def add_hex(self, node_id : str, from_node : str, to_node : str, hex_data : list, pipe_data : list, consumer : object) -> None:
         """
         Add a heat exchanger between two nodes.
         """
@@ -161,7 +161,7 @@ class Network:
         # Create valve and couple it to the hex
         valve_id = node_id.replace('Hex','Valve')
         valve_data = hex_data[-3:]
-        valve = Valve(valve_id, pipe_in_id, valve_data, h_initial, hex=hex)
+        valve = Valve(valve_id, pipe_in_id, valve_data, hex=hex)
         self.valves[valve_id] = valve
   
     def add_pump(self, pump_id : str, from_node : str, to_node : str, pipe_data : list, pump_data) -> None:
@@ -194,7 +194,7 @@ class Network:
         in_node = self.nodes[to_node]
         in_node.connect_pipe_to_node(pump_id, pump, 'incoming') 
 
-    def add_overflow(self, overflow_id : str, from_node: str, to_node: str, pipe_data: list, valve_data : list, h_initial : float, node) -> None:
+    def add_overflow(self, overflow_id : str, from_node: str, to_node: str, pipe_data: list, valve_data : list, node, h_overflow = None) -> None:
         """
         Add overflow valve at the top of the network.
         """
@@ -203,7 +203,7 @@ class Network:
             raise ValueError(f"Overflow valve with id {overflow_id} already exists in the network")
 
         valve_id = 'Overflow valve'
-        overflow_valve = Valve(valve_id, overflow_id, valve_data, h_initial, node = node)
+        overflow_valve = Valve(valve_id, overflow_id, valve_data, node = node, h_overflow = h_overflow)
         self.valves[valve_id] = overflow_valve
 
         self.add_pipe(overflow_id, from_node, to_node, pipe_data)
@@ -250,8 +250,8 @@ class Network:
         """
         Obtain the loop matrix from the graph of the network
         """
-        # compute all fundamental cycles
-        cycles = nx.cycle_basis(graph.to_undirected())
+        # compute all fundamental cycles for a directed graph
+        cycles = list(nx.simple_cycles(graph))
        
         # loop matrix
         self.loop_matrix_active = np.zeros((len(cycles), graph.number_of_edges()))
@@ -344,19 +344,23 @@ class Network:
                 to_node = self.pipes[pipe_id]['to']
                 active_graph.remove_edge(from_node,to_node)
 
-        source_node = 'Node 1.1'
-        reachable = nx.descendants(active_graph, source_node) | {source_node}
-        unreachable = set(active_graph.nodes()) - reachable
-        active_graph.remove_nodes_from(unreachable)
+        # source_node = 'Node 1.1'
+        # reachable = nx.descendants(active_graph, source_node) | {source_node}
+        # unreachable = set(active_graph.nodes()) - reachable
+        # active_graph.remove_nodes_from(unreachable)
+
+        cycles = nx.simple_cycles(active_graph.to_undirected())
+        cycle_nodes = {n for c in cycles for n in c}
+        active_graph_clean = active_graph.subgraph(cycle_nodes).copy()
 
         active_mask = np.zeros(len(self.pipes), dtype=bool)
-        edge_ids = [data["id"] for _, _, data in active_graph.edges(data=True)]
+        edge_ids = [data["id"] for _, _, data in active_graph_clean.edges(data=True)]
 
         for edge_id in edge_ids:
             j = self.pipe_map[edge_id]
             active_mask[j] = True
-            
-        return active_graph, active_mask
+        
+        return active_graph_clean, active_mask
 
     def res(self, mflow) -> np.ndarray:
         """
@@ -415,12 +419,8 @@ class Network:
         p = len(pipe_ids)
 
         # Initial guess for the mflows in the pipes
-        mflow0 = np.zeros(p)
-        if N == 0 or self.loop_matrix_active.shape[0] == 0: # As root doesn't solve for initial guess of zero, we check previous loop matrix
-            mflow0[:] = 0.1
-        else:
-            mflow0 = self.mflow_all[:,N-1] + np.ones(p)*0.01 # 0.01 added as otherwise the solver doesn't converge
-
+        mflow0 = np.ones(p)*0.1
+        
         active_graph, active_mask = self.update_valves(N)
         self.build_loop_matrix(active_graph)
         
@@ -443,6 +443,7 @@ class Network:
         self.pump_coeff_active = self.pump_coeff[active_mask, :]
         mflow0_active = mflow0[active_mask]
 
+        print(f'N = {N}')
         # Performs Newton-Raphson using scipy root function
         result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr')
 
