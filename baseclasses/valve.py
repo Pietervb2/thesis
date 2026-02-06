@@ -61,6 +61,25 @@ class Valve:
         Kv = (self.Kvs/Kv0) ** (h-1) * self.Kvs
         return Kv
     
+    def linear_valve(self, h, Kvleak = False):
+        """
+        Returns Kv value of the valve following a linear characteristic
+        based on the valve displacement h in [0, 1]. 0 means fully closed, 1 means fully open.
+        """
+        self.Kvs = 0.003  # [m3/h/bar^0.5]
+        
+        Kv0 = self.Kvs / 50.0  # same minimum as in equal-percentage
+        Kvleak = self.Kvs / 2000
+        
+        h_star = 0.05  # lower values of h make the form of the valve deviate from the equal percentage equation.
+        
+        if h < h_star and Kvleak:
+            Kv = Kvleak + h * (Kv0 - Kvleak)
+        else:
+            Kv = Kv0 + h * (self.Kvs - Kv0)
+
+        return Kv
+       
     def update_valve(self, N):
         """
         Update the valve position based on the consumer outlet temperature using a PI controller.
@@ -73,11 +92,7 @@ class Valve:
                 # Only update valve position if there is flow
                 if self.hex.consumer.mflow[N] > 0:
 
-                    if self.valve_id == 'Valve 8':
-                        pass
-                    
                     # implement PI controller to determine the valve lift
-
                     T_set_point = 60 # Temperature set point for the tapwater outlet [C]
                     dT = (T_set_point - self.hex.consumer.Tc_out[N-1])
                     
@@ -104,25 +119,38 @@ class Valve:
                     self.Kv[N] = 0
             
             if self.node is not None:
+
                 if self.h_overflow is None:
                     
                     if N == 0:
                         node_temp = self.node.T[N]
                     else:
                         node_temp = self.node.T[N-1]
-                    
-                    if N == 480:
-                        pass
 
-                    if node_temp < self.T_set_overflow:  # Overflow temperature set point
-                        self.h[N] = 1  # Fully open
-                        self.Kv[N] = self.Kvs
+                    P_band = 3.0  # degrees
+                    if node_temp < self.T_set_overflow - P_band:  # Overflow temperature set point
+                        h_band = 1
                     else:
-                        self.h[N] = 0
+                        if node_temp > self.T_set_overflow:
+                            h_band = 0 
+                        else:
+                            h_band = (self.T_set_overflow - node_temp)/P_band
+
+                    tau = 180  # time constant for smoothing [s]
+                    h_tau = self.h[N-1] + (h_band - self.h[N-1]) * self.dt/tau  # smooth the changes
+                    print(f'h_tau = {h_tau} en h_band = {h_band}')
+
+                    Kvleak = True
+                    if not Kvleak:
+                        h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
+                        if h_tau < h_star:
+                            h = 0
+                        else:
+                            h = min(1,h_tau)
+                    else:
+                        h = max(0,min(1,h_tau)) 
+
+                    self.h[N] = h
+                    self.Kv[N] = self.linear_valve(h, Kvleak)                   
+
                 
-
-
-                
-
-
-

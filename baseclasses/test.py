@@ -424,11 +424,11 @@ def model_network_Rutger():
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('45kPa Pump constant')
+    pump_data = read_pump_data('50kPa Pump curve')
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
-    net = Network("Network Rutger 45 kPa, actuating overflow")
+    net = Network("Rutg 50 kPaCurve, overflow Kvleak heat23")
 
     heat_demand_type1 = ['shower']
     heat_demand_type2 = ['shower']
@@ -440,8 +440,9 @@ def model_network_Rutger():
         if i<=9:
             consumer = Consumer(f'Consumer {i+1}',heat_demand_type1, [start_time1[i]])
         else:
-            consumer = Consumer(f'Consumer {i+1}',heat_demand_type2, [start_time2[i-13]])
-
+            consumer = Consumer(f'Consumer {i+1}',heat_demand_type2, [start_time2[i-10]])
+        # else:
+        #     consumer = Consumer(f'Consumer {i+1}',['nothing'], [start_time2[8]])
         consumer_list.append(consumer)
 
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3

@@ -66,9 +66,9 @@ class Node:
         else:   
             self.T[N] = sum_T_flow / sum_m_inflow # set the node temperature
 
-            # Set temperature per pipe
-            for _, pipe in self.pipes_out.items():
-                pipe.set_T_in(self.T[N], N)
+        # Set temperature per pipe
+        for _, pipe in self.pipes_out.items():
+            pipe.set_T_in(self.T[N], N)
             
 
     def get_T(self, N):

@@ -49,7 +49,9 @@ class Simulation:
                          T_init_pipe : float,
                          plot_network = False,
                          plot_nodes_T = False,
+                         plot_sup_ret = False,
                          plot_pipes_T = False,
+                         plot_overflow = False,
                          plot_pipes_mflow = False,
                          plot_nodes_dT = False,
                          plot_cap_influence = False,
@@ -79,11 +81,13 @@ class Simulation:
 
         # Plot outcome and save figure
         self.plot_network(network, plot = plot_network)
-        self.plot_node_temperature_network(network, plot = plot_nodes_T)
-        self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
-        self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
-        self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
-        self.plot_cap_influence(network, plot = plot_cap_influence)
+        # self.plot_node_temperature_network(network, plot = plot_nodes_T)
+        # self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
+        # self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
+        # self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
+        # self.plot_cap_influence(network, plot = plot_cap_influence)
+        self.plot_supply_return_temperature_flow(network, plot = plot_sup_ret)
+        self.plot_overflow(network, plot = plot_overflow)
         self.plot_consumer_demand(network, plot = plot_consumer_demand)
         self.plot_h_valves(network, plot = plot_h_valves)
         self.save_data(network, T_in) 
@@ -110,28 +114,59 @@ class Simulation:
         ax.set_xticks(ticks_seconds)
         ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
       
-        plt.xlabel(f'Time (s), dt = {self.dt}')
+        plt.xlabel(f'Time (h), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend(loc='lower right')
         plt.grid(True)
 
         plt.savefig(self.folder + '/node_temperatures.png')
 
-        fig_T_in = plt.figure()
+        if not plot:
+            plt.close(fig_node_T)
+
+    def plot_supply_return_temperature_flow(self, network: Network, plot = False):
+        
+        fig_T_in = plt.figure()       
         plt.plot(self.time, network.nodes['Node 1.1'].T, label = 'Supply temperature')
         plt.plot(self.time, network.nodes['Node 1.6'].T, label = 'Return temperature')
         plt.title('Supply and Return Temperature')     
-        plt.xlabel(f'Time (s), dt = {self.dt}')
+        plt.xlabel(f'Time (h), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend()
         plt.grid(True)
 
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
         # Create directory if it doesn't exist
         plt.savefig(self.folder + '/supply_return_temperature.png')
 
+        fig_mflow = plt.figure()
+
+        plt.plot(self.time, network.pipes['Pipe 1.1']['pipe_instance'].mflow, label = 'Supply')
+        plt.plot(self.time, network.pipes['Pipe 1.6']['pipe_instance'].mflow, label = 'Return')
+        plt.title('Supply and Return Mass Flow Rate')
+        plt.xlabel(f'Time (h), dt = {self.dt}')
+        plt.ylabel('Mass Flow Rate (kg/s)')
+        plt.legend()
+        plt.grid(True)
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
+        plt.savefig(self.folder + '/supply_return_mflow.png')
+
         if not plot:
-            plt.close(fig_node_T)
             plt.close(fig_T_in)
+            plt.close(fig_mflow)
 
     def plot_node_difference_temperature_network(self, network: Network, plot = False):
         
@@ -178,7 +213,7 @@ class Simulation:
         ax.set_xticks(ticks_seconds)
         ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
 
-        plt.xlabel(f'Time (s), dt = {self.dt}')
+        plt.xlabel(f'Time (h), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
         plt.legend()
         plt.grid(True)
@@ -187,6 +222,67 @@ class Simulation:
 
         if not plot:
             plt.close(fig_pipe)
+        
+    def plot_overflow(self, network: Network, plot = False): 
+
+        fig_overflow_T = plt.figure(figsize=(10, 6)) 
+        plt.title("Overflow Temperature") 
+        for valve in network.valves.values(): 
+            if 'Overflow' in valve.valve_id: 
+                temp = valve.node.T
+                valve_h = valve.h
+
+        plt.plot(self.time, temp, label=f'Temperature') 
+                       
+        # Set x-axis to 0-24 hours (data stored in seconds). 
+        # Show ticks every 4 hours. 
+        ax = plt.gca() 
+        ax.set_xlim(0, 24 * 3600) # limits in seconds 
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds) 
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)]) 
+
+        plt.xlabel(f'Time (hours), dt = {self.dt}') 
+        plt.ylabel('Temperature (°C)') 
+        plt.legend() 
+        plt.grid(True) 
+        plt.savefig(self.folder + '/overflow_temperature.png')
+
+        fig_overflow_mflow = plt.figure()
+
+        plt.plot(self.time, network.pipes['Overflow 1']['pipe_instance'].mflow)
+        ax = plt.gca() 
+        ax.set_xlim(0, 24 * 3600) # limits in seconds 
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds) 
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)]) 
+        plt.title("Overflow Mass Flow Rate")
+        plt.xlabel(f'Time (h), dt = {self.dt}') 
+        plt.ylabel('Mass Flow Rate (kg/s)') 
+        plt.grid(True)
+        plt.savefig(self.folder + '/overflow_mflow.png')
+
+        fig_overflow_h = plt.figure()
+
+        plt.plot(self.time, valve_h)
+        ax = plt.gca() 
+        ax.set_xlim(0, 24 * 3600) # limits in seconds 
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds) 
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)]) 
+        plt.title("Overflow valve displacement")
+        plt.xlabel(f'Time (h), dt = {self.dt}') 
+        plt.ylabel('Valve displacement (-)') 
+        plt.grid(True)
+        plt.savefig(self.folder + '/overflow_h.png')
+
+
+
+        if not plot: 
+            plt.close(fig_overflow_T)
+            plt.close(fig_overflow_mflow)
+            plt.close(fig_overflow_h)
+
 
     def plot_pipe_mflow_network(self, network: Network, plot = False):
         """
@@ -385,6 +481,10 @@ class Simulation:
         pipe_vflow_data = {}
         pipe_dp_data = {}
         pipe_dp_head_data = {}
+
+        # For checking the temperature at supply and return risers
+        pipe_supply_riser_temp = {}
+        pipe_return_riser_temp = {}
                        
         # Store time in all dicts
         node_data['time'] = self.time
@@ -407,11 +507,21 @@ class Simulation:
             pipe_T_data[f'{pipe_id}'] = np.round(pipe.T,3)
             pipe_mflow_data[f'{pipe_id}'] = np.round(pipe.mflow,5)
             pipe_vflow_data[f'{pipe_id}'] = np.round(pipe.mflow / (1000 * pipe.inner_cs),5)
-            pipe_dp_data[f'{pipe_id}'] = np.round(pipe.dp_friction_array,3)       
+
+            if 'Pump' in pipe_id:
+                pipe_dp_data[f'{pipe_id} dp deliv'] = np.round(pipe.a * pipe.mflow**2 + pipe.b * pipe.mflow + pipe.c,5)
+            else:
+                pipe_dp_data[f'{pipe_id}'] = np.round(pipe.dp_friction_array,3)
+
             pipe_dp_head_data[f'{pipe_id}'] = np.round(pipe.pressure_elevation(),3)
             node_from = pipe_info['from']
             node_to = pipe_info['to']
             node_dT_data[f'dT {node_from.split()[1]}_{node_to.split()[1]}'] = np.round(network.nodes[node_from].T - network.nodes[node_to].T,3)
+
+            if '.1' in pipe_id:  # Supply riser
+                pipe_supply_riser_temp[pipe_id] = pipe.T
+            if '.6' in pipe_id:  # Return riser
+                pipe_return_riser_temp[pipe_id] = pipe.T
 
         # Save simulation data
         df_node = pd.DataFrame(node_data)
@@ -422,6 +532,9 @@ class Simulation:
         df_pipe_dp_head = pd.DataFrame(pipe_dp_head_data, index = [0])
         df_pipe_vflow = pd.DataFrame(pipe_vflow_data)
 
+        df_supply_riser_temp = pd.DataFrame(pipe_supply_riser_temp)
+        df_return_riser_temp = pd.DataFrame(pipe_return_riser_temp) 
+
         df_node.to_csv(os.path.join(sim_data_folder, 'Node_temp.csv'), index=False)
         df_node_dT.to_csv(os.path.join(sim_data_folder,'Node_dT.csv'),index = False)
         df_pipe_T.to_csv(os.path.join(sim_data_folder,'Pipe_temp.csv'),index=False)
@@ -430,8 +543,11 @@ class Simulation:
         df_pipe_dp_head.to_csv(os.path.join(sim_data_folder,'Pipe_dp_head.csv'), index = False)
         df_pipe_vflow.to_csv(os.path.join(sim_data_folder,'Pipe_vflow.csv'), index = False)
         
+        df_supply_riser_temp.to_csv(os.path.join(sim_data_folder,'Supply_riser_temp.csv'), index = False)
+        df_return_riser_temp.to_csv(os.path.join(sim_data_folder,'Return_riser_temp.csv'), index = False)
+        
         # Pipe properties 
-        filename = os.path.join(self.folder, "pipe_data.csv")
+        filename = os.path.join(self.folder, 'simulation_data', "pipe_data.csv")
 
         rows = []   # temporary list of row dicts
 
@@ -509,6 +625,7 @@ class Simulation:
                 overflow_data['Kv'] = valve.Kv
                 overflow_data['h'] = valve.h
                 overflow_data['T'] = valve.node.T
+                overflow_data['mflow'] = network.pipes[f'Overflow 1']['pipe_instance'].mflow
 
                 df_overflow = pd.DataFrame(overflow_data)
                 df_overflow.to_csv(os.path.join(self.folder,'hex_consumer_data','overflow.csv'), index = False)

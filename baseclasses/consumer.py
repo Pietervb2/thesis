@@ -68,7 +68,8 @@ class Consumer:
                 t3_start, t3_end = t2_end, (start_time + 0.164)*3600
 
                 # Heat demand height
-                h1, h2, h3 = 20e3, 25e3, 30e3
+                # h1, h2, h3 = 20e3, 25e3, 30e3
+                h1,h2,h3 = 15e3, 20e3, 25e3
 
                 Q_d = np.zeros_like(t)
 
