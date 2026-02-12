@@ -82,7 +82,7 @@ class Simulation:
         # Plot outcome and save figure
         self.plot_network(network, plot = plot_network)
         # self.plot_node_temperature_network(network, plot = plot_nodes_T)
-        # self.plot_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
+        self.plot_return_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
         # self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
         # self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
         # self.plot_cap_influence(network, plot = plot_cap_influence)
@@ -191,7 +191,7 @@ class Simulation:
         if not plot:
             plt.close(fig)
     
-    def plot_pipe_temperature_network(self, network: Network, T_in, plot = False):
+    def plot_return_pipe_temperature_network(self, network: Network, T_in, plot = False):
         """
         Plot the temperature history for all nodes in the network
         
@@ -200,11 +200,14 @@ class Simulation:
         """
         fig_pipe = plt.figure(figsize=(10, 6))
         plt.title('Temperature at outlet pipe')
-        
+        plot = 1
         for pipe_id in network.pipes.keys():
 
-            pipe = network.pipes[pipe_id]['pipe_instance']
-            plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
+            if '.6' in pipe_id:  # Return riser
+                plot = plot*-1
+                pipe = network.pipes[pipe_id]['pipe_instance']
+                if plot == 1:
+                    plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
         ax = plt.gca()
@@ -215,10 +218,11 @@ class Simulation:
 
         plt.xlabel(f'Time (h), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
+        plt.title('Temperature at end of return pipes')
         plt.legend()
         plt.grid(True)
 
-        plt.savefig(self.folder + '/pipe_temperatures.png')
+        plt.savefig(self.folder + '/return_pipe_temperatures.png')
 
         if not plot:
             plt.close(fig_pipe)
@@ -409,8 +413,14 @@ class Simulation:
         fig = plt.figure(figsize=(10, 6))
         plt.title("Consumer Heat Demand vs Supply")
 
+        tot_Q_d = np.zeros_like(self.time).astype(float)
+        tot_Q_supply = np.zeros_like(self.time).astype(float)
+
         for hex_key in network.hexs.keys():
             hex = network.hexs[hex_key]
+            tot_Q_d += hex.consumer.Q_d
+            tot_Q_supply += hex.consumer.Q_supply
+
             plt.plot(self.time, hex.consumer.Q_d, label=f'Heat demand of C{hex.consumer.consumer_id.split(" ")[1]}')
             plt.plot(self.time, hex.consumer.Q_supply, label=f'Heat supplied to C{hex.consumer.consumer_id.split(" ")[1]}', linestyle='--')
 
@@ -423,12 +433,31 @@ class Simulation:
 
         plt.xlabel(f'Time (hours), dt = {self.dt}')
         plt.ylabel('Heat (W)')
-        plt.legend()
+        # plt.legend()
         plt.grid(True)
-        plt.savefig(self.folder + '/HEAT.png')
+        plt.savefig(self.folder + '/individual_heat.png')
+
+        fig_tot = plt.figure()
+        plt.title("Total Consumer Heat Demand vs Supply")
+        plt.plot(self.time, tot_Q_d/1e3, label='Total heat demand')
+        plt.plot(self.time, tot_Q_supply/1e3, label='Total heat supplied', linestyle='--')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
+        plt.xlabel(f'Time (hours), dt = {self.dt}')
+        plt.ylabel('Heat (kW)')
+        plt.grid(True)
+        plt.savefig(self.folder + '/total_heat.png')
+
 
         if not plot:
             plt.close(fig)
+            plt.close(fig_tot)
 
     def plot_h_valves(self, network: Network, plot = False):
 
@@ -624,6 +653,7 @@ class Simulation:
             else:
                 overflow_data['Kv'] = valve.Kv
                 overflow_data['h'] = valve.h
+                overflow_data['h_band'] = valve.h_band
                 overflow_data['T'] = valve.node.T
                 overflow_data['mflow'] = network.pipes[f'Overflow 1']['pipe_instance'].mflow
 

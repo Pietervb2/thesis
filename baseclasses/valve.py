@@ -39,9 +39,10 @@ class Valve:
 
         if self.h_overflow is None:
             self.h = np.zeros(num_steps)
+            self.h_band = np.zeros(num_steps) # for the band control of the overflow valve.
             self.Kv = np.ones(num_steps)*1e-5 # a dummy variable in which way 1/Kv is not inf if we take 0 at the beginning of the simulation. 
         else:
-            self.h = self.h_overflow
+            self.h = self.h_overflow # set the valve displacement at a constant opening
             self.Kv = self.equal_percentage_valve(self.h)
             
        
@@ -138,9 +139,9 @@ class Valve:
 
                     tau = 180  # time constant for smoothing [s]
                     h_tau = self.h[N-1] + (h_band - self.h[N-1]) * self.dt/tau  # smooth the changes
-                    print(f'h_tau = {h_tau} en h_band = {h_band}')
+                    # print(f'h_tau = {h_tau} en h_band = {h_band}')
 
-                    Kvleak = True
+                    Kvleak = False
                     if not Kvleak:
                         h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
                         if h_tau < h_star:
@@ -151,6 +152,7 @@ class Valve:
                         h = max(0,min(1,h_tau)) 
 
                     self.h[N] = h
+                    self.h_band[N] = h_band
                     self.Kv[N] = self.linear_valve(h, Kvleak)                   
 
                 

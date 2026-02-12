@@ -428,28 +428,14 @@ def model_network_Rutger():
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
-    net = Network("Rutg 50 kPaCurve, overflow Kvleak heat23")
+    net = Network("Profile 4")
 
-    heat_demand_type1 = ['shower']
-    heat_demand_type2 = ['shower']
-    start_time1 = np.linspace(8,8.4,10)
-    start_time2 = np.linspace(19,19.4,13) #h
-
-    consumer_list = []
-    for i in range(23):
-        if i<=9:
-            consumer = Consumer(f'Consumer {i+1}',heat_demand_type1, [start_time1[i]])
-        else:
-            consumer = Consumer(f'Consumer {i+1}',heat_demand_type2, [start_time2[i-10]])
-        # else:
-        #     consumer = Consumer(f'Consumer {i+1}',['nothing'], [start_time2[8]])
-        consumer_list.append(consumer)
-
+    consumer_list = consumer_start_times('Profile 4', [7.5, 21])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
     dt = 60 # s
-    total_time = 24 * 3600 # h
+    total_time = 24 * 3600 # sec
     T_ambt = 20
 
     # Temperature input profile
@@ -867,6 +853,53 @@ def generate_input_network(temp_type, total_time, dt):
 
     return T_in
 
+def consumer_start_times(profile, peaks):
+    """
+    Generate the four consumer heat demand profiles
+    """
+  
+    if profile == 'Profile 1':
+
+        heat_demand_types = ['shower', 'shower']
+        start_times = peaks #h
+
+        consumer_list = []
+        for i in range(23):
+            consumer = Consumer(f'Consumer {i+1}',heat_demand_types, start_times)
+            consumer_list.append(consumer)
+    else:
+        if profile == 'Profile 2':
+
+            heat_demand_types = ['shower', 'shower']
+            amount = [1, 2, 4, 9, 4, 2, 1] # needs to be odd 
+            interval = 5 / 60  # hours (5 min)
+    
+        elif profile == 'Profile 3':
+            heat_demand_types = ['shower', 'shower']
+            amount = [1,1,2,2,2,2,3,2,2,2,2,1,1] # needs to be odd 
+            interval = 5 / 60  # hours (5 min)
+        
+        elif profile == 'Profile 4':
+            heat_demand_types = ['shower', 'shower']
+            amount = np.ones([23]).astype(int) 
+            interval = 12 / 60  # hours (12 minutes)
+
+        offsets = interval * np.arange(-len(amount)//2, len(amount)//2 + 1)  # offsets for each consumer around the peak time
+            
+        start_time1 = peaks[0] + offsets
+        start_time2 = peaks[1] + offsets        
+        
+        consumer_list = []
+        tot_num = 0
+        for idx, num in enumerate(amount):
+            for i in range(num):
+                consumer = Consumer(f'Consumer {tot_num+i+1}',heat_demand_types, [start_time1[idx], start_time2[idx]])
+                print(f'consumer number {tot_num+i+1}')
+                consumer_list.append(consumer)
+            tot_num += num
+    
+    return consumer_list 
+    
 def network_builder(net : Network, 
                     pipe_data_list : list, 
                     pipe_hex_data, 
@@ -954,3 +987,4 @@ if __name__ == "__main__":
     # test_Rutger_data()
     # model_step_7()
     # test_NR()
+    # consumer_start_times(1/20, 7.5, 23, 24*3600, 60)

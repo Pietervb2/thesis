@@ -5,15 +5,15 @@ class Consumer:
 
     def __init__(self, 
                  consumer_id: str,
-                 demand_type: int,
-                 start_time: float,
+                 demand_type: list,
+                 start_time: list,
                    ):
         
         """
         Args:
             - consumer_id: Unique identifier for the consumer [-]
-            - demand_type: Type of heat demand profile 
-            - start_time: Time when the consumer starts demanding heat [s]
+            - demand_type: list of heat demand profile type 
+            - start_time: list of time when the consumer starts demanding heat [s]
 
         """
         self.consumer_id = consumer_id
@@ -63,9 +63,9 @@ class Consumer:
             if demand_type == 'shower':
 
                 # Time intervals
-                t1_start, t1_end = start_time*3600, (start_time + 0.05)*3600
-                t2_start, t2_end = t1_end, (start_time + 0.1)*3600
-                t3_start, t3_end = t2_end, (start_time + 0.164)*3600
+                t1_start, t1_end = start_time, (start_time + 0.05) # 3 min
+                t2_start, t2_end = t1_end, (t1_end + 0.05)  # 3 min
+                t3_start, t3_end = t2_end, (t2_end + 0.0667) # 4 min
 
                 # Heat demand height
                 # h1, h2, h3 = 20e3, 25e3, 30e3
@@ -74,9 +74,9 @@ class Consumer:
                 Q_d = np.zeros_like(t)
 
                 # Drie blockgolven naast elkaar
-                Q_d[(t >= t1_start) & (t < t1_end)] = h1
-                Q_d[(t >= t2_start) & (t < t2_end)] = h2
-                Q_d[(t >= t3_start) & (t < t3_end)] = h3
+                Q_d[(t >= t1_start*3600) & (t <= t1_end*3600)] = h1
+                Q_d[(t >= t2_start*3600) & (t <= t2_end*3600)] = h2
+                Q_d[(t >= t3_start*3600) & (t <= t3_end*3600)] = h3
 
                 self.Q_d += Q_d
             
