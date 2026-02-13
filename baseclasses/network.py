@@ -50,7 +50,7 @@ class Network:
         for i, node in enumerate(self.nodes.values()):
             
             if i == 0:
-                self.nodes['Node 1.1'].T = T_in
+                node.initialize_node(num_steps, T_in, dt)
             else:
                 node.initialize_node(num_steps, T_init_water, dt)
 
@@ -60,11 +60,8 @@ class Network:
         v_inflow = 0.004 # m/s, dummy variable chosen very small on purpose so you have a enough history. 
 
         for i, pipe in enumerate(self.pipes.values()):
-            
-            if i == 0:
-                pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow, T_in = T_in)
-            else:
-                pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)      
+           
+            pipe['pipe_instance'].bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)      
 
         for valve in self.valves.values():
             valve.initialize_valve(num_steps, dt)
@@ -463,7 +460,7 @@ class Network:
             pipe.set_mflow(mflow_active[j],N)
             pipe.save_dp_friction(N)
 
-    def set_T_network(self, T_ambt : float, N : int, no_cap = False):
+    def set_T_network(self, T_ambt : float, N : int, T_in : float, no_cap = False):
             
             """"
             Set temperature in the network.
@@ -475,8 +472,11 @@ class Network:
             # Done by hand as no inflow pipe connected to node, gets Pipe 1. 
             first_pipe = self.pipes['Pipe 1.1']['pipe_instance']
             first_node = self.nodes['Node 1.1'] 
-            
+
+            # set_T doesn't work as there is no mass inflow, so set it directly.
+            first_node.T[N] = T_in 
             first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
+
             first_pipe.bnode_method(T_ambt, N, no_cap = no_cap)
 
             self.pipes_finished.append(first_pipe.pipe_id)

@@ -54,9 +54,8 @@ class Pipe:
             num_steps : int,
             T_init_water: float,
             T_init_pipe: float,
-            v_inflow: float,
-            T_in: np.ndarray[Union[float]] = None
-            ):
+            v_inflow: float
+      ):
         """
         Initialize history of velocities and temperatures to ensure valid solutions.
         
@@ -73,8 +72,7 @@ class Pipe:
         T_history: array of historical temperatures
 
         #TODO: update
-        """
-        
+        """     
         self.dt = dt
         self.num_steps = num_steps
 
@@ -87,10 +85,7 @@ class Pipe:
         self.T_history = np.ones(self.hist_len) * T_init_water
 
         self.mflow_extended = np.round(np.concatenate([self.v_history, np.zeros(num_steps)]) * self.inner_cs * self.rho_water,5)
-        if T_in is not None:
-            self.T_in_extended = np.concatenate([self.T_history, T_in])
-        else:
-            self.T_in_extended = np.round(np.concatenate([self.T_history, np.zeros(num_steps)]),5)
+        self.T_in_extended = np.round(np.concatenate([self.T_history, np.zeros(num_steps)]),5)
 
         # T_lossless: water temperature at the pipe output without heat loss or capacity of the pipe 
         # T_cap: water temperature at the pipe output with heat loss to capacity of the pipe  

@@ -69,13 +69,13 @@ class Simulation:
         T_ambt: ambient temperature
         """
 
-        # T_in and v_inflow are saved in the network class
-        network.initialize_network(self.dt, self.num_steps, T_in, T_init_water, T_init_pipe)
+        # v_inflow is saved in the network class
+        network.initialize_network(self.dt, self.num_steps, T_in[0], T_init_water, T_init_pipe)
 
         for N in range(0,self.num_steps):
             
             network.set_mflow_network(N)
-            network.set_T_network(self.T_ambt, N, no_cap = no_cap)
+            network.set_T_network(self.T_ambt, N, T_in[N], no_cap = no_cap)
        
         print('Simulation finished')
 

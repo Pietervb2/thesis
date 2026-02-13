@@ -742,9 +742,93 @@ def test_Rutger_data():
     diff = np.sum(result.x - mflow_array)
     print(f"Difference between supplied Rutgers values and root solution: {diff}")
 
+def optimization_run(theta1, theta2, theta3, theta4):
+    
+    """
+    Replicate network of which Rutger send data from
+    """
+
+    pipe_data_DN20 = read_pipe_data('DN20')
+    pipe_data_DN25 = read_pipe_data('DN25')
+    pipe_data_DN32 = read_pipe_data('DN32')
+    pipe_data_DN40 = read_pipe_data('DN40')
+
+    hex_data = read_hex_data('Standard hex constants')
+    pump_data = read_pump_data('50kPa Pump curve')
+    overflow_data = read_overflow_data('Overflow')
+
+    # Create network
+    net = Network("Profile 4")
+
+    consumer_list = consumer_start_times('Profile 4', [7.5, 21])
+    pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
+   
+    # Simulation parameters
+    dt = 60 # s
+    total_time = 24 * 3600 # sec
+    T_ambt = 20
+
+    # Temperature input profile
+    temp_type = 'constant'
+    T_in = generate_input_network(temp_type, total_time, dt)
+
+
+    # Create Network
+    network_builder(net, 
+                pipe_data_list,
+                pipe_data_DN20, 
+                hex_data,
+                pump_data, 
+                consumer_list,
+                # h_overflow,
+                overflow_data = overflow_data,
+                )
+    # Run simulation
+    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
+    sim.simulate_network(net, T_in, T_ambt, T_ambt)
+
 ###########################################################
 # Help functions for the tests
 ###########################################################
+
+def get_total_heat_demand(theta_1, theta_2, theta_3, net : Network, total_time, dt):
+    """
+    Calculate the total heat demand of all consumers in the network.
+    
+    Args:
+        net : Network object containing all hexs (heat exchangers with consumers)
+        total_time : Total simulation time [s]
+        dt : Time step [s]
+    
+    Returns:
+        total_heat_demand : Array of total heat demand over time [W]
+        time : Time array [s]
+    """
+    time = np.arange(0, total_time, dt)
+    num_steps = len(time)
+    total_heat_demand = np.zeros(num_steps)
+    T_supply = np.zeros(num_steps)
+    
+    # Iterate through all heat exchangers and sum consumer demands
+    for hex_id, hex_obj in net.hexs.items():
+        consumer = hex_obj.consumer
+        total_heat_demand += consumer.Q_d
+    
+    for i in range(num_steps):
+
+        if total_heat_demand[i] < theta_1:
+            T_supply[i] = 60
+        elif total_heat_demand[i] >= theta_2:
+            T_supply[i] = 70
+        else:
+            T_supply[i] = 60 + (total_heat_demand[i] - theta_1) * (theta_2 - theta_1) / (theta_2 - theta_1)
+
+        T_supply[i] 
+
+    
+
+    
+    return total_heat_demand, time
 
 def read_pipe_data(pipe_data_set):
 
@@ -830,26 +914,19 @@ def read_overflow_data(overflow_data_set):
 
     return overflow_data
 
-def generate_input_network(temp_type, total_time, dt):
+def generate_supply_temperature(theta_1, theta_2, theta_3, net : Network, total_time, dt):
 
     """
     Generate time series for inlet temperature used in simulations.
     """
 
-    # Check if total_time / dt is a whole number
-    if (total_time / dt) % 1 != 0:
-                num_steps = int(total_time / dt) + 1
-    else: 
-        num_steps = int(total_time/dt)
+    
+    time = np.arange(0, total_time, dt) # time array
+    num_steps = len(time)
+    T_in = np.zeros(num_steps)
 
-    if temp_type == "constant":
-        T_in = np.ones(num_steps) * 65                                 # Constant
-    elif temp_type == "oscillation":
-        T_in = 65 + 5 * np.sin(np.linspace(0, 8*np.pi, num_steps))   # Oscillating inlet temperature
-    elif temp_type == "square":
-        T_in = 80 + 1* square(2 * np.pi * total_time / 20)       
-    else:
-        raise ValueError("This temperature type doesn't exist!")
+    for i in range(num_steps):
+        
 
     return T_in
 
