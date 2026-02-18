@@ -284,7 +284,7 @@ class Pipe:
         Total pressure drop over the pipe due to friction and valves.
         """
 
-        self.dp_friction_array[N] = self.pressure_friction() * self.mflow_extended[N + self.hist_len]**2
+        self.dp_friction_array[N] = self.pressure_friction() * self.mflow_extended[N + self.hist_len]*np.abs(self.mflow_extended[N + self.hist_len])
 
 
 if __name__ == "__main__":
