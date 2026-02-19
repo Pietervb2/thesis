@@ -14,7 +14,7 @@ from network import Network
 
 class Simulation:
 
-    def __init__(self, dt, total_time, net_id, T_ambt, temp_type = None, file = None, no_cap = False):
+    def __init__(self, dt, total_time, net_id, T_ambt, temp_type = None, file = None, no_cap = False, opt = False):
 
         self.dt = dt
         self.total_time = total_time
@@ -23,6 +23,25 @@ class Simulation:
         self.T_ambt = T_ambt
 
         total_time_str = str(total_time)
+
+        if not opt:
+             # Create simulation-specific subfolder
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            if file:
+                sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
+            else:
+                sim_name = (
+                    f"network={net_id}_dt={dt}_total_time={total_time_str}_"
+                    f"Tin={temp_type}_Tambt={T_ambt}"
+                )
+
+            self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
+                       
+            if no_cap:
+                self.folder = self.folder + "_no_cap" 
+            
+            if not os.path.exists(self.folder):
+                os.makedirs(self.folder)
 
         # Create simulation-specific subfolder
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -44,9 +63,14 @@ class Simulation:
 
     def simulate_network(self, 
                          network : Network, 
-                         T_in : np.ndarray[Union[float]],
                          T_init_water : float,
                          T_init_pipe : float,
+                         theta_1 = None,
+                         theta_2 = None,
+                         theta_3 = None,
+                         theta_4 = None,
+                         T_in = None,
+                         opt = False,
                          plot_network = False,
                          plot_nodes_T = False,
                          plot_sup_ret = False,
@@ -69,8 +93,11 @@ class Simulation:
         T_ambt: ambient temperature
         """
 
-        # v_inflow is saved in the network class
-        network.initialize_network(self.dt, self.num_steps, T_in[0], T_init_water, T_init_pipe)
+        if T_in is not None:
+            network.initialize_network(self.dt, self.num_steps, T_in[0], T_init_water, T_init_pipe)
+        else:
+            network.initialize_network(self.dt, self.num_steps, theta_1, T_init_water, T_init_pipe)
+            T_in = self.supply_temperature_BO(theta_1, theta_2, theta_3, theta_4, network, self.total_time, self.dt)
 
         for N in range(0,self.num_steps):
             
@@ -78,22 +105,48 @@ class Simulation:
             network.set_T_network(self.T_ambt, N, T_in[N], no_cap = no_cap)
        
         print('Simulation finished')
+        
+        if not opt:
+            # Plot outcome and save figure
+            self.plot_network(network, plot = plot_network)
+            # self.plot_node_temperature_network(network, plot = plot_nodes_T)
+            self.plot_return_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
+            # self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
+            # self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
+            # self.plot_cap_influence(network, plot = plot_cap_influence)
+            self.plot_supply_return_temperature_flow(network, plot = plot_sup_ret)
+            self.plot_overflow(network, plot = plot_overflow)
+            self.plot_consumer_demand(network, plot = plot_consumer_demand)
+            self.plot_h_valves(network, plot = plot_h_valves)
+            self.save_data(network, T_in) 
 
-        # Plot outcome and save figure
-        self.plot_network(network, plot = plot_network)
-        # self.plot_node_temperature_network(network, plot = plot_nodes_T)
-        self.plot_return_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
-        # self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
-        # self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
-        # self.plot_cap_influence(network, plot = plot_cap_influence)
-        self.plot_supply_return_temperature_flow(network, plot = plot_sup_ret)
-        self.plot_overflow(network, plot = plot_overflow)
-        self.plot_consumer_demand(network, plot = plot_consumer_demand)
-        self.plot_h_valves(network, plot = plot_h_valves)
-        self.save_data(network, T_in) 
+            plt.show()  
+      
+    def supply_temperature_BO(self, theta_1, theta_2, theta_3, theta_4, net : Network, total_time, dt):
+        """
+        Calculate the total heat demand of all consumers in the network.   
+        """
+        time = np.arange(0, total_time, dt)
+        num_steps = len(time)
+        total_heat_demand = np.zeros(num_steps)
+        T_supply = np.zeros(num_steps)
+        
+        # Iterate through all heat exchangers and sum consumer demands
+        for hex_obj in net.hexs.values():
+            consumer = hex_obj.consumer
+            total_heat_demand += consumer.Q_d
+        
+        for i in range(num_steps):
 
-        plt.show()  
+            if total_heat_demand[i] < theta_3:
+                T_supply[i] = theta_1
+            elif total_heat_demand[i] >= theta_3 + theta_4:
+                T_supply[i] = theta_2
+            else:
+                T_supply[i] = theta_1 + (total_heat_demand[i] - theta_3) * (theta_2 - theta_1) / theta_4
 
+        return T_supply 
+    
     def plot_node_temperature_network(self, network: Network, plot = False):
         """
         Plot the temperature history for all nodes in the network
@@ -200,13 +253,13 @@ class Simulation:
         """
         fig_pipe = plt.figure(figsize=(10, 6))
         plt.title('Temperature at outlet pipe')
-        plot = 1
+        plot_pipe = 1
         for pipe_id in network.pipes.keys():
 
             if '.6' in pipe_id:  # Return riser
-                plot = plot*-1
+                plot_pipe = plot_pipe*-1
                 pipe = network.pipes[pipe_id]['pipe_instance']
-                if plot == 1:
+                if plot_pipe == 1:
                     plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.

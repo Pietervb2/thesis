@@ -3,6 +3,8 @@
         "comment_K_vs": "Hydrualic conductivity fully open valve [m3/h/bar^0.5]",
         "K_vs" : 0.003,
         "comment_T_set": "Temperature setpoint [degrees Celsius]",
-        "T_set" : 55
+        "T_set" : 55,
+        "comment_P_band": "Proportional band for the valve control [degrees Celsius]",
+        "P_band" : 3
     }
 }

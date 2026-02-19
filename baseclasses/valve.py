@@ -25,7 +25,8 @@ class Valve:
             self.Ki = valve_data[2]
  
         elif node is not None:
-            self.T_set_overflow = valve_data[1]   
+            self.T_set_overflow = valve_data[1]
+            self.P_band = valve_data[2]
 
         self.h_overflow = h_overflow  
   
@@ -128,14 +129,13 @@ class Valve:
                     else:
                         node_temp = self.node.T[N-1]
 
-                    P_band = 3.0  # degrees
-                    if node_temp < self.T_set_overflow - P_band:  # Overflow temperature set point
+                    if node_temp < self.T_set_overflow - self.P_band:  # Overflow temperature set point
                         h_band = 1
                     else:
                         if node_temp > self.T_set_overflow:
                             h_band = 0 
                         else:
-                            h_band = (self.T_set_overflow - node_temp)/P_band
+                            h_band = (self.T_set_overflow - node_temp)/self.P_band
 
                     tau = 180  # time constant for smoothing [s]
                     h_tau = self.h[N-1] + (h_band - self.h[N-1]) * self.dt/tau  # smooth the changes
