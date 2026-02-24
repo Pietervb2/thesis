@@ -412,52 +412,6 @@ def model_step_7():
     # sim.plot_network(net)      
     sim.simulate_network(net, T_in, T_ambt, T_ambt)
 
-def model_network_Rutger():
-    
-    """
-    Replicate network of which Rutger send data from
-    """
-
-    pipe_data_DN20 = read_pipe_data('DN20')
-    pipe_data_DN25 = read_pipe_data('DN25')
-    pipe_data_DN32 = read_pipe_data('DN32')
-    pipe_data_DN40 = read_pipe_data('DN40')
-
-    hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('50kPa Pump curve')
-    overflow_data = read_overflow_data('Overflow')
-
-    # Create network
-    net = Network("Profile 2")
-
-    consumer_list = consumer_start_times('Profile 2', [7.5, 21])
-    pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
-   
-    # Simulation parameters
-    dt = 60 # s
-    total_time = 24 * 3600 # sec
-    T_ambt = 20
-
-    # Temperature input profile
-    temp_type = 'constant'
-    T_in = generate_input_network(temp_type, total_time, dt)
-
-    h_overflow = np.zeros_like(T_in)
-
-    # Create Network
-    network_builder(net, 
-                pipe_data_list,
-                pipe_data_DN20, 
-                hex_data,
-                pump_data, 
-                consumer_list,
-                # h_overflow,
-                overflow_data = overflow_data,
-                )
-    # Run simulation
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
-    sim.simulate_network(net, T_ambt, T_ambt, T_in = T_in)
-
 def test_incidence_and_loop_matrices():
     
     pipe_data = read_pipe_data('Pipe of DN40')
@@ -742,7 +696,53 @@ def test_Rutger_data():
     diff = np.sum(result.x - mflow_array)
     print(f"Difference between supplied Rutgers values and root solution: {diff}")
 
-def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile):
+def model_network_Rutger():
+    
+    """
+    Replicate network of which Rutger send data from
+    """
+
+    pipe_data_DN20 = read_pipe_data('DN20')
+    pipe_data_DN25 = read_pipe_data('DN25')
+    pipe_data_DN32 = read_pipe_data('DN32')
+    pipe_data_DN40 = read_pipe_data('DN40')
+
+    hex_data = read_hex_data('Standard hex constants')
+    pump_data = read_pump_data('50kPa Pump curve')
+    overflow_data = read_overflow_data('Overflow')
+
+    # Create network
+    net = Network("Profile 4")
+
+    consumer_list = consumer_start_times('Profile 4', [7.5, 21])
+    pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
+   
+    # Simulation parameters
+    dt = 60 # s
+    total_time = 24 * 3600 # sec
+    T_ambt = 20
+
+    # Temperature input profile
+    temp_type = 'constant'
+    T_in = generate_input_network(temp_type, total_time, dt)
+
+    h_overflow = np.zeros_like(T_in)
+
+    # Create Network
+    network_builder(net, 
+                pipe_data_list,
+                pipe_data_DN20, 
+                hex_data,
+                pump_data, 
+                consumer_list,
+                # h_overflow,
+                overflow_data = overflow_data,
+                )
+    # Run simulation
+    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
+    sim.simulate_network(net, T_ambt, T_ambt, T_in = T_in)
+
+def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, opt):
     
     """
     Replicate network of which Rutger send data from
@@ -761,7 +761,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('50kPa Pump curve')
+    pump_data = read_pump_data('60kPa Pump constant')
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
@@ -775,6 +775,10 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
     total_time = 24 * 3600 # sec
     T_ambt = 20
 
+    # Apply input parameters for BO
+    overflow_data[1] = theta_5
+    overflow_data[2] = theta_6
+
     # Create Network
     network_builder(net, 
                 pipe_data_list,
@@ -782,18 +786,19 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
                 hex_data,
                 pump_data, 
                 consumer_list,
-                # h_overflow,
                 overflow_data = overflow_data,
                 )
     
-    # Apply input parameters for BO
-    overflow_data[1] = theta_5
-    overflow_data[2] = theta_6
-
     # Run simulation
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = 'BO')
-    sim.simulate_network(net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4)
+    theta = [theta_1, theta_2, theta_3, theta_4, theta_5, theta_6]
+    net.theta = theta # debug
 
+    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = 'BO', opt = opt)
+    sim.simulate_network(net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4, opt = opt)
+
+    if opt:
+        return net
+    
 ###########################################################
 # Help functions for the tests
 ###########################################################
@@ -1028,13 +1033,13 @@ def network_builder(net : Network,
         net.add_node(overflow_node_supply, 0, 0, 3*i+1)
         net.add_node(overflow_node_return, 1, 0, 3*i+1)
 
-        net.add_overflow(f'Overflow 1' , supply_node, overflow_node_supply, pipe_data, overflow_data, net.nodes[overflow_node_supply], h_overflow)
-        net.add_pipe(f'Overflow 2', overflow_node_supply, overflow_node_return, pipe_data)
-        net.add_pipe(f'Overflow 3', overflow_node_return, return_node, pipe_data)
+        net.add_pipe('Overflow 1' , supply_node, overflow_node_supply, pipe_data)
+        net.add_overflow('Overflow 2' , overflow_node_supply, overflow_node_return, pipe_data, overflow_data, net.nodes[overflow_node_supply], h_overflow)
+        net.add_pipe('Overflow 3', overflow_node_return, return_node, pipe_data)
 
         return net
     
 if __name__ == "__main__":
 
-    # model_network_Rutger()
-    optimization_run(65, 80, 200e3, 100e3, 55, 3, 'Profile 1')
+    model_network_Rutger()
+    # optimization_run(65, 80, 100e3, 100e3, 55, 3, 'Profile 4')

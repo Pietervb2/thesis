@@ -29,6 +29,8 @@ class Network:
 
         self.net_id = net_id
 
+        self.theta = None #debug
+
     def __repr__(self):
         return f"Network(net_id={self.net_id}, nodes={list(self.nodes.keys())}, pipes={list(self.pipes.keys())}, hexs={list(self.hexs.keys())})"
 
@@ -440,7 +442,7 @@ class Network:
         self.pump_coeff_active = self.pump_coeff[active_mask, :]
         mflow0_active = mflow0[active_mask]
 
-        print(f'N = {N}')
+        # print(f'N = {N}')
         # Performs Newton-Raphson using scipy root function
         result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr')
 

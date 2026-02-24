@@ -69,7 +69,7 @@ class Consumer:
 
                 # Heat demand height
                 # h1, h2, h3 = 20e3, 25e3, 30e3
-                h1,h2,h3 = 15e3, 20e3, 25e3
+                h1,h2,h3 = 10e3, 15e3, 20e3 # total of 9.3 MJ, which is a reasonable value for a shower.
 
                 Q_d = np.zeros_like(t)
 

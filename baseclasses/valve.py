@@ -139,7 +139,6 @@ class Valve:
 
                     tau = 180  # time constant for smoothing [s]
                     h_tau = self.h[N-1] + (h_band - self.h[N-1]) * self.dt/tau  # smooth the changes
-                    # print(f'h_tau = {h_tau} en h_band = {h_band}')
 
                     Kvleak = False
                     if not Kvleak:

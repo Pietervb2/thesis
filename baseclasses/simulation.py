@@ -43,24 +43,6 @@ class Simulation:
             if not os.path.exists(self.folder):
                 os.makedirs(self.folder)
 
-        # Create simulation-specific subfolder
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        if file:
-            sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
-        else:
-            sim_name = (
-                f"network={net_id}_dt={dt}_total_time={total_time_str}_"
-                f"Tin={temp_type}_Tambt={T_ambt}"
-            )
-
-        self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
-                   
-        if no_cap:
-            self.folder = self.folder + "_no_cap" 
-        
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder)
-
     def simulate_network(self, 
                          network : Network, 
                          T_init_water : float,
@@ -103,10 +85,10 @@ class Simulation:
             
             network.set_mflow_network(N)
             network.set_T_network(self.T_ambt, N, T_in[N], no_cap = no_cap)
-       
-        print('Simulation finished')
-        
+            
         if not opt:
+            print('Simulation finished')
+            
             # Plot outcome and save figure
             self.plot_network(network, plot = plot_network)
             # self.plot_node_temperature_network(network, plot = plot_nodes_T)
@@ -289,7 +271,7 @@ class Simulation:
                 temp = valve.node.T
                 valve_h = valve.h
 
-        plt.plot(self.time, temp, label=f'Temperature') 
+        plt.plot(self.time, temp) 
                        
         # Set x-axis to 0-24 hours (data stored in seconds). 
         # Show ticks every 4 hours. 
@@ -301,7 +283,6 @@ class Simulation:
 
         plt.xlabel(f'Time (hours), dt = {self.dt}') 
         plt.ylabel('Temperature (°C)') 
-        plt.legend() 
         plt.grid(True) 
         plt.savefig(self.folder + '/overflow_temperature.png')
 
@@ -505,12 +486,32 @@ class Simulation:
         plt.xlabel(f'Time (hours), dt = {self.dt}')
         plt.ylabel('Heat (kW)')
         plt.grid(True)
+        plt.legend()
         plt.savefig(self.folder + '/total_heat.png')
+
+        fig_just_demand = plt.figure()
+        plt.title("Total Consumer Heat Demand")
+        plt.plot(self.time, tot_Q_d/1e3, label='Total heat demand')
+
+        # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
+        ax = plt.gca()
+        ax.set_xlim(0, 24 * 3600)  # limits in seconds
+        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xticks(ticks_seconds)
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+
+        plt.xlabel(f'Time (hours), dt = {self.dt}')
+        plt.ylabel('Heat (kW)')
+        plt.grid(True)
+        plt.savefig(self.folder + '/total_heat_demand.png')
+
+
 
 
         if not plot:
             plt.close(fig)
             plt.close(fig_tot)
+            plt.close(fig_just_demand)
 
     def plot_h_valves(self, network: Network, plot = False):
 

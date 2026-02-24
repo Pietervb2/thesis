@@ -5,6 +5,6 @@
         "comment_T_set": "Temperature setpoint [degrees Celsius]",
         "T_set" : 55,
         "comment_P_band": "Proportional band for the valve control [degrees Celsius]",
-        "P_band" : 3
+        "P_band" : 1
     }
 }
