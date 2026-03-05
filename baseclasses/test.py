@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import json
+import time
 
 
 def test_compare_bnode_method(number_of_nodes_array,
@@ -712,13 +713,13 @@ def model_network_Rutger():
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
-    net = Network("Profile 4")
+    net = Network("Profile 4_fastbnode")
 
-    consumer_list = consumer_start_times('Profile 4', [7.5, 21])
+    consumer_list = consumer_start_times('Profile 4', [7.5,21])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
-    dt = 60 # s
+    dt = 1 # s
     total_time = 24 * 3600 # sec
     T_ambt = 20
 
@@ -761,7 +762,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('60kPa Pump constant')
+    pump_data = read_pump_data('50kPa Pump curve')
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
@@ -952,7 +953,7 @@ def consumer_start_times(profile, peaks):
         for idx, num in enumerate(amount):
             for i in range(num):
                 consumer = Consumer(f'Consumer {tot_num+i+1}',heat_demand_types, [start_time1[idx], start_time2[idx]])
-                print(f'consumer number {tot_num+i+1}')
+                # print(f'consumer number {tot_num+i+1}')
                 consumer_list.append(consumer)
             tot_num += num
     
@@ -1040,6 +1041,9 @@ def network_builder(net : Network,
         return net
     
 if __name__ == "__main__":
-
+    
+    start = time.time()
     model_network_Rutger()
+    end = time.time()
+    print(f"Execution time: {end - start} seconds")
     # optimization_run(65, 80, 100e3, 100e3, 55, 3, 'Profile 4')

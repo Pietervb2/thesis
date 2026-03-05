@@ -1,15 +1,16 @@
+from network import Network
+
+from pathlib import Path
+from scipy.signal import square
+from typing import Union
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import plotly.tools as tls
 import plotly.graph_objects as go
-
-from pathlib import Path
-from scipy.signal import square
-from typing import Union
-
-from network import Network
+import time
 
 
 class Simulation:
@@ -78,17 +79,26 @@ class Simulation:
         if T_in is not None:
             network.initialize_network(self.dt, self.num_steps, T_in[0], T_init_water, T_init_pipe)
         else:
-            network.initialize_network(self.dt, self.num_steps, theta_1, T_init_water, T_init_pipe)
+            network.initialize_network(self.dt, self.num_steps, theta_1, T_init_water, T_init_pipe) # need to create Q_d, theta_1 stated as it will always start with this low temp. Afterwards T_in for rest of simulation will be determined.
             T_in = self.supply_temperature_BO(theta_1, theta_2, theta_3, theta_4, network, self.total_time, self.dt)
 
         for N in range(0,self.num_steps):
+
+            if not opt:
+                print(f"Simulating time step {N+1}/{self.num_steps}, time = {N*self.dt} seconds")
             
+            # before = time.time()
             network.set_mflow_network(N)
+            # mid = time.time()
             network.set_T_network(self.T_ambt, N, T_in[N], no_cap = no_cap)
+            # after = time.time()
+
+            # print(f"Time taken for mass flow at timestep {N}: {mid-before} seconds")
+            # print(f"Time taken for temperature at timestep {N}: {after-mid} seconds")
             
         if not opt:
             print('Simulation finished')
-            
+
             # Plot outcome and save figure
             self.plot_network(network, plot = plot_network)
             # self.plot_node_temperature_network(network, plot = plot_nodes_T)
@@ -720,6 +730,17 @@ class Simulation:
             df_hex_valve_data = pd.DataFrame(hex_valve_data)
             df_hex_valve_data.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_valve_data.csv'), index = False)
 
+        if network.theta is not None:
+            theta_data = {
+                'Min supply temperature [°C]': network.theta[0],
+                'Max supply temperature [°C]': network.theta[1],
+                'Heat demand threshold [W]': network.theta[2],
+                'Heat demand P-band [W]': network.theta[3],
+                'Overflow T setpoint [°C]': network.theta[4],
+                'Overflow P-band [°C]': network.theta[5]
+            }
+            df_theta = pd.DataFrame(theta_data, index = [0])
+            df_theta.to_csv(os.path.join(self.folder,'hex_consumer_data','theta.csv'), index = False)
 
 if __name__ == "__main__":
     pass 

@@ -8,7 +8,6 @@ from scipy.optimize import root
 from typing import Union
 
 import numpy as np
-import matplotlib.pyplot as plt
 import networkx as nx
 
 
@@ -442,9 +441,8 @@ class Network:
         self.pump_coeff_active = self.pump_coeff[active_mask, :]
         mflow0_active = mflow0[active_mask]
 
-        # print(f'N = {N}')
-        # Performs Newton-Raphson using scipy root function
-        result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr')
+        # Solves system of non linear equations using scipy root function
+        result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr', tol = 1e-5)
 
         # Extract results
         mflow_active = result.x
@@ -479,7 +477,7 @@ class Network:
             first_node.T[N] = T_in 
             first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
 
-            first_pipe.bnode_method(T_ambt, N, no_cap = no_cap)
+            first_pipe.bnode_method_fast(T_ambt, N, no_cap = no_cap)
 
             self.pipes_finished.append(first_pipe.pipe_id)
 
@@ -500,7 +498,9 @@ class Network:
 
         for pipe_id, pipe in node.pipes_out.items():
 
-            pipe.bnode_method(T_ambt, N, no_cap = no_cap)
+            # if pipe_id != 'Pump 1':
+
+            pipe.bnode_method_fast(T_ambt, N, no_cap = no_cap)
             self.pipes_finished.append(pipe_id)
             
             next_node_id = self.pipes[pipe_id]['to']

@@ -137,7 +137,7 @@ class Valve:
                         else:
                             h_band = (self.T_set_overflow - node_temp)/self.P_band
 
-                    tau = 180  # time constant for smoothing [s]
+                    tau = 5  # time constant for smoothing [s]
                     h_tau = self.h[N-1] + (h_band - self.h[N-1]) * self.dt/tau  # smooth the changes
 
                     Kvleak = False

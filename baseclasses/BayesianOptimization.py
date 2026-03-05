@@ -15,7 +15,7 @@ def cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
     """
 
     if theta_1 > theta_2:
-        return 1e7  # Penalize invalid parameter combinations
+        return -1e7  # Penalize invalid parameter combinations
 
     # Run simulation
     net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, opt = True)
@@ -58,8 +58,8 @@ def cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
     return -cost
 
 # Bounded region of parameter space
-pbounds = {'theta_1': (60, 65), 
-           'theta_2': (65, 70), 
+pbounds = {'theta_1': (60, 70), 
+           'theta_2': (60, 70), 
            'theta_3': (0, 500e3), 
            'theta_4': (0, 200e3), 
            'theta_5': (54, 56), 
@@ -71,11 +71,11 @@ optimizer = BayesianOptimization(
     f=cost_function,
     pbounds=pbounds,
     verbose=2, # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
-    random_state=1)
+    random_state=2)
 
 optimizer.maximize(
-    init_points=5,
-    n_iter=10)
+    init_points=10,
+    n_iter=4)
 
 theta_1 =optimizer.max['params']['theta_1']
 theta_2 =optimizer.max['params']['theta_2']
