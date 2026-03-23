@@ -86,7 +86,7 @@ class Simulation:
 
             if not opt:
                 print(f"Simulating time step {N+1}/{self.num_steps}, time = {N*self.dt} seconds")
-            
+
             # before = time.time()
             network.set_mflow_network(N)
             # mid = time.time()
@@ -716,8 +716,9 @@ class Simulation:
                    
             else:
                 overflow_data['Kv'] = valve.Kv
-                overflow_data['h'] = valve.h
-                overflow_data['h_band'] = valve.h_band
+                overflow_data['h'] = valve.h # actual h, with hstar taken into account
+                overflow_data['h_band'] = valve.h_band # change wanted by P-band
+                overflow_data['h_tau'] = valve.h_tau   # change slowed down by tau
                 overflow_data['T'] = valve.node.T
                 overflow_data['mflow'] = network.pipes[f'Overflow 1']['pipe_instance'].mflow
 

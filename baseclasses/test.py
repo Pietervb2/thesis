@@ -43,6 +43,7 @@ def test_compare_bnode_method(number_of_nodes_array,
 
         sim = Simulation(dt, total_time, net.net_id, temp_type, flow_type, T_ambt)      
 
+        #TODO Need to rewrite this part, as the code is updated. 
         T_in,v_flow = generate_input(temp_type, flow_type, total_time, dt)
 
         sim.simulate_network(net, T_in, v_flow, T_ambt)
@@ -713,9 +714,9 @@ def model_network_Rutger():
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
-    net = Network("Profile 4_fastbnode")
+    net = Network("Profile 1_fastbnode")
 
-    consumer_list = consumer_start_times('Profile 4', [7.5,21])
+    consumer_list = consumer_start_times('Profile 1', [7.5,21])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
@@ -743,7 +744,7 @@ def model_network_Rutger():
     sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
     sim.simulate_network(net, T_ambt, T_ambt, T_in = T_in)
 
-def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, opt):
+def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, opt = False, opt_type = 'None'):
     
     """
     Replicate network of which Rutger send data from
@@ -772,7 +773,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
-    dt = 60 # s
+    dt = 1 # s
     total_time = 24 * 3600 # sec
     T_ambt = 20
 
@@ -794,7 +795,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
     theta = [theta_1, theta_2, theta_3, theta_4, theta_5, theta_6]
     net.theta = theta # debug
 
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = 'BO', opt = opt)
+    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = opt_type, opt = opt)
     sim.simulate_network(net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4, opt = opt)
 
     if opt:
@@ -1046,4 +1047,3 @@ if __name__ == "__main__":
     model_network_Rutger()
     end = time.time()
     print(f"Execution time: {end - start} seconds")
-    # optimization_run(65, 80, 100e3, 100e3, 55, 3, 'Profile 4')

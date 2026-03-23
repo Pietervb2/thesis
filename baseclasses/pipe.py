@@ -107,8 +107,9 @@ class Pipe:
         # Try to make model faster
         self.cum_mass = np.zeros_like(self.mflow_extended)
         self.cum_mT   = np.zeros_like(self.mflow_extended)
-        self.cum_mass[:self.hist_len+1] = self.mflow_extended[:self.hist_len+1] * self.dt
-        self.cum_mT[:self.hist_len+1]   = self.mflow_extended[:self.hist_len+1] * self.T_in_extended[:self.hist_len+1] * self.dt
+
+        self.cum_mass[:self.hist_len+1] = np.cumsum(self.mflow_extended[:self.hist_len+1] * self.dt)
+        self.cum_mT[:self.hist_len+1]   = np.cumsum(self.mflow_extended[:self.hist_len+1] * self.T_in_extended[:self.hist_len+1] * self.dt)
 
     def bnode_method(self,
                      T_ambt : float,
@@ -150,11 +151,9 @@ class Pipe:
                 sum_term = sum(mflow_ex[N_hist-m:N_hist+1] * self.dt)
                 if sum_term > self.L * self.inner_cs * self.rho_water + mflow_ex[N_hist] * self.dt:
                     break
-
-                if m > 10000:
-                    pass
                 m += 1
             
+            # print(f"Step {N}: n={n}, R={R:.2f}, R_length {R/(self.inner_cs*self.rho_water)} m={m}") #debug
             # Compute Y and S
             Y = sum(mflow_ex[N_hist-m+1:N_hist-n] * T_in_ex[N_hist-m+1:N_hist-n] * self.dt)
             S = sum(mflow_ex[N_hist - m + 1:N_hist + 1] * self.dt) if m > n else R
@@ -239,37 +238,24 @@ class Pipe:
         self.cum_mT[N_hist]   = self.cum_mT[N_hist-1] + mflow_ex[N_hist] * T_in_ex[N_hist] * self.dt
 
         if mflow_ex[N_hist] != 0:
-            # -------------------------------
-            # Step 1: Update cumulative arrays
-            # -------------------------------
-            # self.cum_mass[N_hist] = self.cum_mass[N_hist-1] + mflow_ex[N_hist] * self.dt
-            # self.cum_mT[N_hist]   = self.cum_mT[N_hist-1] + mflow_ex[N_hist] * T_in_ex[N_hist] * self.dt
-
-            # -------------------------------
-            # Step 2: Compute n using searchsorted
-            # -------------------------------
+            # Replace the while loops with searchsorted for efficiency
             M_pipe = self.L * self.inner_cs * self.rho_water
+
             target_n = self.cum_mass[N_hist] - M_pipe
-            idx_n = np.searchsorted(self.cum_mass[:N_hist+1], target_n, side='left')
+            idx_n = np.searchsorted(self.cum_mass[:N_hist+1], target_n, side='left')           
             n = N_hist - idx_n
             R = self.cum_mass[N_hist] - (self.cum_mass[idx_n-1] if idx_n > 0 else 0.0)
 
-            # -------------------------------
-            # Step 3: Compute m using searchsorted
-            # -------------------------------
             target_m = self.cum_mass[N_hist] - (M_pipe + mflow_ex[N_hist] * self.dt)
             idx_m = np.searchsorted(self.cum_mass[:N_hist+1], target_m, side='left')
             m = N_hist - idx_m
 
-            # -------------------------------
-            # Step 4: Compute Y and S
-            # -------------------------------
+            # print(f"Step {N}: n={n}, R={R:.2f},R_length {R/(self.inner_cs*self.rho_water)} m={m},fast") #debug
+
             Y = sum(mflow_ex[N_hist-m+1:N_hist-n] * T_in_ex[N_hist-m+1:N_hist-n] * self.dt)
             S = sum(mflow_ex[N_hist - m + 1:N_hist + 1] * self.dt) if m > n else R
 
-            # -------------------------------
-            # Step 5: Compute lossless outlet temperature
-            # -------------------------------
+            # Compute lossless temperature with weighted average
             lossless = (
                 (R - M_pipe) * T_in_ex[N_hist-n]
                 + Y
@@ -277,9 +263,7 @@ class Pipe:
             ) / (mflow_ex[N_hist] * self.dt)
             self.T_lossless[N] = lossless
 
-            # -------------------------------
-            # Step 6: Take into account pipe heat capacity
-            # -------------------------------
+            # Take into account the heat capacity of the steel pipe
             prev_Tpipe = self.T_pipe[N-1] if N > 0 else self.T_pipe[N]
             self.T_cap[N] = (
                 mflow_ex[N_hist] * self.c_water * self.T_lossless[N] * self.dt
@@ -287,17 +271,13 @@ class Pipe:
             ) / (self.C_whole_pipe + mflow_ex[N_hist] * self.c_water * self.dt)
 
             # Update pipe wall temperature
-            self.T_pipe[N] = self.T_cap[N]
+            self.T_pipe[N] = self.T_cap[N]  
 
-            # -------------------------------
-            # Step 7: Compute average stay time
-            # -------------------------------
+            # Average delay in pipe
             t_stay = self.average_delay_bnode(n, m, R, S, mflow_ex, N_hist)
             self.t_stay_array[N] = t_stay
 
-            # -------------------------------
-            # Step 8: Final outlet temperature including heat loss
-            # -------------------------------
+            # Final outlet water temperature including heat loss to ambient
             ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
             decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.outer_cs))
             self.T[N] = T_ambt + (ref_T - T_ambt) * decay
@@ -351,6 +331,9 @@ class Pipe:
         third_term_delay = m * (mflow_ex[N] * self.dt + self.L * self.inner_cs * self.rho_water - S)
 
         delay = (first_term_delay + second_term_delay + third_term_delay)/mflow_ex[N]
+
+        # print(f'N = {N}, self.hist_len = {self.hist_len}, n = {n}, m = {m}, R = {R:.2f}, S = {S:.2f}, t_stay {delay}, mflow_ex[N] = {mflow_ex[N]}') #debug
+
 
         return delay
     

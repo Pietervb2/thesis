@@ -1,11 +1,10 @@
-from bayes_opt import BayesianOptimization
-from sklearn.gaussian_process.kernels import Matern
-
-from test import optimization_run 
+from baseclasses.test import optimization_run 
 
 import numpy as np
+import scipy.optimize
+import time
 
-def cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
+def cost_function(theta):
 
     """
     theta_1 : Minimum supply temperature [°C]
@@ -16,8 +15,15 @@ def cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
     theta_6 : Overflow valve P-band [°C]
     """
 
+    theta_1 = theta[0]
+    theta_2 = theta[1]
+    theta_3 = theta[2]
+    theta_4 = theta[3]
+    theta_5 = theta[4]
+    theta_6 = theta[5]
+
     if theta_1 > theta_2:
-        return -1e7  # Penalize invalid parameter combinations
+        return 1e7  # Penalize invalid parameter combinations
 
     # Run simulation
     net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, opt = True)
@@ -55,39 +61,38 @@ def cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
            w_3 * np.sum((total_heat_demand - total_heat_supply)**2) + \
            theta.T @ R @ theta
     
-    print(f'term 1 {w_1 * np.sum(T_r**2)}, term 2 {w_2 * np.sum((T_set - T_overflow)**2)}, term 3 {w_3 * np.sum((total_heat_demand - total_heat_supply)**2)}, regularization {theta.T @ R @ theta}')
+    print(f'tot_cost = {cost}, theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
+    # print(f'tot_cost = {cost}, term 1 {w_1 * np.sum(T_r**2)}, term 2 {w_2 * np.sum((T_set - T_overflow)**2)}, term 3 {w_3 * np.sum((total_heat_demand - total_heat_supply)**2)}, regularization {theta.T @ R @ theta}')
     # print(f'Regularization terms: {theta_1**2 * R[0,0]}, {theta_2**2 * R[1,1]}, {theta_3**2 * R[2,2]}, {theta_4**2 * R[3,3]}, {theta_5**2 * R[4,4]}, {theta_6**2 * R[5,5]}')
-    return -cost
-
-# Bounded region of parameter space
-pbounds = {'theta_1': (60, 70), 
-           'theta_2': (60, 70), 
-           'theta_3': (0, 500e3), 
-           'theta_4': (0, 200e3), 
-           'theta_5': (54, 56), 
-           'theta_6': (0, 5)}
+    return cost
 
 profile = 'Profile 1'
 
-optimizer = BayesianOptimization(
-    f=cost_function,
-    pbounds=pbounds,
-    verbose=2, # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
-    random_state=2)
+# Initial guess
+x0 = [60, 70, 250e3, 100e3, 55, 2]
 
-# kernel = Matern(nu=1.5, length_scale=np.ones(optimizer.space.dim))
-# optimizer.set_gp_params(kernel=kernel)
+bounds = [(60, 70), (60, 70), (0, 500e3), (0, 200e3), (54, 56), (0, 5)]  # e.g., pressures and flows must be non-negative
 
-optimizer.maximize(
-    init_points=10,
-    n_iter=4)
 
-theta_1 =optimizer.max['params']['theta_1']
-theta_2 =optimizer.max['params']['theta_2']
-theta_3 =optimizer.max['params']['theta_3']
-theta_4 =optimizer.max['params']['theta_4']
-theta_5 =optimizer.max['params']['theta_5']
-theta_6 =optimizer.max['params']['theta_6']
+# Powell optimization
 
-# theta_1, theta_2, theta_3, theta_4, theta_5, theta_6 = 60.88932373975674, 69.3343780526063, 160077.4634208071, 0.0, 55.46567498702314, 1.7212685648846227
-optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile = profile, opt = False, temp_type = 'BO')
+start = time.time()
+result = scipy.optimize.minimize(cost_function, x0, method='Powell', bounds = bounds, options={'xtol':1e-3, 'ftol':1e-2, 'disp':True})
+stop = time.time()  
+
+print(f"Optimization time: {stop - start} seconds")
+print(f'Success: {result.success}, Message: {result.message}')
+print("Optimized variables:", result.x)
+print("Objective function:", result.fun)
+
+theta_1 = result.x[0]
+theta_2 = result.x[1]
+theta_3 = result.x[2]
+theta_4 = result.x[3]
+theta_5 = result.x[4]
+theta_6 = result.x[5]
+
+optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile = profile, opt = False, opt_type = 'Powell')
+
+
+# Nu vergelijk je dus wel de geparameteriseerde optie met BO terwijl je eigenlijk alle inputs op elke tijdstap apart zou kunnen optimaliseren.

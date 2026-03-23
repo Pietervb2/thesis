@@ -40,7 +40,8 @@ class Valve:
 
         if self.h_overflow is None:
             self.h = np.zeros(num_steps)
-            self.h_band = np.zeros(num_steps) # for the band control of the overflow valve.
+            self.h_band = np.zeros(num_steps) # debug, get insight in behavior
+            self.h_tau = np.zeros(num_steps) # debug, get insight in behavior
             self.Kv = np.ones(num_steps)*1e-5 # a dummy variable in which way 1/Kv is not inf if we take 0 at the beginning of the simulation. 
         else:
             self.h = self.h_overflow # set the valve displacement at a constant opening
@@ -121,7 +122,8 @@ class Valve:
                     self.Kv[N] = 0
             
             if self.node is not None:
-
+                
+                # stating whether you already give it a predfined position
                 if self.h_overflow is None:
                     
                     if N == 0:
@@ -152,6 +154,7 @@ class Valve:
 
                     self.h[N] = h
                     self.h_band[N] = h_band
+                    self.h_tau[N] = h_tau
                     self.Kv[N] = self.linear_valve(h, Kvleak)                   
 
                 
