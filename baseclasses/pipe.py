@@ -129,8 +129,6 @@ class Pipe:
         T_N: Temperature of water flowing from the pipe at time step N
         """
 
-        # if self.pipe_id == 'Pump 1':
-        #     print("Gaat er wel door!!!")
         N_hist = N + self.hist_len
         mflow_ex, T_in_ex = self.mflow_extended, self.T_in_extended
         self.mflow[N] = self.mflow_extended[N_hist]
@@ -201,7 +199,7 @@ class Pipe:
                 
                 # Update temperature pipe wall
                 self.T_pipe[N] = self.T_cap[N]
-                
+                                
                 # Update time stay in pipe
                 t_stay = self.dt + self.t_stay_array[N-1]
                 self.t_stay_array[N] = t_stay
@@ -236,6 +234,9 @@ class Pipe:
 
         self.cum_mass[N_hist] = self.cum_mass[N_hist-1] + mflow_ex[N_hist] * self.dt
         self.cum_mT[N_hist]   = self.cum_mT[N_hist-1] + mflow_ex[N_hist] * T_in_ex[N_hist] * self.dt
+
+        if self.pipe_id == 'Overflow 1' and N == 2775:
+            pass
 
         if mflow_ex[N_hist] != 0:
             # Replace the while loops with searchsorted for efficiency

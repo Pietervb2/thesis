@@ -40,7 +40,7 @@
         "DN40" : {
         "comment_radius": "Inner and outer radius of the pipe [m]",
         "r_inner" : 0.020, 
-        "r_outer" : 0.025, 
+        "r_outer" : 0.0242, 
         "comment_density": "Density of the pipe material and its insulation layer [kg/m^3]",
         "rho_pipe": 8000, 
         "rho_insu" : 32, 
@@ -53,14 +53,14 @@
         "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/m2 K]",
         "h_pipe_air": 5,
         "comment_thickness": "Thickness of the insulation layer [m]",
-        "insu_thickness": 0.013,
+        "insu_thickness": 0.031,
         "comment_epsilon": "Rougness of inner pipe, value for commercial steel pipe [m]",
         "epsilon" : 0.045e-3
     },
         "DN20": {
         "comment_radius": "Inner and outer radius of the pipe [m]",
         "r_inner" : 0.01, 
-        "r_outer" : 0.015, 
+        "r_outer" : 0.0135, 
         "comment_density": "Density of the pipe material and its insulation layer [kg/m^3]",
         "rho_pipe": 8000, 
         "rho_insu" : 32, 
@@ -73,7 +73,7 @@
         "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/m2 K]",
         "h_pipe_air": 5,
         "comment_thickness": "Thickness of the insulation layer [m]",
-        "insu_thickness": 0.013,
+        "insu_thickness": 0.021,
         "comment_epsilon": "Rougness of inner pipe, value for commercial steel pipe [m]",
         "epsilon" : 0.045e-3
     },
@@ -94,7 +94,7 @@
         "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/m2 K]",
         "h_pipe_air": 5,
         "comment_thickness": "Thickness of the insulation layer [m]",
-        "insu_thickness": 0.013,
+        "insu_thickness": 0.029,
         "comment_epsilon": "Rougness of inner pipe, value for commercial steel pipe [m]",
         "epsilon" : 0.045e-3
     },
@@ -102,7 +102,7 @@
     "DN25": {
         "comment_radius": "Inner and outer radius of the pipe [m]",
         "r_inner" : 0.0125, 
-        "r_outer" : 0.0175, 
+        "r_outer" : 0.0169, 
         "comment_density": "Density of the pipe material and its insulation layer [kg/m^3]",
         "rho_pipe": 8000, 
         "rho_insu" : 32, 
@@ -115,7 +115,7 @@
         "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/m2 K]",
         "h_pipe_air": 5,
         "comment_thickness": "Thickness of the insulation layer [m]",
-        "insu_thickness": 0.013,
+        "insu_thickness": 0.025,
         "comment_epsilon": "Rougness of inner pipe, value for commercial steel pipe [m]",
         "epsilon" : 0.045e-3
     }

@@ -714,9 +714,12 @@ def model_network_Rutger():
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
-    net = Network("Profile 1_fastbnode")
+    tau = overflow_data[3]
+    steps = overflow_data[4]
+    temperature = 65
+    net = Network(f'Oftest Rut,Kvl,tau={tau},{temperature},step{steps}')
 
-    consumer_list = consumer_start_times('Profile 1', [7.5,21])
+    consumer_list = consumer_start_times('Profile 1', [7.5, 21])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
@@ -726,7 +729,55 @@ def model_network_Rutger():
 
     # Temperature input profile
     temp_type = 'constant'
-    T_in = generate_input_network(temp_type, total_time, dt)
+    T_in = generate_input_network(temp_type, total_time, dt, temperature)
+
+    h_overflow = np.zeros_like(T_in)
+
+    # Create Network
+    network_builder(net, 
+                pipe_data_list,
+                pipe_data_DN20, 
+                hex_data,
+                pump_data, 
+                consumer_list,
+                # h_overflow,
+                overflow_data = overflow_data,
+                )
+    # Run simulation
+    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
+    sim.simulate_network(net, T_ambt, T_ambt, T_in = T_in)
+
+def overflow_test():
+    """
+    Replicate network of which Rutger send data from
+    """
+
+    pipe_data_DN20 = read_pipe_data('DN20')
+    pipe_data_DN25 = read_pipe_data('DN25')
+    pipe_data_DN32 = read_pipe_data('DN32')
+    pipe_data_DN40 = read_pipe_data('DN40')
+
+    hex_data = read_hex_data('Standard hex constants')
+    pump_data = read_pump_data('50kPa Pump curve')
+    overflow_data = read_overflow_data('Overflow')
+
+    # Create network
+    tau = overflow_data[3]
+    steps = overflow_data[4]
+    temperature = 65
+    net = Network(f'Oftest,Kvl,tau={tau},{temperature},step{steps}')
+
+    consumer_list = consumer_start_times('Profile 5', [1])
+    pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
+   
+    # Simulation parameters
+    dt = 1 # s
+    total_time = 2 * 3600 # sec
+    T_ambt = 20
+
+    # Temperature input profile
+    temp_type = 'constant'
+    T_in = generate_input_network(temp_type, total_time, dt, temperature)
 
     h_overflow = np.zeros_like(T_in)
 
@@ -805,7 +856,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
 # Help functions for the tests
 ###########################################################
 
-def generate_input_network(temp_type, total_time, dt):
+def generate_input_network(temp_type, total_time, dt, constant_level):
 
     """
     Generate time series for inlet temperature used in simulations.
@@ -818,11 +869,11 @@ def generate_input_network(temp_type, total_time, dt):
         num_steps = int(total_time/dt)
 
     if temp_type == "constant":
-        T_in = np.ones(num_steps) * 65                                 # Constant
+        T_in = np.ones(num_steps) * constant_level                                 # Constant
     elif temp_type == "oscillation":
-        T_in = 65 + 5 * np.sin(np.linspace(0, 8*np.pi, num_steps))   # Oscillating inlet temperature
+        T_in = constant_level + 5 * np.sin(np.linspace(0, 8*np.pi, num_steps))   # Oscillating inlet temperature
     elif temp_type == "square":
-        T_in = 80 + 1* square(2 * np.pi * total_time / 20)       
+        T_in = constant_level + 1* square(2 * np.pi * total_time / 20)       
     else:
         raise ValueError("This temperature type doesn't exist!")
 
@@ -855,6 +906,8 @@ def read_pipe_data(pipe_data_set):
         )
 
     K = 1/R # total thermal conductivity [W / m K]
+
+    # print(f'K = {K} W/m K for pipe {pipe_data_set}') #debug
 
     pipe_data = [r_inner, r_outer, rho_pipe, rho_insu, cp_pipe, cp_insu, insu_thickness, K, epsilon]
 
@@ -908,8 +961,10 @@ def read_overflow_data(overflow_data_set):
     K_vs = constants[overflow_data_set]['K_vs'] # 
     T_set = constants[overflow_data_set]['T_set'] # 
     P_band = constants[overflow_data_set]['P_band'] #
+    tau = constants[overflow_data_set]['tau'] #
+    steps = constants[overflow_data_set]['steps'] #
 
-    overflow_data = [K_vs, T_set, P_band]
+    overflow_data = [K_vs, T_set, P_band, tau, steps]
 
     return overflow_data
 
@@ -923,6 +978,15 @@ def consumer_start_times(profile, peaks):
         heat_demand_types = ['shower', 'shower']
         start_times = peaks #h
 
+        consumer_list = []
+        for i in range(23):
+            consumer = Consumer(f'Consumer {i+1}',heat_demand_types, start_times)
+            consumer_list.append(consumer)
+
+    elif profile == 'Profile 5':
+
+        heat_demand_types = ['shower']
+        start_times = peaks
         consumer_list = []
         for i in range(23):
             consumer = Consumer(f'Consumer {i+1}',heat_demand_types, start_times)
@@ -1032,8 +1096,8 @@ def network_builder(net : Network,
         overflow_node_supply = f'Node {i}.7'
         overflow_node_return = f'Node {i}.8'
 
-        net.add_node(overflow_node_supply, 0, 0, 3*i+1)
-        net.add_node(overflow_node_return, 1, 0, 3*i+1)
+        net.add_node(overflow_node_supply, 0, 0, 3*i+1.5)
+        net.add_node(overflow_node_return, 1, 0, 3*i+1.5)
 
         net.add_pipe('Overflow 1' , supply_node, overflow_node_supply, pipe_data)
         net.add_overflow('Overflow 2' , overflow_node_supply, overflow_node_return, pipe_data, overflow_data, net.nodes[overflow_node_supply], h_overflow)

@@ -37,70 +37,115 @@ def read_pipe_data(pipe_data_set):
 
     return pipe_data
 
-# Create pipe
-pipe_data = read_pipe_data('DN40')
-pipe_length = 10
-delta_z = 0
-pipe1= Pipe('Pipe 1', pipe_length, delta_z, pipe_data)
-pipe2 = Pipe('Pipe 2', pipe_length, delta_z, pipe_data)
 
-dt = 1
-num_steps = 100
-T_init_water = 60
-T_init_pipe = 60
-v_inflow = 0.1
-pipe1.bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
-pipe2.bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
+## First part is to get insight in the fuction domain of the node method 
+def part1():
+    # Create pipe
+    pipe_data = read_pipe_data('DN40')
+    pipe_length = 10
+    delta_z = 0
+    pipe1= Pipe('Pipe 1', pipe_length, delta_z, pipe_data)
+    pipe2 = Pipe('Pipe 2', pipe_length, delta_z, pipe_data)
 
-# Fill it with historic data
-v_inflow = np.linspace(0.1,2,num_steps) 
-mflow = v_inflow * np.pi * pipe1.r_inner**2 * pipe1.rho_water
-mflow = np.concatenate([mflow])
-# m_real = np.concatenate([mflow, np.zeros(num_steps), mflow[::-1]])
-T_in = np.linspace(60,62,num_steps)
-T_ambt = 20
+    dt = 1
+    num_steps = 100
+    T_init_water = 60
+    T_init_pipe = 60
+    v_inflow = 0.1
+    pipe1.bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
+    pipe2.bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
 
-fast = np.zeros(num_steps)
-normal = np.zeros(num_steps)
+    # Fill it with historic data
+    v_inflow = np.linspace(0.1,2,num_steps) 
+    mflow = v_inflow * np.pi * pipe1.r_inner**2 * pipe1.rho_water
+    mflow = np.concatenate([mflow])
+    # m_real = np.concatenate([mflow, np.zeros(num_steps), mflow[::-1]])
+    T_in = np.linspace(60,62,num_steps)
+    T_ambt = 20
 
-for N in range(num_steps):
-    pipe1.set_mflow(mflow[N],N) 
-    pipe1.set_T_in(T_in[N],N)
-    pipe1.bnode_method(T_ambt,N)
-    pipe2.set_mflow(mflow[N],N)
-    pipe2.set_T_in(T_in[N],N)  
-    pipe2.bnode_method_fast(T_ambt,N)
+    fast = np.zeros(num_steps)
+    normal = np.zeros(num_steps)
 
-plt.figure()
-plt.plot(pipe1.T, label='Normal Method')
-plt.plot(pipe2.T, label='Fast Method')
-plt.legend()
+    for N in range(num_steps):
+        pipe1.set_mflow(mflow[N],N) 
+        pipe1.set_T_in(T_in[N],N)
+        pipe1.bnode_method(T_ambt,N)
+        pipe2.set_mflow(mflow[N],N)
+        pipe2.set_T_in(T_in[N],N)  
+        pipe2.bnode_method_fast(T_ambt,N)
 
-# See what happens for different mflow
-dis_num = 20 # number of different mass flow rates to test
-T_out = np.zeros(dis_num)
-T_stay = np.zeros(dis_num)
-dis_mflow = np.linspace(0,3,dis_num) * np.pi * pipe2.r_inner**2 * pipe2.rho_water
-for i,m_flow in enumerate(dis_mflow):
-    pipe2.set_mflow(m_flow,N)
-    pipe2.set_T_in(62,N)
-    pipe2.bnode_method_fast(T_ambt,N)
-    T_stay[i] = pipe2.t_stay_array[N]
-    T_out[i] = pipe2.T[N]
+    plt.figure()
+    plt.plot(pipe1.T, label='Normal Method')
+    plt.plot(pipe2.T, label='Fast Method')
+    plt.legend()
 
-    print(f'i = {i}, m_flow = {m_flow:.2f} kg/s, T_out = {T_out[i]:.2f} °C, t_stay = {T_stay[i]:.2f} s')
+    # See what happens for different mflow
+    dis_num = 20 # number of different mass flow rates to test
+    T_out = np.zeros(dis_num)
+    T_stay = np.zeros(dis_num)
+    dis_mflow = np.linspace(0,3,dis_num) * np.pi * pipe2.r_inner**2 * pipe2.rho_water
+    for i,m_flow in enumerate(dis_mflow):
+        pipe2.set_mflow(m_flow,N)
+        pipe2.set_T_in(62,N)
+        pipe2.bnode_method_fast(T_ambt,N)
+        T_stay[i] = pipe2.t_stay_array[N]
+        T_out[i] = pipe2.T[N]
 
-
-plt.figure()
-plt.plot(dis_mflow, T_out, label='Fast Method with varying mflow')
-plt.xlabel('Mass Flow [kg/s]')
-plt.ylabel('Outlet Temperature [°C]')
-plt.legend()
+        print(f'i = {i}, m_flow = {m_flow:.2f} kg/s, T_out = {T_out[i]:.2f} °C, t_stay = {T_stay[i]:.2f} s')
 
 
-plt.figure()
-plt.plot(dis_mflow, T_stay, label='Average stay time')
-plt.xlabel('Mass Flow [kg/s]')
-plt.ylabel('Average stay time [s]')
-plt.grid()
-plt.show()
+    plt.figure()
+    plt.plot(dis_mflow, T_out, label='Fast Method with varying mflow')
+    plt.xlabel('Mass Flow [kg/s]')
+    plt.ylabel('Outlet Temperature [°C]')
+    plt.legend()
+
+    plt.figure()
+    plt.plot(dis_mflow, T_stay, label='Average stay time')
+    plt.xlabel('Mass Flow [kg/s]')
+    plt.ylabel('Average stay time [s]')
+    plt.grid()
+    plt.show()
+
+# Investigate T_outlet for very small mflow mimiking closing the pipe 
+def part2():
+
+    pipe_data = read_pipe_data('DN40')
+    pipe_length = 1
+    delta_z = 0
+    pipe1= Pipe('Pipe 1', pipe_length, delta_z, pipe_data)
+
+
+    # Fill it with historic data
+    mflow_heating = np.linspace(0.1,1,100)  * pipe1.inner_cs * pipe1.rho_water #heating up.
+    mflow_low = np.ones(900) * 0.0001 * pipe1.inner_cs * pipe1.rho_water # very low mass flow mimicking closing the pipe
+    mflow_normal = np.ones(100)*0.04 * pipe1.inner_cs * pipe1.rho_water # normal mass flow
+    mflow = np.concatenate([mflow_heating, mflow_low, mflow_normal])
+    
+    dt = 1
+    num_steps = len(mflow)
+    T_init_water = 60
+    T_init_pipe = 60
+    v_inflow = 0.1
+    pipe1.bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
+
+    T_in = np.ones(num_steps) * 60
+    T_ambt = 20
+
+    for N in range(num_steps):
+        pipe1.set_mflow(mflow[N],N) 
+        pipe1.set_T_in(T_in[N],N)
+        pipe1.bnode_method_fast(T_ambt,N)
+
+    plt.figure()
+    plt.plot(pipe1.T, label='Outlet Temperature')
+    plt.xlabel('Time step')
+    plt.ylabel('Temperature [°C]')
+    plt.legend()
+    plt.grid()
+
+    plt.show()
+
+if __name__ == "__main__":
+    # part1()
+    part2()

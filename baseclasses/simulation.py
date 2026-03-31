@@ -282,14 +282,17 @@ class Simulation:
                 valve_h = valve.h
 
         plt.plot(self.time, temp) 
+
+        num_hours = int(self.total_time / 3600)
+
                        
         # Set x-axis to 0-24 hours (data stored in seconds). 
         # Show ticks every 4 hours. 
         ax = plt.gca() 
-        ax.set_xlim(0, 24 * 3600) # limits in seconds 
-        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xlim(0, num_hours * 3600) # limits in seconds 
+        ticks_seconds = np.arange(0, num_hours + 1, 4) * 3600
         ax.set_xticks(ticks_seconds) 
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)]) 
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, num_hours + 1, 4)]) 
 
         plt.xlabel(f'Time (hours), dt = {self.dt}') 
         plt.ylabel('Temperature (°C)') 
@@ -300,10 +303,10 @@ class Simulation:
 
         plt.plot(self.time, network.pipes['Overflow 1']['pipe_instance'].mflow)
         ax = plt.gca() 
-        ax.set_xlim(0, 24 * 3600) # limits in seconds 
-        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xlim(0, num_hours * 3600) # limits in seconds 
+        ticks_seconds = np.arange(0, num_hours + 1, 4) * 3600
         ax.set_xticks(ticks_seconds) 
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)]) 
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, num_hours + 1, 4)]) 
         plt.title("Overflow Mass Flow Rate")
         plt.xlabel(f'Time (h), dt = {self.dt}') 
         plt.ylabel('Mass Flow Rate (kg/s)') 
@@ -314,16 +317,15 @@ class Simulation:
 
         plt.plot(self.time, valve_h)
         ax = plt.gca() 
-        ax.set_xlim(0, 24 * 3600) # limits in seconds 
-        ticks_seconds = np.arange(0, 25, 4) * 3600
+        ax.set_xlim(0, num_hours * 3600) # limits in seconds 
+        ticks_seconds = np.arange(0, num_hours + 1, 4) * 3600
         ax.set_xticks(ticks_seconds) 
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)]) 
+        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, num_hours + 1, 4)]) 
         plt.title("Overflow valve displacement")
         plt.xlabel(f'Time (h), dt = {self.dt}') 
         plt.ylabel('Valve displacement (-)') 
         plt.grid(True)
         plt.savefig(self.folder + '/overflow_h.png')
-
 
 
         if not plot: 
@@ -673,7 +675,8 @@ class Simulation:
         HEX_data = {}
         hex_dp_data = {}
         hex_valve_data = {}
-        overflow_data = {}
+        overflow_data_normal = {}
+        overflow_data_debug = {}
 
         hex_folder = os.path.join(self.folder, 'hex_consumer_data')
         if not os.path.exists(hex_folder):
@@ -715,16 +718,33 @@ class Simulation:
                 df_hex.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}.csv'), index = False)
                    
             else:
-                overflow_data['Kv'] = valve.Kv
-                overflow_data['h'] = valve.h # actual h, with hstar taken into account
-                overflow_data['h_band'] = valve.h_band # change wanted by P-band
-                overflow_data['h_tau'] = valve.h_tau   # change slowed down by tau
-                overflow_data['T'] = valve.node.T
-                overflow_data['mflow'] = network.pipes[f'Overflow 1']['pipe_instance'].mflow
+                overflow_pipe = network.pipes['Overflow 1']['pipe_instance']
 
-                df_overflow = pd.DataFrame(overflow_data)
+                overflow_data_normal['Kv'] = valve.Kv
+                overflow_data_normal['h'] = valve.h # actual h, with hstar taken into account
+                overflow_data_normal['T_sensor'] = valve.T_sensor
+                overflow_data_normal['T node'] = valve.node.T
+                overflow_data_normal['mflow'] = overflow_pipe.mflow
+
+                overflow_data_debug['Kv'] = valve.Kv
+                overflow_data_debug['h'] = valve.h # actual h, with hstar taken into account
+                overflow_data_debug['h_band'] = valve.h_band # change wanted by P-band
+                overflow_data_debug['h_tau'] = valve.h_tau   # change slowed down by tau                
+                overflow_data_debug['T_sensor'] = valve.T_sensor
+                overflow_data_debug['T node'] = valve.node.T
+                overflow_data_debug['T_pipe'] = overflow_pipe.T_pipe
+                overflow_data_debug['T_pipe_lossless'] = overflow_pipe.T_lossless
+                overflow_data_debug['T_pipe_in'] = overflow_pipe.T_in_extended[overflow_pipe.hist_len:]
+
+                overflow_data_debug['mflow'] = overflow_pipe.mflow
+                overflow_data_debug['t_stay'] = overflow_pipe.t_stay_array
+                
+                df_overflow = pd.DataFrame(overflow_data_normal)
                 df_overflow.to_csv(os.path.join(self.folder,'hex_consumer_data','overflow.csv'), index = False)
 
+                df_overflow_debug = pd.DataFrame(overflow_data_debug)
+                df_overflow_debug.to_csv(os.path.join(self.folder,'hex_consumer_data','overflow_debug.csv'), index = False)
+                
             df_hex_dp = pd.DataFrame(hex_dp_data)
             df_hex_dp.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_dp.csv'), index = False)
 
