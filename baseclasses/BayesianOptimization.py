@@ -12,7 +12,7 @@ def cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
     theta_2 : Maximum supply temperature [°C]
     theta_3 : Heat demand threshold [W] (Q_set)
     theta_4 : Heat demand P-band [W]
-    theta_5 : Overflow valve temperature setpoint [°C]
+    theta_5 : Additional temperature setpoint for overflow control [°C]
     theta_6 : Overflow valve P-band [°C]
     """
 
@@ -26,7 +26,7 @@ def cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
     T_r = net.nodes['Node 1.6'].T
 
     # Overflow setpoint and temperature
-    T_set = theta_5
+    T_set = 55 # [°C] Setpoint for overflow valve
 
     overflow = net.valves['Overflow valve'] 
     T_overflow = overflow.node.T

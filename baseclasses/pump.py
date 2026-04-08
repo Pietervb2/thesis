@@ -27,8 +27,7 @@ class Pump(Pipe):
 
     def pump_curve(self, mflow: float) -> float:
         
-        a,b,c = [ -4221.7159851,  -18568.07669405,  50000.] # Example pump curve coefficients
-        return a * mflow**2 + b * mflow + c
+        return self.a * mflow**2 + self.b * mflow + self.c
      
     #NOTE: now within the pipe of the pump the pressure head due to elevation and friciton loss are also calculated. 
     # And the node method is performed in the pipe. But in set_T_network_rec it is made sure that the temperature at the first node is not changed.

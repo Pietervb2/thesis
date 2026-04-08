@@ -249,8 +249,8 @@ class Network:
         Obtain the loop matrix from the graph of the network
         """
         # compute all fundamental cycles for a directed graph
-        cycles = list(nx.simple_cycles(graph))
-       
+        cycles = sorted(list(nx.simple_cycles(graph)), key=len) # sorted adds determinism to the order of cycles.
+
         # loop matrix
         self.loop_matrix_active = np.zeros((len(cycles), graph.number_of_edges()))
 

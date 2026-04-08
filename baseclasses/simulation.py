@@ -116,7 +116,7 @@ class Simulation:
       
     def supply_temperature_BO(self, theta_1, theta_2, theta_3, theta_4, net : Network, total_time, dt):
         """
-        Calculate the total heat demand of all consumers in the network.   
+        Calculate the total heat demand of all consumers in the network and determine the supply temperature.  
         """
         time = np.arange(0, total_time, dt)
         num_steps = len(time)
@@ -130,12 +130,12 @@ class Simulation:
         
         for i in range(num_steps):
 
-            if total_heat_demand[i] < theta_3:
+            if total_heat_demand[i] < theta_3 - theta_4:
                 T_supply[i] = theta_1
-            elif total_heat_demand[i] >= theta_3 + theta_4:
+            elif total_heat_demand[i] >= theta_3:
                 T_supply[i] = theta_2
             else:
-                T_supply[i] = theta_1 + (total_heat_demand[i] - theta_3) * (theta_2 - theta_1) / theta_4
+                T_supply[i] = theta_1 + (total_heat_demand[i] - (theta_3-theta_4)) * (theta_2 - theta_1) / theta_4
 
         return T_supply 
     
@@ -757,7 +757,7 @@ class Simulation:
                 'Max supply temperature [°C]': network.theta[1],
                 'Heat demand threshold [W]': network.theta[2],
                 'Heat demand P-band [W]': network.theta[3],
-                'Overflow T setpoint [°C]': network.theta[4],
+                'Overflow add T setpoint [°C]': network.theta[4],
                 'Overflow P-band [°C]': network.theta[5]
             }
             df_theta = pd.DataFrame(theta_data, index = [0])

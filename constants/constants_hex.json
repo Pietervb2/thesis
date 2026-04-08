@@ -3,7 +3,7 @@
         "comment_U": "Overall heat transfer coefficient [W/m2K]",
         "U" : 4000, 
         "comment_As": "Heat transfer area [m2]",
-        "extra_comment_As": "Qd = U * As * F * delta_T_mean, 30kW = 4000 * As * 0.95 * 50 (tapwater)",
+        "extra_comment_As": "Qd = U * As * F * delta_T_mean, 31kW = 4000 * As * 0.95 * 50 (tapwater)",
         "As" : 0.656,    
         "comment_Kp_dp": "Pressure loss coefficient [kg/m2], assume 35kPa dp, at 0.24 kg/s mflow because of max heat transfer tap water 30kW",
         "Kp_dp" : 600,

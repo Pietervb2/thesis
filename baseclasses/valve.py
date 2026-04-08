@@ -27,8 +27,11 @@ class Valve:
         elif node is not None:
             self.T_set_overflow = valve_data[1]
             self.P_band = valve_data[2]
-            self.tau = valve_data[3]
-            self.steps = valve_data[4]
+            self.T_set_add = valve_data[3]
+            self.tau = valve_data[4]
+            self.steps = valve_data[5]
+            self.opt = valve_data[6]
+
 
         self.h_overflow = h_overflow  
   
@@ -67,7 +70,7 @@ class Valve:
         Kv = (self.Kvs/Kv0) ** (h-1) * self.Kvs
         return Kv
     
-    def linear_valve(self, h, Kvleak = False):
+    def linear_valve(self, h, Kvleak_bool = False):
         """
         Returns Kv value of the valve following a linear characteristic
         based on the valve displacement h in [0, 1]. 0 means fully closed, 1 means fully open.
@@ -79,157 +82,138 @@ class Valve:
         
         h_star = 0.05  # lower values of h make the form of the valve deviate from the equal percentage equation.
         
-        if h < h_star and Kvleak:
+        if h < h_star and Kvleak_bool:
             Kvr = Kv0 + h_star * (self.Kvs - Kv0)
             Kv = Kvleak + h*(Kvr - Kvleak)/h_star
         else:
             Kv = Kv0 + h * (self.Kvs - Kv0)
         return Kv
+    
+    def BO_overflow_valve(self, Kvleak_bool, N):
+        """"
+        Returns the valve position and Kv value of the overflow valve based on the lumped BO model. 
+        """
+
+        # P-band logic
+        if self.T_sensor[N] <= self.T_set_overflow + self.T_set_add - self.P_band:  
+            h_band = 1
+        elif self.T_sensor[N] > self.T_set_overflow + self.T_set_add:
+            h_band = 0 
+        else:
+                  
+            # Choice between continuous and discrete valve displacement 
+            if self.steps == "con":
+                h_band = (self.T_set_overflow + self.T_set_add - self.T_sensor[N])/self.P_band
+            else:
+                h_band = np.floor((self.T_set_overflow + self.T_set_add - self.T_sensor[N]) / self.P_band * self.steps) / self.steps
+
+        self.h_band[N] = h_band
+       
+        if not Kvleak_bool:
+            h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
+            if h_band < h_star:
+                h = 0
+            else:
+                h = min(1,h_band)
+        else:
+            h = max(0,min(1,h_band)) 
+
+        Kv = self.linear_valve(h, Kvleak_bool)
+
+        return h, Kv
+
+    def benchmark_valve(self, N):
+        """
+        Theoretical benchmark for bypass valve including a deadband.
+        """
+        
+        if N == 0:
+            h = 1
+        else:
+            upper = self.T_set_overflow + self.P_band/2
+            lower = self.T_set_overflow - self.P_band/2
+            
+            if self.h[N-1] == 1:
+                if self.T_sensor[N] <= upper:
+                    h = 1
+                else:
+                    h = 0
+            elif self.h[N-1] == 0:
+                if self.T_sensor[N] >= lower:
+                    h = 0
+                else:
+                    h = 1
+        
+        Kv = self.linear_valve(h)
+        return h, Kv
        
     def update_valve(self, N):
         """
         Update the valve position based on the consumer outlet temperature using a PI controller.
         """
 
-        if N < len(self.h)-1: # to prevent index out of range
+        # if N < len(self.h)-1: # to prevent index out of range
             
-            if self.hex is not None:
+        # Heat exchanger valves
+        if self.hex is not None:
 
-                # Only update valve position if there is flow
-                if self.hex.consumer.mflow[N] > 0:
+            # Only update valve position if there is flow on consumer side
+            if self.hex.consumer.mflow[N] > 0:
 
-                    # implement PI controller to determine the valve lift
-                    T_set_point = 60 # Temperature set point for the tapwater outlet [C] (brochure)
-                    dT = (T_set_point - self.hex.consumer.Tc_out[N-1])
-                    
-                    self.I += dT * self.dt
-                    delta_h = self.Kp * dT + self.Ki * self.I
-
-                    h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
-                    
-                    h = self.h[N-1] + delta_h
-                    h = min(1,max(h_star,h)) # As h is scaled to hstar-1
-
-                    # Anti-windup 
-                    if (h == 0 and dT < 0) or (h == 1 and dT > 0):
-                        self.I -= dT * self.dt  # unwind integral
-
-                    Kv = self.equal_percentage_valve(h)
-
-                    self.h[N] = h
-                    self.Kv[N] = Kv
-                    self.I_array[N] = self.I
-                else:
-                    # no change in valve position
-                    self.h[N] = 0
-                    self.Kv[N] = 0
-            
-            if self.node is not None:
+                # implement PI controller to determine the valve lift
+                T_set_point = 60 # Temperature set point for the tapwater outlet [C] (brochure)
+                dT = (T_set_point - self.hex.consumer.Tc_out[N-1])
                 
-                # stating whether you already give it a predefined position
-                if self.h_overflow is None:
-                    
-                    # Initialization
-                    if N == 0:
-                        self.T_sensor[N] = 20 # initial temperature of sensor, set to T_ambt
-                    else:
-                        self.T_sensor[N] = self.T_sensor[N-1] + self.dt / self.tau * (self.node.T[N-1] - self.T_sensor[N-1]) # simple model for heat transfer to sensor
-                    
-                    sensor_temp = self.T_sensor[N]
+                self.I += dT * self.dt
+                delta_h = self.Kp * dT + self.Ki * self.I
 
-                    if sensor_temp <= self.T_set_overflow - self.P_band/2:  # Overflow temperature set point
-                        h_band = 1
-                    elif sensor_temp > self.T_set_overflow + self.P_band/2:
-                        h_band = 0 
-                    else:
+                h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
+                
+                h = self.h[N-1] + delta_h
 
-                        if self.steps == 'con':
-                            h_band = (self.T_set_overflow + self.P_band/2 - sensor_temp)/self.P_band
-                        else:
-                            # Convert continuous P_band to discrete steps
-                            h_band = np.floor((self.T_set_overflow + self.P_band/2 - sensor_temp) / self.P_band * self.steps) / self.steps
-               
-                    self.h_band[N] = h_band
-                    
-                    # tau_h = 5  # time constant for smoothing [s]
-                    # h_tau = self.h[N-1] + (h_band - self.h[N-1]) * self.dt/tau_h  # smooth the changes
+                if h < h_star:
+                    h = 0
+                else:
+                    h = min(1,h) # Ensure h is between 0 and 1
+                
+                # Anti-windup 
+                if (h == 0 and dT < 0) or (h == 1 and dT > 0):
+                    self.I -= dT * self.dt  # unwind integral
 
-                    # if h_tau < 0.005:
-                    #     h_tau = 0
-                    h_tau = h_band
-                    self.h_tau[N] = h_tau
+                Kv = self.equal_percentage_valve(h)
 
-                    Kvleak_flag = True
+                self.h[N] = h
+                self.Kv[N] = Kv
+                self.I_array[N] = self.I
+            else:
+                # no demand, so closed.
+                self.h[N] = 0
+                self.Kv[N] = 0
+        
+        # Overflow valve
+        if self.node is not None:
 
-                    if not Kvleak_flag:
-                        h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
-                        if h_tau < h_star:
-                            h = 0
-                        else:
-                            h = min(1,h_tau)
-                    else:
-                        h = max(0,min(1,h_tau)) 
+            # Indicates use of Kvleak
+            Kvleak_bool = True  
+           
+            # stating whether you already give it a predefined position
+            if self.h_overflow is None:
+                
+                # Sensor temperature model
+                if N == 0:
+                    self.T_sensor[N] = 20 # initial temperature of sensor, set to T_ambt
+                else:
+                    self.T_sensor[N] = self.T_sensor[N-1] + self.dt / self.tau * (self.node.T[N-1] - self.T_sensor[N-1]) # simple model for heat transfer to sensor
 
-                    self.Kv[N] = self.linear_valve(h, Kvleak_flag)
-                    self.h[N] = h
-                  
+                if self.opt:
+                    h, Kv = self.BO_overflow_valve(Kvleak_bool, N)
+                else:
+                    h, Kv = self.benchmark_valve(N)
 
-# 26-3-2026 12u
-# Initialization
-                    # if N == 0:
-                    #     node_temp = self.node.T[N]
-                    #     self.T_sensor[N] = 20 # initial temperature of sensor, set to T_ambt
-                    # else:
-                    #     node_temp = self.node.T[N-1]
-                    #     mflow = next(iter(self.node.pipes_in.values())).get_mflow(N-1) # assuming only one incoming pipe, which is the case in our network for overflow      
-                       
-                    #     # Heat transfer coefficient between the node and the sensor 
-                    #     K = 0.5 # [J / kg K]
-                    #     if mflow == 0:
-                    #         mflow = 0.001
-                    #     self.T_sensor[N] = self.T_sensor[N-1] + self.dt * K * mflow * (-self.T_sensor[N-1] + node_temp) # simple model for heat transfer to sensor
-
-                    # sensor_temp = self.T_sensor[N]
-
-                    # if sensor_temp < self.T_set_overflow - self.P_band:  # Overflow temperature set point
-                    #     h_band = 1
-                    # elif sensor_temp > self.T_set_overflow:
-                    #     h_band = 0 
-                    # else:
-                        
-                    #     e = self.T_sensor[N] - self.updated_temp
-                    #     # Prevent very small changes in h
-                    #     if abs(e) < 0.1: 
-                    #         h = self.h[N-1] # keep the same valve position
-                    #         self.Kv[N] = self.Kv[N-1] # keep the same valve position
-                    #         return
-
-                    #         # Convert continuous P_band to discrete steps
-                    #         # num_steps_band = 20  # Define number of discrete steps
-                    #         # h_band = np.floor((self.T_set_overflow - node_temp) / self.P_band * num_steps_band) / num_steps_band
-                    #     h_band = (self.T_set_overflow - sensor_temp)/self.P_band
-
-                    # self.updated_temp = self.T_sensor[N]
-                    # tau = 30  # time constant for smoothing [s]
-                    # h_tau = self.h[N-1] + (h_band - self.h[N-1]) * self.dt/tau  # smooth the changes
-                    
-                    # if h_tau < 0.01:
-                    #     h_tau = 0
-                    # self.h_band[N] = h_band
-                    # self.h_tau[N] = h_tau
-
-                    # Kvleak = True
-                    # if not Kvleak:
-                    #     h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
-                    #     if h_tau < h_star:
-                    #         h = 0
-                    #     else:
-                    #         h = min(1,h_tau)
-                    # else:
-                    #     h = max(0,min(1,h_tau)) 
-
-                    #     self.Kv[N] = self.linear_valve(h, Kvleak)
-                         
-                    # # Round h as very small changes don't make sense
-
-                    # self.h[N] = h
+                self.h[N] = h
+                self.Kv[N] = Kv
+            
+            else:
+                self.h[N] = self.h_overflow
+                self.Kv[N] = self.linear_valve(self.h_overflow, Kvleak_bool)
+                
