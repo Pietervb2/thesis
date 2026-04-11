@@ -6,18 +6,25 @@
         "c" : 50000.0
     },
 
+    "50kPa Pump constant":{
+        "comment_curve": "Pump curve coefficients in the form of dp = a*mflow^2 + b*mflow + c, with dp in Pa and mflow in kg/s",
+        "a" : 0,
+        "b" : 0,    
+        "c" : 50000.0
+    },
+
+    "60kPa Pump curve":{
+        "comment_curve": "Pump curve coefficients in the form of dp = a*mflow^2 + b*mflow + c, with dp in Pa and mflow in kg/s",
+        "a" : -13369.01955677,
+        "b" : -6630.98044323,    
+        "c" : 60000.0
+    },
+
     "60kPa Pump constant":{
         "comment_curve": "Pump curve coefficients in the form of dp = a*mflow^2 + b*mflow + c, with dp in Pa and mflow in kg/s",
         "a" : 0,
         "b" : 0,    
         "c" : 60000.0
-    },
-
-        "50kPa Pump constant":{
-        "comment_curve": "Pump curve coefficients in the form of dp = a*mflow^2 + b*mflow + c, with dp in Pa and mflow in kg/s",
-        "a" : 0,
-        "b" : 0,    
-        "c" : 50000.0
     },
 
     "20kPa Pump constant":{
@@ -27,11 +34,11 @@
         "c" : 20000.0
     },
 
-    "60kPa Pump curve":{
+    "45kPa Pump curve":{
         "comment_curve": "Pump curve coefficients in the form of dp = a*mflow^2 + b*mflow + c, with dp in Pa and mflow in kg/s",
-        "a" : -34640.87585588,
-        "b" : -4215.47448647,    
-        "c" : 60000.0
+        "a" : -6636.76405444,
+        "b" : -11363.23594556,    
+        "c" : 45000.0
     },
 
     "45kPa Pump constant":{

@@ -1,0 +1,51 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "BO Profile 1",
+            "type": "shell",
+            "command": "python BayesianOptimization.py 1",
+            "presentation": {
+                "panel": "new",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "BO Profile 2",
+            "type": "shell",
+            "command": "python BayesianOptimization.py 2",
+            "presentation": {
+                "panel": "new",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "BO Profile 3",
+            "type": "shell",
+            "command": "python BayesianOptimization.py 3",
+            "presentation": {
+                "panel": "new",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "BO Profile 4",
+            "type": "shell",
+            "command": "python BayesianOptimization.py 4",
+            "presentation": {
+                "panel": "new",
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "Run all BO profiles",
+            "dependsOn": [
+                "BO Profile 1",
+                "BO Profile 2", 
+                "BO Profile 3",
+                "BO Profile 4"
+            ],
+            "dependsOrder": "parallel"
+        }
+    ]
+}

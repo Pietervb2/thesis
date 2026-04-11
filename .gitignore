@@ -1,6 +1,7 @@
 # My own changes to git ignore:
 figures/
 data/
+debug/
 temperatuurtest.py
 # Byte-compiled / optimized / DLL files
 __pycache__/

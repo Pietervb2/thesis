@@ -1,14 +1,16 @@
-from node import Node
-from pipe import Pipe
-from heatexchanger import HeatExchanger
-from pump import Pump
-from valve import Valve
+from .node import Node
+from .pipe import Pipe
+from .heatexchanger import HeatExchanger
+from .pump import Pump
+from .valve import Valve
 
 from scipy.optimize import root
 from typing import Union
 
 import numpy as np
 import networkx as nx
+import os
+import pickle
 
 
 class Network:
@@ -393,10 +395,14 @@ class Network:
         pump_term_derivative = self.loop_matrix_active @ np.diag(pump_curve_derivative)
 
         # d/dmflow |mflow|*mflow = |mflow| + mflow * mflow / |mflow|
-        deriv = np.abs(mflow) + mflow * mflow/np.abs(mflow)
+        safe_abs = np.where(np.abs(mflow) > 1e-10, np.abs(mflow), 1e-10)
+        deriv = safe_abs + mflow * mflow / safe_abs
+        # deriv = np.abs(mflow) + mflow * mflow/np.abs(mflow)
+
+
         J = np.vstack([self.incidence_matrix_active, 
                        self.loop_matrix_active @ np.diag(2 * self.friction_vector_active * deriv) - pump_term_derivative]) 
-        
+        J += 1e-8 * np.eye(*J.shape)  # regularization
         return J
 
     def set_mflow_network(self, N : int):
@@ -417,6 +423,8 @@ class Network:
         p = len(pipe_ids)
 
         # Initial guess for the mflows in the pipes
+        # mflow0 = self.mflow_all[:,N-1] 
+        # mflow0[mflow0 == 0] = 0.05 # Avoid zero initial guess for better convergence, can be tuned.
         mflow0 = np.ones(p)*0.1
         
         active_graph, active_mask = self.update_valves(N)
@@ -446,13 +454,32 @@ class Network:
 
         # Extract results
         mflow_active = result.x
-        if not result.success:
+        self.mflow_all[active_mask,N] = mflow_active
+
+        # Save state of network for debugging if hydraulics break
+        if not result.success or not (mflow_active > 0).all():
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+       
+                dis_steps = self.valves['Overflow valve'].steps
+                Kvleak_bool = self.valves['Overflow valve'].Kvleak_bool
+
+                c = int((self.pumps['Pump 1'].c)/1000)
+                b = self.pumps['Pump 1'].b
+
+                if b == 0:
+                    pump_type = 'constant'
+                else:
+                    pump_type = 'curve'
+                file_name = f"{self.net_id}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.pkl"
+
+                with open(os.path.join(base_dir, 'debug', file_name), 'wb') as f:
+                    pickle.dump(self.__dict__, f)
+
+        if not result.success:   
             raise RuntimeError(f"The root finder did not converge at timestep = {N}, message: {result.message}")
         
         elif not (mflow_active > 0).all():
-            raise RuntimeError(f'Newton-Raphson converges to a mass flow with negative values at timestep {N}')
-        
-        self.mflow_all[active_mask,N] = mflow_active
+            raise RuntimeError(f'Newton-Raphson converges to a mass flow with negative values at timestep {N}')       
 
         # Assign flows to the pipes for timestep N
         for j, pipe_id in enumerate(pipe_ids[active_mask]):

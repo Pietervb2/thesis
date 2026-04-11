@@ -1,4 +1,4 @@
-from pipe import Pipe
+from .pipe import Pipe
 import numpy as np
 
 class Pump(Pipe):

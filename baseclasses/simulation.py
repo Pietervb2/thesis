@@ -1,4 +1,4 @@
-from network import Network
+from .network import Network
 
 from pathlib import Path
 from scipy.signal import square
@@ -15,7 +15,13 @@ import time
 
 class Simulation:
 
-    def __init__(self, dt, total_time, net_id, T_ambt, temp_type = None, file = None, no_cap = False, opt = False):
+    def __init__(self, dt, total_time, net_id, T_ambt, 
+                 temp_type = None, 
+                 file = None, 
+                 no_cap = False, 
+                 opt = False,
+                 n_init_points = None,
+                 n_iter = None):
 
         self.dt = dt
         self.total_time = total_time
@@ -25,21 +31,25 @@ class Simulation:
 
         total_time_str = str(total_time)
 
-        if not opt:
-             # Create simulation-specific subfolder
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            if file:
-                sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
-            else:
-                sim_name = (
-                    f"network={net_id}_dt={dt}_total_time={total_time_str}_"
-                    f"Tin={temp_type}_Tambt={T_ambt}"
-                )
+        # Create simulation-specific subfolder
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-            self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
+        if not opt:
+            if 'Profile' in  temp_type:
+                self.folder = os.path.join(base_dir, "figures", "optimization", f"{temp_type}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
+            else: 
+                if file:
+                    sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
+                else:
+                    sim_name = (
+                        f"network={net_id}_dt={dt}_total_time={total_time_str}_"
+                        f"Tin={temp_type}_Tambt={T_ambt}"
+                    )
+
+                self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
                        
-            if no_cap:
-                self.folder = self.folder + "_no_cap" 
+                if no_cap:
+                    self.folder = self.folder + "_no_cap" 
             
             if not os.path.exists(self.folder):
                 os.makedirs(self.folder)
@@ -84,17 +94,11 @@ class Simulation:
 
         for N in range(0,self.num_steps):
 
-            if not opt:
-                print(f"Simulating time step {N+1}/{self.num_steps}, time = {N*self.dt} seconds")
+            # if not opt:
+            # print(f"Simulating time step {N+1}/{self.num_steps}, time = {N*self.dt} seconds")
 
-            # before = time.time()
             network.set_mflow_network(N)
-            # mid = time.time()
             network.set_T_network(self.T_ambt, N, T_in[N], no_cap = no_cap)
-            # after = time.time()
-
-            # print(f"Time taken for mass flow at timestep {N}: {mid-before} seconds")
-            # print(f"Time taken for temperature at timestep {N}: {after-mid} seconds")
             
         if not opt:
             print('Simulation finished')
@@ -128,14 +132,21 @@ class Simulation:
             consumer = hex_obj.consumer
             total_heat_demand += consumer.Q_d
         
+        # Look 3 minutes into time. 
+        look_ahead = int(3 * 60 / dt)  # 3 minutes in steps
         for i in range(num_steps):
 
-            if total_heat_demand[i] < theta_3 - theta_4:
+            if i + look_ahead >= num_steps:
+                k = i
+            else:
+                k = i + look_ahead
+
+            if total_heat_demand[k] < theta_3 - theta_4:
                 T_supply[i] = theta_1
-            elif total_heat_demand[i] >= theta_3:
+            elif total_heat_demand[k] >= theta_3:
                 T_supply[i] = theta_2
             else:
-                T_supply[i] = theta_1 + (total_heat_demand[i] - (theta_3-theta_4)) * (theta_2 - theta_1) / theta_4
+                T_supply[i] = theta_1 + (total_heat_demand[k] - (theta_3-theta_4)) * (theta_2 - theta_1) / theta_4
 
         return T_supply 
     

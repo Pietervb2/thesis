@@ -1,7 +1,7 @@
-from network import Network 
-from simulation import Simulation
-from consumer import Consumer
-from pipe import Pipe
+from .network import Network 
+from .simulation import Simulation
+from .consumer import Consumer
+from .pipe import Pipe
 
 from scipy.signal import square
 from sklearn.metrics import root_mean_squared_error
@@ -692,7 +692,11 @@ def overflow_test():
     sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
     sim.simulate_network(net, T_ambt, T_ambt, T_in = T_in)
 
-def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, opt = False, opt_type = 'None'):
+def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
+                    profile, 
+                    opt_results = None, 
+                    opt = False, 
+                    opt_type = 'None'):
     
     """
     Replicate network of which Rutger send data from
@@ -728,7 +732,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
     # Apply input parameters for BO
     overflow_data[2] = theta_6
     overflow_data[3] = theta_5
-    overflow_data.append(False) # Indicating that it should use the P-band
+    overflow_data.append(True) #  True = P-band optimzation, False = benchmark with deadband
 
     # Create Network
     network_builder(net, 
@@ -744,9 +748,13 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profi
     theta = [theta_1, theta_2, theta_3, theta_4, theta_5, theta_6]
     net.theta = theta # debug
 
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = opt_type, opt = opt)
+    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = profile, opt = opt)
     sim.simulate_network(net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4, opt = opt)
 
+    if not opt:
+        with open(os.path.join(sim.folder, 'bo_settings.json'), 'w') as f:
+            json.dump(opt_results, f, indent=2)
+       
     if opt:
         return net
     
@@ -860,8 +868,9 @@ def read_overflow_data(overflow_data_set):
     T_set_add = constants[overflow_data_set]['T_set_add'] #
     tau = constants[overflow_data_set]['tau'] #
     steps = constants[overflow_data_set]['steps'] #
+    Kvleak_bool = constants[overflow_data_set]['Kvleak_bool'] #
 
-    overflow_data = [K_vs, T_set, P_band, T_set_add, tau, steps]
+    overflow_data = [K_vs, T_set, P_band, T_set_add, tau, steps, Kvleak_bool]
 
     return overflow_data
 
@@ -1007,7 +1016,14 @@ def network_builder(net : Network,
 if __name__ == "__main__":
     
     start = time.time()
-    model_network_Rutger()
+
+    # theta = [65.0, 70.0, 0.0, 0.0, 0.5577544383402322, 5.0]
+    # theta = [62.17997451071002, 65.12963115913945, 274831.23893935455, 87064.47852365537, 0.8407356041749781, 1.6523437701983665]
+    # theta = [62.17997451071002, 65.12963115913945, 274831.23893935455, 87064.47852365537, 1, 5]
+
+    theta = [61.022261248657585, 69.39058718195473, 13693.796598963081, 134093.50203568043, 1.2519144071013808, 3.2347593137830066]
+    optimization_run(theta_1=theta[0], theta_2=theta[1], theta_3=theta[2], theta_4=theta[3], theta_5=theta[4], theta_6=theta[5], profile = 'Profile 2', opt = True)
     end = time.time()
     print(f"Execution time: {end - start} seconds")
+
 

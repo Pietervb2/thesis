@@ -30,7 +30,8 @@ class Valve:
             self.T_set_add = valve_data[3]
             self.tau = valve_data[4]
             self.steps = valve_data[5]
-            self.opt = valve_data[6]
+            self.Kvleak_bool = valve_data[6]
+            self.opt = valve_data[7]
 
 
         self.h_overflow = h_overflow  
@@ -193,9 +194,6 @@ class Valve:
         # Overflow valve
         if self.node is not None:
 
-            # Indicates use of Kvleak
-            Kvleak_bool = True  
-           
             # stating whether you already give it a predefined position
             if self.h_overflow is None:
                 
@@ -206,7 +204,7 @@ class Valve:
                     self.T_sensor[N] = self.T_sensor[N-1] + self.dt / self.tau * (self.node.T[N-1] - self.T_sensor[N-1]) # simple model for heat transfer to sensor
 
                 if self.opt:
-                    h, Kv = self.BO_overflow_valve(Kvleak_bool, N)
+                    h, Kv = self.BO_overflow_valve(self.Kvleak_bool, N)
                 else:
                     h, Kv = self.benchmark_valve(N)
 
@@ -215,5 +213,5 @@ class Valve:
             
             else:
                 self.h[N] = self.h_overflow
-                self.Kv[N] = self.linear_valve(self.h_overflow, Kvleak_bool)
+                self.Kv[N] = self.linear_valve(self.h_overflow, self.Kvleak_bool)
                 
