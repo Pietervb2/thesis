@@ -1,11 +1,13 @@
-from .network import Network 
-from .simulation import Simulation
-from .consumer import Consumer
-from .pipe import Pipe
+from baseclasses.network import Network 
+from baseclasses.simulation import Simulation
+from baseclasses.consumer import Consumer
+from baseclasses.pipe import Pipe
 
 from scipy.signal import square
 from sklearn.metrics import root_mean_squared_error
 from scipy.optimize import root
+from datetime import datetime
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,6 +15,8 @@ import pandas as pd
 import os
 import json
 import time
+import pickle
+
 
 def compare_experimental_data(dt,
                         file = None,
@@ -534,7 +538,7 @@ def fit_Kv_values():
             radius = net.pipes[f'Pipe {i+1}.1']['pipe_instance'].r_inner
             mflow = np.pi * radius ** 2 * average_v[i] * 1000
             mflow_array[i*6+1:(i+1)*6+1] = mflow
-    # print("mass flow array:", mflow_array)
+    print("mass flow array:", mflow_array)
 
     # Calculate pressure losses in loops without taking the valves into account
     friction_vector = net.pressure_friction_vector + \
@@ -696,8 +700,11 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
                     profile, 
                     opt_results = None, 
                     opt = False, 
-                    opt_type = 'None'):
-    
+                    opt_type = 'None',
+                    n_init_points = None,
+                    n_iter = None):
+
+   
     """
     Replicate network of which Rutger send data from
 
@@ -719,13 +726,15 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
-    net = Network(profile)
+    net = Network(f'{profile}')
 
     consumer_list = consumer_start_times(profile, [7.5, 21])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
+    # pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 7 
+
    
     # Simulation parameters
-    dt = 1 # s
+    dt = 60 # s
     total_time = 24 * 3600 # sec
     T_ambt = 20
 
@@ -747,8 +756,8 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     # Run simulation
     theta = [theta_1, theta_2, theta_3, theta_4, theta_5, theta_6]
     net.theta = theta # debug
-
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = profile, opt = opt)
+    
+    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = profile, opt = opt, n_init_points=n_init_points, n_iter = n_iter)
     sim.simulate_network(net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4, opt = opt)
 
     if not opt:
@@ -788,7 +797,7 @@ def generate_input_network(temp_type, total_time, dt, constant_level):
 def read_pipe_data(pipe_data_set):
 
     thesis_dir = os.path.dirname(os.path.abspath(__file__))
-    constants_file = os.path.join(os.path.dirname(thesis_dir),'constants', 'constants_pipe.json')
+    constants_file = os.path.join(thesis_dir,'constants', 'constants_pipe.json')
 
     with open(constants_file) as f:
         constants = json.load(f)
@@ -820,7 +829,7 @@ def read_pipe_data(pipe_data_set):
 def read_hex_data(hex_data_set):
 
     thesis_dir = os.path.dirname(os.path.abspath(__file__))
-    constants_file = os.path.join(os.path.dirname(thesis_dir),'constants', 'constants_hex.json')
+    constants_file = os.path.join(thesis_dir,'constants', 'constants_hex.json')
 
     with open(constants_file) as f:
         constants = json.load(f)
@@ -841,7 +850,7 @@ def read_hex_data(hex_data_set):
 def read_pump_data(pump_data_set):
 
     thesis_dir = os.path.dirname(os.path.abspath(__file__))
-    constants_file = os.path.join(os.path.dirname(thesis_dir),'constants', 'constants_pump.json')
+    constants_file = os.path.join(thesis_dir,'constants', 'constants_pump.json')
 
     with open(constants_file) as f:
         constants = json.load(f)
@@ -857,7 +866,7 @@ def read_pump_data(pump_data_set):
 def read_overflow_data(overflow_data_set):
 
     thesis_dir = os.path.dirname(os.path.abspath(__file__))
-    constants_file = os.path.join(os.path.dirname(thesis_dir),'constants', 'constants_overflow.json')
+    constants_file = os.path.join(thesis_dir,'constants', 'constants_overflow.json')
 
     with open(constants_file) as f:
         constants = json.load(f)
@@ -912,6 +921,62 @@ def consumer_start_times(profile, peaks):
         elif profile == 'Profile 4':
             heat_demand_types = ['shower', 'shower']
             amount = [1,1,2,2,2,2,3,2,2,2,2,1,1] # needs to be odd 
+            interval = 5 / 60  # hours (5 min)
+        
+        offsets = interval * np.arange(-len(amount)//2, len(amount)//2 + 1)  # offsets for each consumer around the peak time
+            
+        start_time1 = peaks[0] + offsets
+        start_time2 = peaks[1] + offsets        
+        
+        consumer_list = []
+        tot_num = 0
+        for idx, num in enumerate(amount):
+            for i in range(num):
+                consumer = Consumer(f'Consumer {tot_num+i+1}',heat_demand_types, [start_time1[idx], start_time2[idx]])
+                # print(f'consumer number {tot_num+i+1}')
+                consumer_list.append(consumer)
+            tot_num += num
+    
+    return consumer_list 
+
+def consumer_start_times13(profile, peaks):
+    """
+    Generate the four consumer heat demand profiles
+    """
+  
+    if profile == 'Profile 1':
+
+        heat_demand_types = ['shower', 'shower']
+        start_times = peaks #h
+
+        consumer_list = []
+        for i in range(13):
+            consumer = Consumer(f'Consumer {i+1}',heat_demand_types, start_times)
+            consumer_list.append(consumer)
+
+    elif profile == 'Profile 5':
+        # For testing
+        heat_demand_types = ['shower']
+        start_times = peaks
+        consumer_list = []
+        for i in range(13):
+            consumer = Consumer(f'Consumer {i+1}',heat_demand_types, start_times)
+            consumer_list.append(consumer)
+    else:
+        if profile == 'Profile 2':
+
+            heat_demand_types = ['shower', 'shower']
+            amount = [3,7,3] # must be odd number of items
+            interval = 5 / 60  # hours (5 min)
+        
+        elif profile == 'Profile 3':
+            heat_demand_types = ['shower', 'shower']
+            amount = [2,2,5,2,2] # must be odd number of items
+            interval = 5 / 60  # hours (5 min)
+    
+        elif profile == 'Profile 4':
+            heat_demand_types = ['shower', 'shower']
+            amount = [1,2,2,3,2,2,1] # needs to be odd 
             interval = 5 / 60  # hours (5 min)
         
         offsets = interval * np.arange(-len(amount)//2, len(amount)//2 + 1)  # offsets for each consumer around the peak time
@@ -1014,15 +1079,39 @@ def network_builder(net : Network,
         return net
     
 if __name__ == "__main__":
+
+    # Load class instance at crash point
+    net_id = 'Profile 3'
+    Kvleak_bool = True
+    dis_steps = 125
+    c = 50
+    N = 26811
+    pump_type = 'curve'
+
+    if N is not None:
+        file_name = f"{net_id}_N={N}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.pkl"
+    else: 
+        file_name = f"{net_id}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.pkl"
+
+        
+    # base_dir = os.path.dirname(__file__)
+    base_dir = os.path.abspath('')
+
+    file = os.path.join(base_dir, 'debug', file_name)
+
+    with open(file, 'rb') as f:
+        state = pickle.load(f)
+
+    net = Network.__new__(Network)  # create instance without calling __init__
+    net.__dict__.update(state)
+
+    theta = net.theta
+
+    print(file_name)
     
     start = time.time()
-
-    # theta = [65.0, 70.0, 0.0, 0.0, 0.5577544383402322, 5.0]
-    # theta = [62.17997451071002, 65.12963115913945, 274831.23893935455, 87064.47852365537, 0.8407356041749781, 1.6523437701983665]
-    # theta = [62.17997451071002, 65.12963115913945, 274831.23893935455, 87064.47852365537, 1, 5]
-
-    theta = [61.022261248657585, 69.39058718195473, 13693.796598963081, 134093.50203568043, 1.2519144071013808, 3.2347593137830066]
-    optimization_run(theta_1=theta[0], theta_2=theta[1], theta_3=theta[2], theta_4=theta[3], theta_5=theta[4], theta_6=theta[5], profile = 'Profile 2', opt = True)
+    print(f' start {datetime.now()}')
+    optimization_run(theta_1=theta[0], theta_2=theta[1], theta_3=theta[2], theta_4=theta[3], theta_5=theta[4], theta_6=theta[5], profile = 'Profile 3', opt = True)
     end = time.time()
     print(f"Execution time: {end - start} seconds")
 

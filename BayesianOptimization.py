@@ -9,11 +9,11 @@ import time
 import sys
 
 
-from baseclasses.test import optimization_run 
+from test import optimization_run 
 
 # Physical bounds
 PHYSICAL_BOUNDS = {
-    'theta_1': (60, 65),
+    'theta_1': (60, 65), 
     'theta_2': (65, 70),
     'theta_3': (0, 500e3),
     'theta_4': (0, 200e3),
@@ -96,10 +96,14 @@ def run_bo(i):
         warmup_period = 4.5 #h 
         length_of_simulation = len(T_overflow)
         warmup_steps = int(warmup_period / 24 * length_of_simulation)
+
+        # Obtain all idx for total heat demand above zero 
+        heat_demand_idx = [idx for idx,i in enumerate(total_heat_demand) if i>0]
         
         term1 = w_1 * np.mean(T_r[warmup_steps:]**2)
         term2 = w_2 * np.mean((T_set - T_overflow[warmup_steps:])**2)
-        term3 = w_3 * np.mean((total_heat_demand - total_heat_supply)[warmup_steps:]**2)
+        term3 = w_3 * np.mean((total_heat_demand[heat_demand_idx] - total_heat_supply[heat_demand_idx])**2)
+        # term3 = w_3 * np.mean((total_heat_demand - total_heat_supply)[warmup_steps:]**2)
         regularization = theta.T @ R @ theta
 
         cost = term1 + term2 + term3 + regularization
@@ -155,7 +159,8 @@ def run_bo(i):
     }
 
     # Save best simulation result
-    net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, results, 
+    net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, 
+                           opt_results = results, 
                            opt = False, 
                            opt_type = 'BO', 
                            n_init_points = init_points,

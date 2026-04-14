@@ -4,7 +4,7 @@ from .heatexchanger import HeatExchanger
 from .pump import Pump
 from .valve import Valve
 
-from scipy.optimize import root
+from scipy.optimize import root, minimize
 from typing import Union
 
 import numpy as np
@@ -320,7 +320,7 @@ class Network:
             j = self.pipe_map[valve.pipe_id]
             self.inv_Kv_array[j] = 1/valve.Kv[0] # Not necessary but for reverse engineering Rutger's data I left it here.
 
-    def update_valves(self,N : int):
+    def update_valves(self, N : int):
         """
         Build a boolean mask for pipes that are connected to a heat exchanger with an open valve. 
         And update valve positions
@@ -328,7 +328,12 @@ class Network:
         active_graph = self.G.copy()
         for valve in self.valves.values():
             
-            valve.update_valve(N)
+            # Only update valve state if not already done this timestep (debug purpose)
+            already_updated = getattr(valve, 'updated_at', -1) == N
+            if not already_updated:
+                valve.update_valve(N)
+                valve.updated_at = N
+
             if valve.h[N] > 0:
                 j = self.pipe_map[valve.pipe_id]
                 self.inv_Kv_array[j] = 1/valve.Kv[N]
@@ -375,12 +380,12 @@ class Network:
                                         + self.pressure_elevation_vector_active)
 
         # Pump contribution (only in loop equations)
-        self.pump_pressure_curve =  self.pump_coeff_active[:,0] * mflow**2 + \
+        pump_pressure_curve =  self.pump_coeff_active[:,0] * mflow**2 + \
                                             self.pump_coeff_active[:,1] * mflow + \
                                             self.pump_coeff_active[:,2]
         
         
-        pump_term = self.loop_matrix_active @ self.pump_pressure_curve
+        pump_term = self.loop_matrix_active @ pump_pressure_curve
 
         # Full residual vector
         F = np.concatenate([continuity, head_loss - pump_term])
@@ -423,8 +428,6 @@ class Network:
         p = len(pipe_ids)
 
         # Initial guess for the mflows in the pipes
-        # mflow0 = self.mflow_all[:,N-1] 
-        # mflow0[mflow0 == 0] = 0.05 # Avoid zero initial guess for better convergence, can be tuned.
         mflow0 = np.ones(p)*0.1
         
         active_graph, active_mask = self.update_valves(N)
@@ -438,23 +441,76 @@ class Network:
         self.incidence_matrix_red = self.incidence_matrix[1:,:]
         incidence_matrix_active = self.incidence_matrix_red[:, active_mask]
         self.incidence_matrix_active = incidence_matrix_active[~np.all(incidence_matrix_active == 0, axis=1), :]  # Remove zero rows (disconnected nodes)
-   
+
         # Adjust all vectors to active pipes
-        friction_vector = self.pressure_friction_vector + \
-                        self.Kp_array + \
-                        self.inv_Kv_array ** 2
-        self.friction_vector_active = friction_vector[active_mask]
-        
         self.pressure_elevation_vector_active = self.pressure_elevation_vector[active_mask]
         self.pump_coeff_active = self.pump_coeff[active_mask, :]
         mflow0_active = mflow0[active_mask]
 
+        friction_vector = self.pressure_friction_vector + \
+                self.Kp_array + \
+                self.inv_Kv_array**2
+        self.friction_vector_active = friction_vector[active_mask]
+        
         # Solves system of non linear equations using scipy root function
-        result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr', tol = 1e-5)
+        result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr', tol = 1e-6)
+
+        # Retry with progressively rounded friction vectors if initial solve failed        
+        if result.success == False or (result.x > 0).all():
+            solved = False
+            for precision in range(5,0,-1):
+
+                # friction_vector = self.pressure_friction_vector + \
+                #                 self.Kp_array + \
+                #                 np.round(self.inv_Kv_array**2,precision)
+                # self.friction_vector_active = friction_vector[active_mask]
+
+                self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
+                
+                # Solves system of non linear equations using scipy root function
+                result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr', tol = 1e-6)
+
+                # Try other root solver
+                lm = False
+                if result.success == False or (result.x < 0).all():
+                    result = root(self.res, mflow0_active, jac = self.jac, method = 'lm', tol = 1e-6)
+                    lm = True
+
+                if result.success == True and (result.x > 0).all():
+                    solved = True
+                    if lm:
+                        print(f'Used Levenbergh Marquardt at N = {N} and with precision {precision}')
+                    else:
+                        if precision < 5:
+                            print(f'Used Hybr method at N = {N} and with precision {precision}')
+
+
+                    break
+            
+            # In case root solving didn't work.
+            if not solved: 
+                for precision in range(5,0,-1): 
+                    # friction_vector = self.pressure_friction_vector + \
+                    #                 self.Kp_array + \
+                    #                 np.round(self.inv_Kv_array**2,precision)
+                    # self.friction_vector_active = friction_vector[active_mask]
+                    self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
+
+
+                    result = minimize(
+                        fun=lambda x: np.sum(self.res(x)**2),
+                        x0=mflow0_active,
+                        jac=lambda x: 2 * self.jac(x).T @ self.res(x),  # chain rule: 2 * J^T * F
+                        method='L-BFGS-B',
+                        tol=1e-10
+                    )
+
+                    if result.success == True and (result.x > 0).all():
+                        print(f'timestep {N} used minimization')
+                        break
 
         # Extract results
         mflow_active = result.x
-        self.mflow_all[active_mask,N] = mflow_active
 
         # Save state of network for debugging if hydraulics break
         if not result.success or not (mflow_active > 0).all():
@@ -470,7 +526,7 @@ class Network:
                     pump_type = 'constant'
                 else:
                     pump_type = 'curve'
-                file_name = f"{self.net_id}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.pkl"
+                file_name = f"{self.net_id}_N={N}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.pkl"
 
                 with open(os.path.join(base_dir, 'debug', file_name), 'wb') as f:
                     pickle.dump(self.__dict__, f)
@@ -481,6 +537,7 @@ class Network:
         elif not (mflow_active > 0).all():
             raise RuntimeError(f'Newton-Raphson converges to a mass flow with negative values at timestep {N}')       
 
+        self.mflow_all[active_mask,N] = mflow_active
         # Assign flows to the pipes for timestep N
         for j, pipe_id in enumerate(pipe_ids[active_mask]):
             pipe = self.pipes[pipe_id]['pipe_instance']

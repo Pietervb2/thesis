@@ -1,4 +1,4 @@
-from baseclasses.test import optimization_run 
+from test import optimization_run 
 
 import numpy as np
 import scipy.optimize

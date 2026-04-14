@@ -76,7 +76,7 @@ class Valve:
         Returns Kv value of the valve following a linear characteristic
         based on the valve displacement h in [0, 1]. 0 means fully closed, 1 means fully open.
         """
-        self.Kvs = 0.003  # [m3/h/bar^0.5]
+        # self.Kvs = 0.003  # [m3/h/bar^0.5]
         
         Kv0 = self.Kvs / 50.0  # same minimum as in equal-percentage
         Kvleak = self.Kvs / 2000
