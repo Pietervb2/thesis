@@ -21,7 +21,7 @@ PHYSICAL_BOUNDS = {
     'theta_6': (1, 5)
 }
 
-def run_bo(i):
+def run_bo(i, pump_pressure, curve):
     start = time.time()
     print(f'Initiation of code profile {i} at {datetime.now()}')
     pbounds = {k: (0, 1) for k in PHYSICAL_BOUNDS}
@@ -31,8 +31,8 @@ def run_bo(i):
     random_state = 1 
     n_restarts = 40
     alpha = 1e-6 
-    init_points = 5
-    n_iter = 10
+    init_points = 1
+    n_iter = 1
     
     def denormalize(val, low, high):
         return low + val * (high - low)
@@ -62,7 +62,10 @@ def run_bo(i):
             return -1e7  # Penalize invalid parameter combinations
 
         # Run simulation
-        net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, opt = True)
+        net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
+                               profile,
+                               pump_pressure,
+                               curve)
 
         # Return temperature
         T_r = net.nodes['Node 1.6'].T
@@ -159,10 +162,9 @@ def run_bo(i):
     }
 
     # Save best simulation result
-    net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, 
+    net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, pump_pressure, curve, 
+                           run_type = 'save_optimization',
                            opt_results = results, 
-                           opt = False, 
-                           opt_type = 'BO', 
                            n_init_points = init_points,
                            n_iter = n_iter)
     stop = time.time()
@@ -171,4 +173,6 @@ def run_bo(i):
 if __name__ == '__main__':    
     if len(sys.argv) > 1:
         profile_num = int(sys.argv[1])
-        run_bo(profile_num)
+        pump_pressure = 50
+        curve = True
+        run_bo(profile_num, pump_pressure, curve)

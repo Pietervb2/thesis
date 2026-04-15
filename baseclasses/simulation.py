@@ -10,16 +10,16 @@ import pandas as pd
 import os
 import plotly.tools as tls
 import plotly.graph_objects as go
-import time
+import pickle
 
 
 class Simulation:
 
-    def __init__(self, dt, total_time, net_id, T_ambt, 
+    def __init__(self, profile, run_type, dt, total_time, T_ambt, 
+                 net_id = None,
                  temp_type = None, 
                  file = None, 
                  no_cap = False, 
-                 opt = False,
                  n_init_points = None,
                  n_iter = None):
 
@@ -33,11 +33,15 @@ class Simulation:
 
         # Create simulation-specific subfolder
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+           
+        if run_type != 'optimization':
+            if run_type == 'benchmark':
+                self.folder = os.path.join(base_dir, "figures", "benchmark", f"Benchmark_{profile}_dt={dt}")
 
-        if not opt:
-            if 'Profile' in  temp_type:
-                self.folder = os.path.join(base_dir, "figures", "optimization", f"{temp_type}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
-            else: 
+            elif run_type == 'save_optimization':
+                self.folder = os.path.join(base_dir, "figures", "optimization", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
+            
+            elif run_type == 'test': 
                 if file:
                     sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
                 else:
@@ -47,14 +51,15 @@ class Simulation:
                     )
 
                 self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
-                       
+                    
                 if no_cap:
-                    self.folder = self.folder + "_no_cap" 
-            
+                    self.folder = self.folder + "_no_cap"       
+
             if not os.path.exists(self.folder):
                 os.makedirs(self.folder)
 
     def simulate_network(self, 
+                         run_type, 
                          network : Network, 
                          T_init_water : float,
                          T_init_pipe : float,
@@ -63,18 +68,17 @@ class Simulation:
                          theta_3 = None,
                          theta_4 = None,
                          T_in = None,
-                         opt = False,
                          plot_network = False,
-                         plot_nodes_T = False,
                          plot_sup_ret = False,
                          plot_pipes_T = False,
                          plot_overflow = False,
+                         plot_consumer_demand = False,
+                         plot_h_valves = False,
+                         no_cap = False,
                          plot_pipes_mflow = False,
                          plot_nodes_dT = False,
                          plot_cap_influence = False,
-                         plot_consumer_demand = False,
-                         plot_h_valves = False,
-                         no_cap = False):
+                         plot_nodes_T = False):
         """
         Simulate temperature dynamics for a network.
         
@@ -94,28 +98,25 @@ class Simulation:
 
         for N in range(0,self.num_steps):
 
-            # if not opt:
-            # print(f"Simulating time step {N+1}/{self.num_steps}, time = {N*self.dt} seconds")
-
             network.set_mflow_network(N)
             network.set_T_network(self.T_ambt, N, T_in[N], no_cap = no_cap)
             
-        if not opt:
+        if run_type != 'optimization':
             print('Simulation finished')
 
             # Plot outcome and save figure
             self.plot_network(network, plot = plot_network)
-            # self.plot_node_temperature_network(network, plot = plot_nodes_T)
             self.plot_return_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
-            # self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
-            # self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
-            # self.plot_cap_influence(network, plot = plot_cap_influence)
             self.plot_supply_return_temperature_flow(network, plot = plot_sup_ret)
             self.plot_overflow(network, plot = plot_overflow)
             self.plot_consumer_demand(network, plot = plot_consumer_demand)
             self.plot_h_valves(network, plot = plot_h_valves)
             self.save_data(network, T_in) 
 
+            # self.plot_node_temperature_network(network, plot = plot_nodes_T)
+            # self.plot_pipe_mflow_network(network, plot = plot_pipes_mflow)
+            # self.plot_node_difference_temperature_network(network, plot = plot_nodes_dT)
+            # self.plot_cap_influence(network, plot = plot_cap_influence)
             plt.show()  
       
     def supply_temperature_BO(self, theta_1, theta_2, theta_3, theta_4, net : Network, total_time, dt):
@@ -164,11 +165,7 @@ class Simulation:
             plt.plot(self.time, node.T, label=f'{node_id}')
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
-        ax = plt.gca()
-        ax.set_xlim(0, 24 * 3600)  # limits in seconds
-        ticks_seconds = np.arange(0, 25, 4) * 3600
-        ax.set_xticks(ticks_seconds)
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        format_plot_time_axis(num_hours=24)
       
         plt.xlabel(f'Time (h), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
@@ -192,11 +189,7 @@ class Simulation:
         plt.grid(True)
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
-        ax = plt.gca()
-        ax.set_xlim(0, 24 * 3600)  # limits in seconds
-        ticks_seconds = np.arange(0, 25, 4) * 3600
-        ax.set_xticks(ticks_seconds)
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        format_plot_time_axis(num_hours=24)
 
         # Create directory if it doesn't exist
         plt.savefig(self.folder + '/supply_return_temperature.png')
@@ -212,11 +205,7 @@ class Simulation:
         plt.grid(True)
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
-        ax = plt.gca()
-        ax.set_xlim(0, 24 * 3600)  # limits in seconds
-        ticks_seconds = np.arange(0, 25, 4) * 3600
-        ax.set_xticks(ticks_seconds)
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        format_plot_time_axis(num_hours=24)
 
         plt.savefig(self.folder + '/supply_return_mflow.png')
 
@@ -266,11 +255,7 @@ class Simulation:
                     plt.plot(self.time, pipe.T, label=f'{pipe_id}, L = {pipe.L}')
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
-        ax = plt.gca()
-        ax.set_xlim(0, 24 * 3600)  # limits in seconds
-        ticks_seconds = np.arange(0, 25, 4) * 3600
-        ax.set_xticks(ticks_seconds)
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        format_plot_time_axis(num_hours=24)
 
         plt.xlabel(f'Time (h), dt = {self.dt}')
         plt.ylabel('Temperature (°C)')
@@ -299,11 +284,7 @@ class Simulation:
                        
         # Set x-axis to 0-24 hours (data stored in seconds). 
         # Show ticks every 4 hours. 
-        ax = plt.gca() 
-        ax.set_xlim(0, num_hours * 3600) # limits in seconds 
-        ticks_seconds = np.arange(0, num_hours + 1, 4) * 3600
-        ax.set_xticks(ticks_seconds) 
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, num_hours + 1, 4)]) 
+        format_plot_time_axis(num_hours=24)
 
         plt.xlabel(f'Time (hours), dt = {self.dt}') 
         plt.ylabel('Temperature (°C)') 
@@ -313,11 +294,8 @@ class Simulation:
         fig_overflow_mflow = plt.figure()
 
         plt.plot(self.time, network.pipes['Overflow 1']['pipe_instance'].mflow)
-        ax = plt.gca() 
-        ax.set_xlim(0, num_hours * 3600) # limits in seconds 
-        ticks_seconds = np.arange(0, num_hours + 1, 4) * 3600
-        ax.set_xticks(ticks_seconds) 
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, num_hours + 1, 4)]) 
+        format_plot_time_axis(num_hours=24)
+
         plt.title("Overflow Mass Flow Rate")
         plt.xlabel(f'Time (h), dt = {self.dt}') 
         plt.ylabel('Mass Flow Rate (kg/s)') 
@@ -326,12 +304,8 @@ class Simulation:
 
         fig_overflow_h = plt.figure()
 
-        plt.plot(self.time, valve_h)
-        ax = plt.gca() 
-        ax.set_xlim(0, num_hours * 3600) # limits in seconds 
-        ticks_seconds = np.arange(0, num_hours + 1, 4) * 3600
-        ax.set_xticks(ticks_seconds) 
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, num_hours + 1, 4)]) 
+        format_plot_time_axis(num_hours=24)
+
         plt.title("Overflow valve displacement")
         plt.xlabel(f'Time (h), dt = {self.dt}') 
         plt.ylabel('Valve displacement (-)') 
@@ -482,11 +456,7 @@ class Simulation:
             plt.plot(self.time, hex.consumer.Q_supply, label=f'Heat supplied to C{hex.consumer.consumer_id.split(" ")[1]}', linestyle='--')
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
-        ax = plt.gca()
-        ax.set_xlim(0, 24 * 3600)  # limits in seconds
-        ticks_seconds = np.arange(0, 25, 4) * 3600
-        ax.set_xticks(ticks_seconds)
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        format_plot_time_axis(num_hours=24)
 
         plt.xlabel(f'Time (hours), dt = {self.dt}')
         plt.ylabel('Heat (W)')
@@ -500,11 +470,7 @@ class Simulation:
         plt.plot(self.time, tot_Q_supply/1e3, label='Total heat supplied', linestyle='--')
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
-        ax = plt.gca()
-        ax.set_xlim(0, 24 * 3600)  # limits in seconds
-        ticks_seconds = np.arange(0, 25, 4) * 3600
-        ax.set_xticks(ticks_seconds)
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        format_plot_time_axis(num_hours=24)
 
         plt.xlabel(f'Time (hours), dt = {self.dt}')
         plt.ylabel('Heat (kW)')
@@ -517,11 +483,7 @@ class Simulation:
         plt.plot(self.time, tot_Q_d/1e3, label='Total heat demand')
 
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
-        ax = plt.gca()
-        ax.set_xlim(0, 24 * 3600)  # limits in seconds
-        ticks_seconds = np.arange(0, 25, 4) * 3600
-        ax.set_xticks(ticks_seconds)
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        format_plot_time_axis(num_hours=24)
 
         plt.xlabel(f'Time (hours), dt = {self.dt}')
         plt.ylabel('Heat (kW)')
@@ -550,11 +512,7 @@ class Simulation:
             plt.plot(self.time, valve.h, label=label)      
     
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
-        ax = plt.gca()
-        ax.set_xlim(0, 24 * 3600)  # limits in seconds
-        ticks_seconds = np.arange(0, 25, 4) * 3600
-        ax.set_xticks(ticks_seconds)
-        ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        format_plot_time_axis(num_hours=24)
 
         plt.xlabel(f'Time (hours), dt = {self.dt}')
         plt.ylabel('Valve displacement (-)')
@@ -573,6 +531,10 @@ class Simulation:
             network: Network object containing nodes and pipes
             T_in: Input temperature array
         """
+
+        # Save network instance
+        with open(os.path.join(self.folder, 'Network_instance.pkl'), 'wb') as f:
+            pickle.dump(network.__dict__, f)
 
         sim_data_folder = os.path.join(self.folder, 'simulation_data')
         if not os.path.exists(sim_data_folder):
@@ -774,5 +736,18 @@ class Simulation:
             df_theta = pd.DataFrame(theta_data, index = [0])
             df_theta.to_csv(os.path.join(self.folder,'hex_consumer_data','theta.csv'), index = False)
 
+def format_plot_time_axis(num_hours=24):
+    """
+    Format plot time axis to show hours with ticks every 4 hours.
+    
+    Args:
+        dt: time step in seconds
+        num_hours: total time in hours (default 24)
+    """
+    ax = plt.gca()
+    ax.set_xlim(0, num_hours * 3600)  # limits in seconds
+    ticks_seconds = np.arange(0, num_hours + 1, 4) * 3600
+    ax.set_xticks(ticks_seconds)
+    ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, num_hours + 1, 4)])
 if __name__ == "__main__":
     pass 

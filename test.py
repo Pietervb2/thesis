@@ -2,12 +2,13 @@ from baseclasses.network import Network
 from baseclasses.simulation import Simulation
 from baseclasses.consumer import Consumer
 from baseclasses.pipe import Pipe
+from baseclasses.simulation import format_plot_time_axis
 
 from scipy.signal import square
 from sklearn.metrics import root_mean_squared_error
 from scipy.optimize import root
 from datetime import datetime
-
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,6 +17,7 @@ import os
 import json
 import time
 import pickle
+import shutil
 
 
 def compare_experimental_data(dt,
@@ -594,7 +596,7 @@ def fit_Kv_values():
     diff = np.sum(result.x - mflow_array)
     print(f"Difference between of all mass flows supplied Rutgers values and root solution: {diff}")
 
-def model_network_Rutger():
+def model_network_Rutger(profile, run_type, dt, pump_pressure, curve):
     
     """
     Replicate network of which Rutger send data from
@@ -606,21 +608,27 @@ def model_network_Rutger():
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('50kPa Pump curve')
     overflow_data = read_overflow_data('Overflow')
+
+    pump_type = f"{pump_pressure}kPa Pump {'curve' if curve else 'constant'}"
+    pump_data = read_pump_data(pump_type)
 
     # Create network
     tau = overflow_data[4]
     steps = overflow_data[5]
     temperature = 65
-    # net = Network(f'Benchmark Rut, tau={tau},{temperature}, step{steps}')
-    net = Network(f'Oftest Rut,Kvl,tau={tau},{temperature},step{steps}')
 
-    consumer_list = consumer_start_times('Profile 1', [7.5, 21])
+    if run_type == 'benchmark': 
+        net = Network(f'Benchmark Rut')
+        of_type = False
+    elif run_type == 'test':
+        net = Network(f'Test Rut,Kvl,tau={tau},{temperature},step{steps}')
+        of_type = True
+
+    consumer_list = consumer_start_times(f'Profile {1}', [7.5, 21])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
-    dt = 1 # s
     total_time = 24 * 3600 # sec
     T_ambt = 20
 
@@ -628,10 +636,8 @@ def model_network_Rutger():
     temp_type = 'constant'
     T_in = generate_input_network(temp_type, total_time, dt, temperature)
 
-    h_overflow = np.zeros_like(T_in)
-    opt = True # True = P-band optimzation, False = benchmark with deadband
-    overflow_data.append(opt) 
-
+    # True = P-band optimzation, False = benchmark with deadband
+    overflow_data.append(of_type) 
 
     # Create Network
     network_builder(net, 
@@ -640,17 +646,18 @@ def model_network_Rutger():
                 hex_data,
                 pump_data, 
                 consumer_list,
-                # h_overflow,
                 overflow_data = overflow_data,
                 )
     # Run simulation
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
-    sim.simulate_network(net, T_ambt, T_ambt, T_in = T_in)
+    sim = Simulation(profile, run_type, dt, total_time, T_ambt, net_id = net.net_id)
+    sim.simulate_network(run_type, net, T_ambt, T_ambt, T_in = T_in)
 
 def overflow_test():
     """
     Replicate network of which Rutger send data from
     """
+    run_type = 'test'
+    profile = 'Profile 5'
 
     pipe_data_DN20 = read_pipe_data('DN20')
     pipe_data_DN25 = read_pipe_data('DN25')
@@ -665,10 +672,11 @@ def overflow_test():
     tau = overflow_data[4]
     steps = overflow_data[5]
     temperature = 65
-    net = Network(f'Oftest,Kvl,tau={tau},{temperature},step{steps}')
-    overflow_data.append(True) # Indicating that it should use the benchmark
 
-    consumer_list = consumer_start_times('Profile 5', [1])
+    net = Network(f'Oftest,Kvl,tau={tau},{temperature},step{steps}')
+    overflow_data.append(False) # Indicating that it should use the benchmark
+
+    consumer_list = consumer_start_times(profile, [1])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
@@ -680,8 +688,6 @@ def overflow_test():
     temp_type = 'constant'
     T_in = generate_input_network(temp_type, total_time, dt, temperature)
 
-    h_overflow = np.zeros_like(T_in)
-
     # Create Network
     network_builder(net, 
                 pipe_data_list,
@@ -689,21 +695,20 @@ def overflow_test():
                 hex_data,
                 pump_data, 
                 consumer_list,
-                # h_overflow,
                 overflow_data = overflow_data,
                 )
     # Run simulation
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
-    sim.simulate_network(net, T_ambt, T_ambt, T_in = T_in)
+    sim = Simulation(profile, run_type, dt, total_time, T_ambt, net_id = net.net_id)
+    sim.simulate_network(run_type, net, T_ambt, T_ambt, T_in = T_in)
 
 def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
-                    profile, 
-                    opt_results = None, 
-                    opt = False, 
-                    opt_type = 'None',
+                    profile,
+                    pump_pressure,
+                    curve,
+                    run_type = 'optimization', 
                     n_init_points = None,
-                    n_iter = None):
-
+                    n_iter = None,
+                    opt_results = None):
    
     """
     Replicate network of which Rutger send data from
@@ -722,8 +727,10 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('50kPa Pump curve')
     overflow_data = read_overflow_data('Overflow')
+
+    pump_type = f"{pump_pressure}kPa Pump {'curve' if curve else 'constant'}"
+    pump_data = read_pump_data(pump_type)
 
     # Create network
     net = Network(f'{profile}')
@@ -757,16 +764,128 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     theta = [theta_1, theta_2, theta_3, theta_4, theta_5, theta_6]
     net.theta = theta # debug
     
-    sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = profile, opt = opt, n_init_points=n_init_points, n_iter = n_iter)
-    sim.simulate_network(net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4, opt = opt)
+    sim = Simulation(profile, run_type, dt, total_time, T_ambt, n_init_points=n_init_points, n_iter = n_iter)
+    sim.simulate_network(run_type, net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4)
 
-    if not opt:
+    if run_type == 'save_optimization':
         with open(os.path.join(sim.folder, 'bo_settings.json'), 'w') as f:
             json.dump(opt_results, f, indent=2)
-       
-    if opt:
+        
+        # Save the overflow settings
+        src = Path(__file__).parent / 'constants' / 'constants_overflow.json'
+        shutil.copy(src, Path(sim.folder) / 'overflow_settings.json')
+
+        compare_with_benchmark(profile, dt, pump_pressure, curve, n_init_points, n_iter)
+           
+    elif run_type == 'optimization':
         return net
+
+def compare_with_benchmark(profile, 
+                           dt, 
+                           pump_pressure, 
+                           curve,
+                           n_init_points, 
+                           n_iter):
+
+    thesis_dir = os.path.dirname(os.path.abspath(__file__))
+    bench_file = f'Benchmark_{profile}_dt={dt}'
+    path_bench = os.path.join(thesis_dir, 'figures', 'benchmark', bench_file)
+
+    if not os.path.exists(path_bench):
+        # Perform benchmark simulation
+        model_network_Rutger(profile, 'benchmark', dt, pump_pressure, curve)
+         
+    # Load network instances
+    opt_folder = f'{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}'
+    file_opt = os.path.join(thesis_dir, 'figures', 'optimization', opt_folder, 'Network_instance.pkl')
+
+    with open(file_opt, 'rb') as f:
+        state = pickle.load(f)
+
+    net_opt = Network.__new__(Network) 
+    net_opt.__dict__.update(state)
+
+    file_benchmark = os.path.join(path_bench, 'Network_instance.pkl')
+
+    with open(file_benchmark, 'rb') as f:
+        state = pickle.load(f)
+
+    net_bench = Network.__new__(Network)  
+    net_bench.__dict__.update(state)
+
+    output_folder = os.path.join(thesis_dir, 'figures', 'comparison_BO_benchmark', opt_folder)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Generate time array
+    time = np.arange(len(net_opt.nodes['Node 1.1'].T)) * dt
+
+    # Return and supply temperature 
+    fig_T_in = plt.figure(figsize=(10, 6))
+    plt.plot(time, net_opt.nodes['Node 1.1'].T, label = r"$T_s$ BO")
+    plt.plot(time, net_bench.nodes['Node 1.1'].T, label = r"$T_s$ Benchmark")
+    plt.plot(time, net_opt.nodes['Node 1.6'].T, label = r"$T_r$ BO")
+    plt.plot(time, net_bench.nodes['Node 1.6'].T, label = r"$T_r$ Benchmark")
+    plt.title('Supply and Return Temperature')     
+    plt.xlabel(f'Time (h), dt = {dt}')
+    plt.ylabel('Temperature (°C)')
+    plt.legend()
+    plt.grid(True)
+    format_plot_time_axis()
+       
+    plt.savefig(os.path.join(output_folder, 'supply_return_temperature.png'))
+    plt.close()
+
+    # Overflow valve displacement
+    fig_overflow_h = plt.figure(figsize=(10, 6)) 
+    plt.plot(time, net_opt.valves['Overflow valve'].h, label = "BO")
+    plt.plot(time, net_bench.valves['Overflow valve'].h, label = "Benchmark")
+    plt.title("Overflow Valve Displacement") 
+    plt.xlabel(f'Time (h), dt = {dt}')
+    plt.ylabel('Valve displacement (-)')
+    plt.legend()
+    plt.grid(True)
+    format_plot_time_axis()
     
+    plt.savefig(os.path.join(output_folder, 'overflow_displacement.png'))
+    plt.close()
+
+    # Total heat demand and supply
+    fig_heat = plt.figure(figsize=(10, 6))
+    
+    # Calculate total heat demand and supply for BO
+    total_Q_d_opt = np.zeros_like(list(net_opt.hexs.values())[0].consumer.Q_d)
+    total_Q_supply_opt = np.zeros_like(list(net_opt.hexs.values())[0].consumer.Q_supply)
+    
+    for hex_obj in net_opt.hexs.values():
+        total_Q_d_opt += hex_obj.consumer.Q_d
+        total_Q_supply_opt += hex_obj.consumer.Q_supply
+    
+    # Calculate total heat demand and supply for Benchmark
+    total_Q_d_bench = np.zeros_like(list(net_bench.hexs.values())[0].consumer.Q_d)
+    total_Q_supply_bench = np.zeros_like(list(net_bench.hexs.values())[0].consumer.Q_supply)
+    
+    for hex_obj in net_bench.hexs.values():
+        total_Q_d_bench += hex_obj.consumer.Q_d
+        total_Q_supply_bench += hex_obj.consumer.Q_supply
+    
+    diff_bench = sum(total_Q_supply_bench - total_Q_d_bench)/1e3
+    diff_opt = sum(total_Q_supply_opt - total_Q_d_opt)/1e3
+    
+    plt.plot(time, total_Q_d_opt/1e3, label='Total Heat Demand')
+    plt.plot(time, total_Q_supply_opt/1e3, label= "Total Heat Supply BO " + r"$\Delta Q$ = " + f"{round(diff_opt)} kW", linestyle='--')
+    plt.plot(time, total_Q_supply_bench/1e3, label='Total Heat Supply Benchmark ' + r"$\Delta Q$ =" + f"{round(diff_bench)} kW", linestyle='--')
+    
+    plt.title('Total Heat Demand vs Supply')     
+    plt.xlabel(f'Time (h), dt = {dt}')
+    plt.ylabel('Heat (kW)')
+    plt.legend()
+    plt.grid(True)
+    format_plot_time_axis()
+    
+    plt.savefig(os.path.join(output_folder, 'total_heat_demand_supply.png'))
+    plt.close()
+
 ###########################################################
 # Help functions for the tests
 ###########################################################
@@ -1079,40 +1198,15 @@ def network_builder(net : Network,
         return net
     
 if __name__ == "__main__":
-
-    # Load class instance at crash point
-    net_id = 'Profile 3'
-    Kvleak_bool = True
-    dis_steps = 125
-    c = 50
-    N = 26811
-    pump_type = 'curve'
-
-    if N is not None:
-        file_name = f"{net_id}_N={N}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.pkl"
-    else: 
-        file_name = f"{net_id}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.pkl"
-
-        
-    # base_dir = os.path.dirname(__file__)
-    base_dir = os.path.abspath('')
-
-    file = os.path.join(base_dir, 'debug', file_name)
-
-    with open(file, 'rb') as f:
-        state = pickle.load(f)
-
-    net = Network.__new__(Network)  # create instance without calling __init__
-    net.__dict__.update(state)
-
-    theta = net.theta
-
-    print(file_name)
     
-    start = time.time()
-    print(f' start {datetime.now()}')
-    optimization_run(theta_1=theta[0], theta_2=theta[1], theta_3=theta[2], theta_4=theta[3], theta_5=theta[4], theta_6=theta[5], profile = 'Profile 3', opt = True)
-    end = time.time()
-    print(f"Execution time: {end - start} seconds")
+    dt = 1
+    pump_pressure = 50 # kPa
+    curve = True
+    n_init_points = 5
+    n_iter = 10
+    
+    for i in range(1,5):
+        compare_with_benchmark(f'Profile {i}', dt, pump_pressure, curve, n_init_points, n_iter)
+
 
 
