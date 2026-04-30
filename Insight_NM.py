@@ -107,13 +107,23 @@ def part1():
     plt.grid()
     plt.show()
 
-# Investigate T_outlet for very small mflow mimiking closing the pipe 
+# Investigate T_outlet for very small mflow mimicking closing the pipe 
 def part2():
 
     pipe_data = read_pipe_data('DN40')
+    
     pipe_length = 1
     delta_z = 0
+    pipe_data = pipe_data.copy()
     pipe1= Pipe('Pipe 1', pipe_length, delta_z, pipe_data)
+
+    pipe_data1 = pipe_data.copy()
+    # pipe_data1[4] = 0
+    pipe_data1[5] = 0 # cp_insu set to zero 
+
+    pipe2= Pipe('Pipe 2', pipe_length, delta_z, pipe_data1)
+
+
 
 
     # Fill it with historic data
@@ -128,6 +138,7 @@ def part2():
     T_init_pipe = 60
     v_inflow = 0.1
     pipe1.bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
+    pipe2.bnode_init(dt, num_steps, T_init_water, T_init_pipe, v_inflow)
 
     T_in = np.ones(num_steps) * 60
     T_ambt = 20
@@ -137,8 +148,14 @@ def part2():
         pipe1.set_T_in(T_in[N],N)
         pipe1.bnode_method_fast(T_ambt,N)
 
+        pipe2.set_mflow(mflow[N],N) 
+        pipe2.set_T_in(T_in[N],N)
+        pipe2.bnode_method_fast(T_ambt,N)
+
     plt.figure()
-    plt.plot(pipe1.T, label='Outlet Temperature')
+    plt.title("Outlet temperature")
+    plt.plot(pipe1.T, label='Pipe 1')
+    plt.plot(pipe2.T, label = f"Pipe 2, diff = {np.sum(pipe2.T-pipe1.T)}")
     plt.xlabel('Time step')
     plt.ylabel('Temperature [°C]')
     plt.legend()

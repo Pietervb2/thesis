@@ -1,44 +1,68 @@
 from datetime import datetime
-from multiprocessing import Pool
-
 from bayes_opt import BayesianOptimization
-from sklearn.gaussian_process.kernels import Matern
+from sklearn.gaussian_process.kernels import Matern, WhiteKernel
+
+from test import optimization_run 
 
 import numpy as np
 import time
 import sys
 
+# T_supply[i] = theta_1 + theta_2 * np.tanh(theta_3 * (total_heat_demand[k] - theta_4)) # Alternative formulation with tanh function
 
-from test import optimization_run 
+class CostFunction:
+    def __init__(self, profile, dt, pump_pressure, curve, run_type, test_name = None):
+        self.profile = profile
+        self.dt = dt
+        self.pump_pressure = pump_pressure
+        self.curve = curve
 
-# Physical bounds
-PHYSICAL_BOUNDS = {
-    'theta_1': (60, 65), 
-    'theta_2': (65, 70),
-    'theta_3': (0, 500e3),
-    'theta_4': (0, 200e3),
-    'theta_5': (0, 3),
-    'theta_6': (1, 5)
-}
+        self.run_type = run_type
+        self.test_name = test_name
 
-def run_bo(i, pump_pressure, curve):
-    start = time.time()
-    print(f'Initiation of code profile {i} at {datetime.now()}')
-    pbounds = {k: (0, 1) for k in PHYSICAL_BOUNDS}
-    profile = f'Profile {i}'
+        self.w_Tr = 0.5
+        self.w_Tof = 5
+        self.w_Ts = 0.1
+        self.w_Tof_var = 20
 
-    # Settings 
-    random_state = 1 
-    n_restarts = 40
-    alpha = 1e-6 
-    init_points = 1
-    n_iter = 1
-    
-    def denormalize(val, low, high):
-        return low + val * (high - low)
+        self.dict_w_Q = {
+            'Profile 1': 0.2e-7,
+            'Profile 2': 0.2e-6,
+            'Profile 3': 0.2e-5,
+            'Profile 4': 1e-4}
 
-    def cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
+        # Saving cost function values and parameters for all iterations
+        self.iter = 0
+        self.dict_debug = {}
 
+        self.dict_debug["w_Tr"] = self.w_Tr
+        self.dict_debug["w_Tof"] = self.w_Tof
+        self.dict_debug["w_Ts"] = self.w_Ts
+        self.dict_debug["dict_w_Q"] = self.dict_w_Q
+
+        # Physical bounds
+        self.PHYSICAL_BOUNDS = {
+            'theta_1': (60, 65), 
+            'theta_2': (0.1, 3),
+            'theta_3': (0,10),
+            'theta_4': (100e3, 400e3),
+            'theta_5': (0, 3),
+            'theta_6': (1, 2)
+        }
+
+        # # Physical bounds
+        # self.PHYSICAL_BOUNDS = {
+        #     'theta_1': (60, 65), 
+        #     'theta_2': (65, 70),
+        #     'theta_3': (0, 500e3),
+        #     'theta_4': (0, 200e3),
+        #     'theta_5': (0, 3),
+        #     'theta_6': (1, 5)
+        # }
+        
+        self.dict_debug["bounds"] = self.PHYSICAL_BOUNDS
+
+    def __call__(self, theta_1, theta_2, theta_3, theta_4, theta_5, theta_6):
         """
         theta_1 : Minimum supply temperature [°C]
         theta_2 : Maximum supply temperature [°C]
@@ -49,26 +73,32 @@ def run_bo(i, pump_pressure, curve):
         """
 
         # Denormalize all inputs
-        theta_1 = denormalize(theta_1, *PHYSICAL_BOUNDS['theta_1'])
-        theta_2 = denormalize(theta_2, *PHYSICAL_BOUNDS['theta_2'])
-        theta_3 = denormalize(theta_3, *PHYSICAL_BOUNDS['theta_3'])
-        theta_4 = denormalize(theta_4, *PHYSICAL_BOUNDS['theta_4'])
-        theta_5 = denormalize(theta_5, *PHYSICAL_BOUNDS['theta_5'])
-        theta_6 = denormalize(theta_6, *PHYSICAL_BOUNDS['theta_6'])
+        theta_1 = denormalize(theta_1, *self.PHYSICAL_BOUNDS['theta_1'])
+        theta_2 = denormalize(theta_2, *self.PHYSICAL_BOUNDS['theta_2'])
+        theta_3 = denormalize(theta_3, *self.PHYSICAL_BOUNDS['theta_3'])
+        theta_4 = denormalize(theta_4, *self.PHYSICAL_BOUNDS['theta_4'])
+        theta_5 = denormalize(theta_5, *self.PHYSICAL_BOUNDS['theta_5'])
+        theta_6 = denormalize(theta_6, *self.PHYSICAL_BOUNDS['theta_6'])
 
         # print(f'theta_1: {theta_1}, theta_2: {theta_2}, theta_3: {theta_3}, theta_4: {theta_4}, theta_5: {theta_5}, theta_6: {theta_6}')
 
-        if theta_1 > theta_2:
-            return -1e7  # Penalize invalid parameter combinations
+        # if theta_1 > theta_2:
+        #     return -1e7  # Penalize invalid parameter combinations
 
         # Run simulation
         net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
-                               profile,
-                               pump_pressure,
-                               curve)
+                               self.profile,
+                               self.dt,
+                               self.pump_pressure,
+                               self.curve,
+                               run_type = self.run_type,
+                               test_name = self.test_name)
 
         # Return temperature
         T_r = net.nodes['Node 1.6'].T
+
+        # Supply temperature
+        T_s = net.nodes['Node 1.1'].T
 
         # Overflow setpoint and temperature
         T_set = 55 # [°C] Setpoint for overflow valve
@@ -86,12 +116,7 @@ def run_bo(i, pump_pressure, curve):
             total_heat_demand += consumer.Q_d
             total_heat_supply += consumer.Q_supply
 
-        # Weights
-        w_1 = 1e-1
-        w_2 = 1e2
-        w_3 = 0.2e-5
-
-        R = np.diag([1e-4, 1e-4, 1e-11, 1e-10, 1e-3, 1e-1]) # Regularization matrix (identity for simplicity)
+        R = 0.1*np.diag([1e-4, 1e-4, 1e-11, 1e-10, 1e-3, 1e-1]) # Regularization matrix 
         theta = np.array([theta_1, theta_2, theta_3, theta_4, theta_5, theta_6])
         
         # 𝑤_1 𝑇_𝑟^2+𝑤_2 (T_set−𝑇_𝑜verflow )^2+𝑤_3 (𝑄_(𝑑𝑒𝑚𝑎𝑛𝑑,𝑡𝑜𝑡)−𝑄_(𝑠𝑢𝑝,𝑡𝑜𝑡) )^2+𝜽R𝜽^T
@@ -103,20 +128,62 @@ def run_bo(i, pump_pressure, curve):
         # Obtain all idx for total heat demand above zero 
         heat_demand_idx = [idx for idx,i in enumerate(total_heat_demand) if i>0]
         
-        term1 = w_1 * np.mean(T_r[warmup_steps:]**2)
-        term2 = w_2 * np.mean((T_set - T_overflow[warmup_steps:])**2)
-        term3 = w_3 * np.mean((total_heat_demand[heat_demand_idx] - total_heat_supply[heat_demand_idx])**2)
+        term_Tr = self.w_Tr * np.mean(T_r[warmup_steps:]**2)
+
+        term_Tof = self.w_Tof * np.mean((T_set - T_overflow[warmup_steps:])**2)
+        # alpha = 5
+        # overshoot = T_set - T_overflow[warmup_steps:]
+        # weights = np.exp(alpha * overshoot)
+        # term_Tof = self.w_Tof * np.sum(weights * overshoot) / np.sum(weights)
+
+        term_Q = self.dict_w_Q[self.profile] * np.mean((total_heat_demand[heat_demand_idx] - total_heat_supply[heat_demand_idx])**2)
+        term_Ts = self.w_Ts * np.mean(T_s[warmup_steps:]**2)
+
+        # term_Tof_var = self.w_Tof_var * np.max(abs(T_set - T_overflow[warmup_steps:]))
+
         # term3 = w_3 * np.mean((total_heat_demand - total_heat_supply)[warmup_steps:]**2)
         regularization = theta.T @ R @ theta
 
-        cost = term1 + term2 + term3 + regularization
-        
-        print(f'term 1 {term1}, term 2 {term2}, term 3 {term3}, regularization {regularization}')
+        cost = term_Tr + term_Tof + term_Q + term_Ts + regularization
+
+        # Save cost function values and parameters for debugging
+        self.dict_debug[f'iter {self.iter}'] = {
+            'theta': theta.tolist(),
+            'T_r': float(term_Tr),
+            'T_overflow': float(term_Tof),
+            'Q': float(term_Q),
+            'T_s': float(term_Ts),
+            'regularization': float(regularization),
+            'cost' : float(cost)
+        }
+        self.iter += 1
+
+        # term Tof_var {term_Tof_var}
+        print(f'term Tr {term_Tr}, term Tof {term_Tof}, term Q {term_Q}, term Ts {term_Ts}, regularization {regularization}, cost {cost}')
         # print(f'Regularization terms: {theta_1**2 * R[0,0]}, {theta_2**2 * R[1,1]}, {theta_3**2 * R[2,2]}, {theta_4**2 * R[3,3]}, {theta_5**2 * R[4,4]}, {theta_6**2 * R[5,5]}')
         return -cost
 
+def denormalize(val, low, high):
+    return low + val * (high - low)
+
+def run_bo(i, dt, pump_pressure, curve):
+    start = time.time()
+    print(f'Initiation of code profile {i} at {datetime.now()}')
+    
+    profile = f'Profile {i}'
+
+    # Settings 
+    random_state = 1 
+    n_restarts = 15
+    alpha = 1e-6
+    init_points = 10
+    n_iter = 10
+   
+    cost_fn = CostFunction(profile, dt, pump_pressure, curve, run_type = 'optimization')
+    pbounds = {k: (0, 1) for k in cost_fn.PHYSICAL_BOUNDS}
+
     optimizer = BayesianOptimization(
-        f=cost_function,
+        f=cost_fn,
         pbounds=pbounds,
         verbose=2, # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
         random_state=random_state)
@@ -128,6 +195,10 @@ def run_bo(i, pump_pressure, curve):
     optimizer.set_gp_params(kernel=kernel, 
                             n_restarts_optimizer = n_restarts,
                             alpha = alpha)
+    
+    # # Verschil met de alpha en de white Kernel is dat ze de white kernel ook afschatten tijdens set_gp_params
+    # noise_level = 1e-3
+    # WhiteKernel(noise_level = noise_level)
 
     gp_kernel_before = optimizer._gp.kernel
 
@@ -137,12 +208,12 @@ def run_bo(i, pump_pressure, curve):
 
     gp_kernel_after = optimizer._gp.kernel_
 
-    theta_1 = denormalize(optimizer.max['params']['theta_1'], *PHYSICAL_BOUNDS['theta_1'])
-    theta_2 = denormalize(optimizer.max['params']['theta_2'], *PHYSICAL_BOUNDS['theta_2'])
-    theta_3 = denormalize(optimizer.max['params']['theta_3'], *PHYSICAL_BOUNDS['theta_3'])
-    theta_4 = denormalize(optimizer.max['params']['theta_4'], *PHYSICAL_BOUNDS['theta_4'])
-    theta_5 = denormalize(optimizer.max['params']['theta_5'], *PHYSICAL_BOUNDS['theta_5'])
-    theta_6 = denormalize(optimizer.max['params']['theta_6'], *PHYSICAL_BOUNDS['theta_6'])
+    theta_1 = denormalize(optimizer.max['params']['theta_1'], *cost_fn.PHYSICAL_BOUNDS['theta_1'])
+    theta_2 = denormalize(optimizer.max['params']['theta_2'], *cost_fn.PHYSICAL_BOUNDS['theta_2'])
+    theta_3 = denormalize(optimizer.max['params']['theta_3'], *cost_fn.PHYSICAL_BOUNDS['theta_3'])
+    theta_4 = denormalize(optimizer.max['params']['theta_4'], *cost_fn.PHYSICAL_BOUNDS['theta_4'])
+    theta_5 = denormalize(optimizer.max['params']['theta_5'], *cost_fn.PHYSICAL_BOUNDS['theta_5'])
+    theta_6 = denormalize(optimizer.max['params']['theta_6'], *cost_fn.PHYSICAL_BOUNDS['theta_6'])
 
     print(f'GP kernel before optimization: {gp_kernel_before}'
         f'\nGP kernel after optimization: {gp_kernel_after}')
@@ -162,17 +233,21 @@ def run_bo(i, pump_pressure, curve):
     }
 
     # Save best simulation result
-    net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, pump_pressure, curve, 
+    net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6, profile, dt, pump_pressure, curve, 
                            run_type = 'save_optimization',
                            opt_results = results, 
                            n_init_points = init_points,
-                           n_iter = n_iter)
+                           n_iter = n_iter,
+                           new_benchmark_run = True,
+                           debug_dict_BO = cost_fn.dict_debug)
+    
     stop = time.time()
     print(f'Profile {i}: Total optimization time: {stop - start:.2f} seconds')
 
 if __name__ == '__main__':    
     if len(sys.argv) > 1:
         profile_num = int(sys.argv[1])
-        pump_pressure = 50
+        dt = 60
+        pump_pressure = 60
         curve = True
-        run_bo(profile_num, pump_pressure, curve)
+        run_bo(profile_num, dt, pump_pressure, curve)

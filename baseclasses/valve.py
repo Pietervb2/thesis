@@ -11,8 +11,8 @@ class Valve:
                  h_overflow = None):
         """"
         Args:
-            - Kvs: hydraulic conductivity of fully open valve [m3/h/bar^0.5]
-            - Kv0: hydraulic conductivity of closed valve at h* [m3/h/bar^0.5]
+            - Kvs: hydraulic conductivity of fully open valve [kg/s/Pa^0.5]
+            - Kv0: hydraulic conductivity of closed valve at h* [kg/s/Pa^0.5]
 
         """
 

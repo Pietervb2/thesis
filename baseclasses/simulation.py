@@ -8,16 +8,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
-import plotly.tools as tls
 import plotly.graph_objects as go
-import pickle
-
 
 class Simulation:
 
     def __init__(self, profile, run_type, dt, total_time, T_ambt, 
-                 net_id = None,
-                 temp_type = None, 
+                 test_name = None,
+                 net_id = None, 
                  file = None, 
                  no_cap = False, 
                  n_init_points = None,
@@ -45,9 +42,13 @@ class Simulation:
                 if file:
                     sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
                 else:
-                    sim_name = (
-                        f"network={net_id}_dt={dt}_total_time={total_time_str}_"
-                        f"Tin={temp_type}_Tambt={T_ambt}"
+                    
+                    if test_name is not None:
+                        sim_name = f"{test_name}_dt={dt}_Tambt={T_ambt}"
+                    else:
+                        sim_name = (
+                            f"{net_id}_dt={dt}_total_time={total_time_str}_"
+                            f"Tambt={T_ambt}"
                     )
 
                 self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
@@ -142,12 +143,14 @@ class Simulation:
             else:
                 k = i + look_ahead
 
-            if total_heat_demand[k] < theta_3 - theta_4:
-                T_supply[i] = theta_1
-            elif total_heat_demand[k] >= theta_3:
-                T_supply[i] = theta_2
-            else:
-                T_supply[i] = theta_1 + (total_heat_demand[k] - (theta_3-theta_4)) * (theta_2 - theta_1) / theta_4
+            # if total_heat_demand[k] < theta_3:
+            #     T_supply[i] = theta_1
+            # elif total_heat_demand[k] >= theta_3 + theta_4:
+            #     T_supply[i] = theta_2
+            # else:
+            #     T_supply[i] = theta_1 + (total_heat_demand[k] - theta_3) * (theta_2 - theta_1) / theta_4
+
+            T_supply[i] = theta_1 + theta_2 * np.tanh(theta_3 * (total_heat_demand[k] - theta_4)) # Alternative formulation with tanh function
 
         return T_supply 
     
@@ -278,17 +281,20 @@ class Simulation:
                 valve_h = valve.h
 
         plt.plot(self.time, temp) 
+        plt.plot(self.time, np.ones_like(temp)*55, linestyle = 'dashed', color = 'grey', linewidth=0.8)
 
         num_hours = int(self.total_time / 3600)
-
-                       
-        # Set x-axis to 0-24 hours (data stored in seconds). 
-        # Show ticks every 4 hours. 
-        format_plot_time_axis(num_hours=24)
+                      
+        format_plot_time_axis(num_hours=num_hours)
 
         plt.xlabel(f'Time (hours), dt = {self.dt}') 
         plt.ylabel('Temperature (°C)') 
-        plt.grid(True) 
+        plt.grid(True)
+        
+        # Add custom tick label for setpoint without removing automatic ticks
+        ax = plt.gca()
+        ax.axhline(55, linestyle='dotted', color = 'grey', linewidth=1, label=r'$T_{set}$')
+        
         plt.savefig(self.folder + '/overflow_temperature.png')
 
         fig_overflow_mflow = plt.figure()
@@ -303,6 +309,11 @@ class Simulation:
         plt.savefig(self.folder + '/overflow_mflow.png')
 
         fig_overflow_h = plt.figure()
+
+        # Plot overflow valve displacement for each valve
+        for valve in network.valves.values(): 
+            if 'Overflow' in valve.valve_id: 
+                plt.plot(self.time, valve.h, label='Overflow')
 
         format_plot_time_axis(num_hours=24)
 
@@ -465,7 +476,8 @@ class Simulation:
         plt.savefig(self.folder + '/individual_heat.png')
 
         fig_tot = plt.figure()
-        plt.title("Total Consumer Heat Demand vs Supply")
+        title = rf"Total Consumer Heat Demand vs Supply $\Delta Q$ = {np.sum(tot_Q_d - tot_Q_supply)/1e3:.3f} kJ"
+        plt.title(title)
         plt.plot(self.time, tot_Q_d/1e3, label='Total heat demand')
         plt.plot(self.time, tot_Q_supply/1e3, label='Total heat supplied', linestyle='--')
 
@@ -489,9 +501,6 @@ class Simulation:
         plt.ylabel('Heat (kW)')
         plt.grid(True)
         plt.savefig(self.folder + '/total_heat_demand.png')
-
-
-
 
         if not plot:
             plt.close(fig)
@@ -531,10 +540,6 @@ class Simulation:
             network: Network object containing nodes and pipes
             T_in: Input temperature array
         """
-
-        # Save network instance
-        with open(os.path.join(self.folder, 'Network_instance.pkl'), 'wb') as f:
-            pickle.dump(network.__dict__, f)
 
         sim_data_folder = os.path.join(self.folder, 'simulation_data')
         if not os.path.exists(sim_data_folder):
@@ -641,7 +646,7 @@ class Simulation:
         # Convert to a small DataFrame
         df = pd.DataFrame(rows)
 
-      # This overwrites the previous file completely
+        # This overwrites the previous file completely
         df.to_csv(filename, index=False)
 
         # Saving the data corresponding to HEX and consumers
@@ -650,6 +655,10 @@ class Simulation:
         hex_valve_data = {}
         overflow_data_normal = {}
         overflow_data_debug = {}
+
+        total_heat = {}
+        total_Q_demand = np.zeros_like(T_in)
+        total_Q_supply = np.zeros_like(T_in)
 
         hex_folder = os.path.join(self.folder, 'hex_consumer_data')
         if not os.path.exists(hex_folder):
@@ -671,7 +680,9 @@ class Simulation:
                 HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {valve_key.split()[-1]}.3'].mflow
                 HEX_data['mflow_sec'] = hex.consumer.mflow           
                 HEX_data['Q_d'] = hex.consumer.Q_d
+                total_Q_demand += hex.consumer.Q_d
                 HEX_data['Q_supply'] = hex.consumer.Q_supply
+                total_Q_supply += hex.consumer.Q_supply
                 HEX_data['h'] = valve.h
                 HEX_data['Integral term'] = valve.I_array
 
@@ -724,6 +735,13 @@ class Simulation:
             df_hex_valve_data = pd.DataFrame(hex_valve_data)
             df_hex_valve_data.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_valve_data.csv'), index = False)
 
+            total_heat["Demand"] = total_Q_demand
+            total_heat["Supply"] = total_Q_supply
+
+            df_total_heat = pd.DataFrame(total_heat)
+            df_total_heat.to_csv(os.path.join(self.folder,'hex_consumer_data','total_heat.csv'), index = False)
+
+
         if network.theta is not None:
             theta_data = {
                 'Min supply temperature [°C]': network.theta[0],
@@ -735,6 +753,8 @@ class Simulation:
             }
             df_theta = pd.DataFrame(theta_data, index = [0])
             df_theta.to_csv(os.path.join(self.folder,'hex_consumer_data','theta.csv'), index = False)
+
+
 
 def format_plot_time_axis(num_hours=24):
     """

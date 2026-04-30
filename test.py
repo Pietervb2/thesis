@@ -16,8 +16,9 @@ import pandas as pd
 import os
 import json
 import time
-import pickle
 import shutil
+import csv
+import pandas as pd
 
 
 def compare_experimental_data(dt,
@@ -625,7 +626,7 @@ def model_network_Rutger(profile, run_type, dt, pump_pressure, curve):
         net = Network(f'Test Rut,Kvl,tau={tau},{temperature},step{steps}')
         of_type = True
 
-    consumer_list = consumer_start_times(f'Profile {1}', [7.5, 21])
+    consumer_list = consumer_start_times(f'{profile}', [7.5, 21])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
@@ -703,12 +704,16 @@ def overflow_test():
 
 def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
                     profile,
+                    dt,
                     pump_pressure,
                     curve,
                     run_type = 'optimization', 
                     n_init_points = None,
                     n_iter = None,
-                    opt_results = None):
+                    opt_results = None,
+                    new_benchmark_run = False,
+                    debug_dict_BO = None,
+                    test_name = None):
    
     """
     Replicate network of which Rutger send data from
@@ -739,9 +744,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
     # pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 7 
 
-   
     # Simulation parameters
-    dt = 60 # s
     total_time = 24 * 3600 # sec
     T_ambt = 20
 
@@ -764,20 +767,29 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     theta = [theta_1, theta_2, theta_3, theta_4, theta_5, theta_6]
     net.theta = theta # debug
     
-    sim = Simulation(profile, run_type, dt, total_time, T_ambt, n_init_points=n_init_points, n_iter = n_iter)
+    sim = Simulation(profile, run_type, dt, total_time, T_ambt, n_init_points=n_init_points, n_iter = n_iter, test_name = test_name)
     sim.simulate_network(run_type, net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4)
 
     if run_type == 'save_optimization':
-        with open(os.path.join(sim.folder, 'bo_settings.json'), 'w') as f:
-            json.dump(opt_results, f, indent=2)
+
+        if opt_results is not None:
+            with open(os.path.join(sim.folder, 'bo_results.json'), 'w') as f:
+                json.dump(opt_results, f, indent=2)
+
+        if debug_dict_BO is not None:
+            with open(os.path.join(sim.folder, 'debug_dict_BO.json'), 'w') as f:
+                json.dump(debug_dict_BO, f, indent=2)
         
         # Save the overflow settings
         src = Path(__file__).parent / 'constants' / 'constants_overflow.json'
         shutil.copy(src, Path(sim.folder) / 'overflow_settings.json')
 
-        compare_with_benchmark(profile, dt, pump_pressure, curve, n_init_points, n_iter)
+        # Close all matplotlib figures to prevent state leakage before comparison plotting
+        plt.close('all')
+        
+        compare_with_benchmark(profile, dt, pump_pressure, curve, n_init_points, n_iter, new_benchmark_run = new_benchmark_run)
            
-    elif run_type == 'optimization':
+    elif run_type == 'optimization' or run_type == 'test':
         return net
 
 def compare_with_benchmark(profile, 
@@ -785,47 +797,60 @@ def compare_with_benchmark(profile,
                            pump_pressure, 
                            curve,
                            n_init_points, 
-                           n_iter):
+                           n_iter,
+                           new_benchmark_run = False):
 
     thesis_dir = os.path.dirname(os.path.abspath(__file__))
-    bench_file = f'Benchmark_{profile}_dt={dt}'
-    path_bench = os.path.join(thesis_dir, 'figures', 'benchmark', bench_file)
 
-    if not os.path.exists(path_bench):
+    bench_folder_name = f'Benchmark_{profile}_dt={dt}'
+    bench_folder = os.path.join(thesis_dir, 'figures', 'benchmark', bench_folder_name)
+
+    if not os.path.exists(bench_folder) or new_benchmark_run:
         # Perform benchmark simulation
+        print("Perform benchmark simulation")
         model_network_Rutger(profile, 'benchmark', dt, pump_pressure, curve)
          
     # Load network instances
-    opt_folder = f'{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}'
-    file_opt = os.path.join(thesis_dir, 'figures', 'optimization', opt_folder, 'Network_instance.pkl')
+    opt_folder_name = f'{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}'
+    opt_folder = os.path.join(thesis_dir, 'figures', 'optimization', opt_folder_name)
 
-    with open(file_opt, 'rb') as f:
-        state = pickle.load(f)
+    # file_opt = os.path.join(opt_folder, 'pickle_folder.zip')
+    file_opt = os.path.join(opt_folder, 'hex_consumer_data', 'total_heat.csv')
 
-    net_opt = Network.__new__(Network) 
-    net_opt.__dict__.update(state)
+    # check if optimization has been performed
+    if os.path.exists(opt_folder):
 
-    file_benchmark = os.path.join(path_bench, 'Network_instance.pkl')
+        # whether it already contains a heat file
+        if not os.path.exists(file_opt):
+            theta_file = os.path.join(opt_folder, 'hex_consumer_data', 'theta.csv')
+            with open(theta_file, newline='') as csvfile:
+                theta = [float(i) for i in list(csv.reader(csvfile))[1]]
+            
+            optimization_run(*theta,
+                        profile, dt, pump_pressure, curve, 
+                        run_type = 'save_optimization',
+                        n_init_points = n_init_points,
+                        n_iter = n_iter)
+    else:
+        raise ValueError (f"No optimization performed for {opt_folder_name}")
 
-    with open(file_benchmark, 'rb') as f:
-        state = pickle.load(f)
-
-    net_bench = Network.__new__(Network)  
-    net_bench.__dict__.update(state)
-
-    output_folder = os.path.join(thesis_dir, 'figures', 'comparison_BO_benchmark', opt_folder)
+    output_folder = os.path.join(thesis_dir, 'figures', 'comparison_BO_benchmark', opt_folder_name)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    # Generate time array
-    time = np.arange(len(net_opt.nodes['Node 1.1'].T)) * dt
-
     # Return and supply temperature 
+    opt_temp_path = os.path.join(opt_folder, 'simulation_data','Node_temp.csv')
+    opt_temp_df = pd.read_csv(opt_temp_path)
+
+    bench_temp_path = os.path.join(bench_folder, 'simulation_data','Node_temp.csv')
+    bench_temp_df = pd.read_csv(bench_temp_path)
+
+    time = opt_temp_df['time'].values
     fig_T_in = plt.figure(figsize=(10, 6))
-    plt.plot(time, net_opt.nodes['Node 1.1'].T, label = r"$T_s$ BO")
-    plt.plot(time, net_bench.nodes['Node 1.1'].T, label = r"$T_s$ Benchmark")
-    plt.plot(time, net_opt.nodes['Node 1.6'].T, label = r"$T_r$ BO")
-    plt.plot(time, net_bench.nodes['Node 1.6'].T, label = r"$T_r$ Benchmark")
+    plt.plot(time, opt_temp_df['Node 1.1'], label = r"$T_s$ BO")
+    plt.plot(time, bench_temp_df['Node 1.1'], label = r"$T_s$ Benchmark")
+    plt.plot(time, opt_temp_df['Node 1.6'], label = r"$T_r$ BO")
+    plt.plot(time, bench_temp_df['Node 1.6'], label = r"$T_r$ Benchmark")
     plt.title('Supply and Return Temperature')     
     plt.xlabel(f'Time (h), dt = {dt}')
     plt.ylabel('Temperature (°C)')
@@ -837,9 +862,15 @@ def compare_with_benchmark(profile,
     plt.close()
 
     # Overflow valve displacement
+    opt_overflow_path = os.path.join(opt_folder, 'hex_consumer_data','overflow.csv')
+    opt_overflow_df = pd.read_csv(opt_overflow_path)
+
+    bench_overflow_path = os.path.join(bench_folder, 'hex_consumer_data','overflow.csv')
+    bench_overflow_df = pd.read_csv(bench_overflow_path)    
+
     fig_overflow_h = plt.figure(figsize=(10, 6)) 
-    plt.plot(time, net_opt.valves['Overflow valve'].h, label = "BO")
-    plt.plot(time, net_bench.valves['Overflow valve'].h, label = "Benchmark")
+    plt.plot(time, opt_overflow_df['h'], label = "BO")
+    plt.plot(time, bench_overflow_df['h'], label = "Benchmark")
     plt.title("Overflow Valve Displacement") 
     plt.xlabel(f'Time (h), dt = {dt}')
     plt.ylabel('Valve displacement (-)')
@@ -850,31 +881,36 @@ def compare_with_benchmark(profile,
     plt.savefig(os.path.join(output_folder, 'overflow_displacement.png'))
     plt.close()
 
+    # Overflow valve temperature
+    fig_overflow_T = plt.figure(figsize=(10, 6))
+    plt.plot(time, opt_overflow_df['T node'], label = "BO")
+    plt.plot(time, bench_overflow_df['T node'], label = "Benchmark")
+    plt.title("Overflow Valve Temperature")
+    plt.xlabel(f'Time (h), dt = {dt}')
+    plt.ylabel('Temperature (°C)')
+    plt.legend()
+    plt.grid(True)
+    format_plot_time_axis()
+    
+    plt.savefig(os.path.join(output_folder, 'overflow_temperature.png'))
+    plt.close()
+
     # Total heat demand and supply
+    opt_heat_path = os.path.join(opt_folder, 'hex_consumer_data','total_heat.csv')
+    opt_heat_df = pd.read_csv(opt_heat_path)
+
+    bench_heat_path = os.path.join(bench_folder, 'hex_consumer_data','total_heat.csv')
+    bench_heat_df = pd.read_csv(bench_heat_path)    
+
+    diff_opt = np.sum(opt_heat_df["Supply"].values - opt_heat_df["Demand"].values)
+    diff_bench = np.sum(bench_heat_df["Supply"].values - bench_heat_df["Demand"].values)
+
     fig_heat = plt.figure(figsize=(10, 6))
     
-    # Calculate total heat demand and supply for BO
-    total_Q_d_opt = np.zeros_like(list(net_opt.hexs.values())[0].consumer.Q_d)
-    total_Q_supply_opt = np.zeros_like(list(net_opt.hexs.values())[0].consumer.Q_supply)
-    
-    for hex_obj in net_opt.hexs.values():
-        total_Q_d_opt += hex_obj.consumer.Q_d
-        total_Q_supply_opt += hex_obj.consumer.Q_supply
-    
-    # Calculate total heat demand and supply for Benchmark
-    total_Q_d_bench = np.zeros_like(list(net_bench.hexs.values())[0].consumer.Q_d)
-    total_Q_supply_bench = np.zeros_like(list(net_bench.hexs.values())[0].consumer.Q_supply)
-    
-    for hex_obj in net_bench.hexs.values():
-        total_Q_d_bench += hex_obj.consumer.Q_d
-        total_Q_supply_bench += hex_obj.consumer.Q_supply
-    
-    diff_bench = sum(total_Q_supply_bench - total_Q_d_bench)/1e3
-    diff_opt = sum(total_Q_supply_opt - total_Q_d_opt)/1e3
-    
-    plt.plot(time, total_Q_d_opt/1e3, label='Total Heat Demand')
-    plt.plot(time, total_Q_supply_opt/1e3, label= "Total Heat Supply BO " + r"$\Delta Q$ = " + f"{round(diff_opt)} kW", linestyle='--')
-    plt.plot(time, total_Q_supply_bench/1e3, label='Total Heat Supply Benchmark ' + r"$\Delta Q$ =" + f"{round(diff_bench)} kW", linestyle='--')
+    # Calculate total heat demand and supply for BO  
+    plt.plot(time, opt_heat_df["Demand"]/1e3, label='Total Heat Demand')
+    plt.plot(time, opt_heat_df["Supply"]/1e3, label= "Total Heat Supply BO " + r"$\Delta Q$ = " + f"{round(diff_opt)/1e3:.3f} kJ", linestyle='--')
+    plt.plot(time, bench_heat_df["Supply"]/1e3, label='Total Heat Supply Benchmark ' + r"$\Delta Q$ =" + f"{round(diff_bench)/1e3:.3f} kJ", linestyle='--')
     
     plt.title('Total Heat Demand vs Supply')     
     plt.xlabel(f'Time (h), dt = {dt}')
@@ -940,6 +976,8 @@ def read_pipe_data(pipe_data_set):
         )
 
     K = 1/R # total thermal conductivity [W / m K]
+
+    cp_insu = 0
 
     pipe_data = [r_inner, r_outer, rho_pipe, rho_insu, cp_pipe, cp_insu, insu_thickness, K, epsilon]
 
@@ -1196,17 +1234,43 @@ def network_builder(net : Network,
             net.add_pipe('Overflow 3', overflow_node_return, return_node, pipe_data)
 
         return net
-    
+
+def denormalize(val, low, high):
+    return low + val * (high - low)
+
 if __name__ == "__main__":
     
-    dt = 1
-    pump_pressure = 50 # kPa
+
+    from BayesianOptimization import CostFunction
+
+    profile = 'Profile 4'
+    dt = 60
+    pump_pressure = 60
     curve = True
-    n_init_points = 5
-    n_iter = 10
-    
-    for i in range(1,5):
-        compare_with_benchmark(f'Profile {i}', dt, pump_pressure, curve, n_init_points, n_iter)
+    test_name = 'test_P4_lengthscale_BO_Ts_soepel'
+
+    cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
+
+    # Normalized
+    theta_1 = 0.7151629
+    theta_2 = 0.4164378
+    theta_3 = 1
+    theta_4 = 1
+    theta_5 = 0
+    theta_6 = 1
+
+    cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6)
+
+# T_supply[i] = theta_1 + theta_2 * np.tanh(theta_3 * (total_heat_demand[k] - theta_4)) # Alternative formulation with tanh function
+
+    # self.PHYSICAL_BOUNDS = {
+    #     'theta_1': (60, 65), 
+    #     'theta_2': (0.1, 3),
+    #     'theta_3': (0,10),
+    #     'theta_4': (100e3, 400e3),
+    #     'theta_5': (0, 3),
+    #     'theta_6': (1, 2)
+    # }
 
 
 

@@ -11,6 +11,7 @@ import numpy as np
 import networkx as nx
 import os
 import pickle
+import zipfile
 
 
 class Network:
@@ -456,14 +457,9 @@ class Network:
         result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr', tol = 1e-6)
 
         # Retry with progressively rounded friction vectors if initial solve failed        
-        if result.success == False or (result.x > 0).all():
+        if result.success == False or not (result.x > 0).all():
             solved = False
             for precision in range(5,0,-1):
-
-                # friction_vector = self.pressure_friction_vector + \
-                #                 self.Kp_array + \
-                #                 np.round(self.inv_Kv_array**2,precision)
-                # self.friction_vector_active = friction_vector[active_mask]
 
                 self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
                 
@@ -490,12 +486,8 @@ class Network:
             # In case root solving didn't work.
             if not solved: 
                 for precision in range(5,0,-1): 
-                    # friction_vector = self.pressure_friction_vector + \
-                    #                 self.Kp_array + \
-                    #                 np.round(self.inv_Kv_array**2,precision)
-                    # self.friction_vector_active = friction_vector[active_mask]
-                    self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
 
+                    self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
 
                     result = minimize(
                         fun=lambda x: np.sum(self.res(x)**2),
@@ -526,10 +518,13 @@ class Network:
                     pump_type = 'constant'
                 else:
                     pump_type = 'curve'
-                file_name = f"{self.net_id}_N={N}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.pkl"
+                file_name = f"{self.net_id}_N={N}_Kvleak={Kvleak_bool}_hsteps={dis_steps}_pump={c}kPa_{pump_type}.zip"
 
-                with open(os.path.join(base_dir, 'debug', file_name), 'wb') as f:
-                    pickle.dump(self.__dict__, f)
+                pickle_folder = os.path.join(base_dir, 'debug', file_name)
+
+                with zipfile.ZipFile(pickle_folder, 'w', zipfile.ZIP_DEFLATED) as zf:
+                    with zf.open('Network_instance.pkl', 'w') as f:
+                        pickle.dump(self.__dict__, f)
 
         if not result.success:   
             raise RuntimeError(f"The root finder did not converge at timestep = {N}, message: {result.message}")
