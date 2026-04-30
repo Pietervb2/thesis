@@ -1247,7 +1247,7 @@ if __name__ == "__main__":
     dt = 60
     pump_pressure = 60
     curve = True
-    test_name = 'test_P4_lengthscale_BO_Ts_soepel'
+    test_name = 'test_P4_lengthscale_BO_Ts_max_step_theta60'
 
     cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
@@ -1257,7 +1257,7 @@ if __name__ == "__main__":
     theta_3 = 1
     theta_4 = 1
     theta_5 = 0
-    theta_6 = 1
+    theta_6 = 0
 
     cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6)
 

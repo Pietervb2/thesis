@@ -109,15 +109,26 @@ class Valve:
                 h_band = np.floor((self.T_set_overflow + self.T_set_add - self.T_sensor[N]) / self.P_band * self.steps) / self.steps
 
         self.h_band[N] = h_band
-       
+
+        max_rate = 1/300  # [h/s]
+        max_step = max_rate * self.dt
+        
+        h_previous = self.h[N-1] if N > 0 else 0
+        h_limited = h_previous + np.clip(h_band - h_previous, -max_step, max_step)
+        
         if not Kvleak_bool:
             h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
             if h_band < h_star:
                 h = 0
             else:
-                h = min(1,h_band)
+                # h = min(1,h_band)
+                h = min(1,h_limited)
         else:
-            h = max(0,min(1,h_band)) 
+            # h = max(0,min(1,h_band)) 
+            h = max(0,min(1,h_limited))
+
+
+        h = max(0, min(1, h_limited))
 
         Kv = self.linear_valve(h, Kvleak_bool)
 
