@@ -26,8 +26,8 @@ class Valve:
  
         elif node is not None:
             self.T_set_overflow = valve_data[1]
-            self.P_band = valve_data[2]
-            self.T_set_add = valve_data[3]
+            self.Kp = valve_data[2] # P-term for overflow valve control (theta_5)
+            self.Ki = valve_data[3] # I-term for overflow valve control (theta_6)
             self.tau = valve_data[4]
             self.steps = valve_data[5]
             self.Kvleak_bool = valve_data[6]
@@ -47,7 +47,7 @@ class Valve:
         if self.h_overflow is None:
             self.h = np.zeros(num_steps)
             self.T_sensor = np.zeros(num_steps) # temperature of sensor
-            self.h_band = np.zeros(num_steps) # debug, get insight in behavior
+            self.h_PI_lim = np.zeros(num_steps) # debug, get insight in behavior
             self.h_tau = np.zeros(num_steps) # debug, get insight in behavior
             self.Kv = np.ones(num_steps)*1e-5 # a dummy variable in which way 1/Kv is not inf if we take 0 at the beginning of the simulation. 
             self.updated_temp = 0
@@ -57,9 +57,9 @@ class Valve:
               
         self.dt = dt # For PI controller
 
-        if self.hex is not None: 
-            self.I_array = np.zeros(num_steps)
-            self.I = 0  # Integral term for PI controller
+  
+        self.I_array = np.zeros(num_steps)
+        self.I = 0  # Integral term for PI controller
 
 
     def equal_percentage_valve(self, h):
@@ -95,40 +95,38 @@ class Valve:
         Returns the valve position and Kv value of the overflow valve based on the lumped BO model. 
         """
 
-        # P-band logic
-        if self.T_sensor[N] <= self.T_set_overflow + self.T_set_add - self.P_band:  
-            h_band = 1
-        elif self.T_sensor[N] > self.T_set_overflow + self.T_set_add:
-            h_band = 0 
-        else:
-                  
-            # Choice between continuous and discrete valve displacement 
-            if self.steps == "con":
-                h_band = (self.T_set_overflow + self.T_set_add - self.T_sensor[N])/self.P_band
-            else:
-                h_band = np.floor((self.T_set_overflow + self.T_set_add - self.T_sensor[N]) / self.P_band * self.steps) / self.steps
+        # implement PI controller to determine the valve lift
+        T_set_point = 55 # Temperature set point for the tapwater outlet [C] (brochure)
+        dT = (T_set_point - self.T_sensor[N])
+        
+        self.I += dT * self.dt
+        delta_h = self.Kp * dT + self.Ki * self.I
 
-        self.h_band[N] = h_band
-
-        max_rate = 1/300  # [h/s]
+        # Max valve displacement
+        max_rate = 1/300  # [%/s]
         max_step = max_rate * self.dt
         
         h_previous = self.h[N-1] if N > 0 else 0
-        h_limited = h_previous + np.clip(h_band - h_previous, -max_step, max_step)
+        h_PI_lim = h_previous + np.clip(delta_h, -max_step, max_step) # new h based on PI controller, but limited to max_step to prevent too fast changes in valve position
+      
+        h = max(0, min(1, h_PI_lim)) # Ensure h is between 0 and 1
+        
+        # Anti-windup 
+        if (h == 0 and dT < 0) or (h == 1 and dT > 0):
+            self.I -= dT * self.dt  # unwind integral
+
+        Kv = self.equal_percentage_valve(h)
+
+        self.h[N] = h
+        self.Kv[N] = Kv
+        self.I_array[N] = self.I                
+  
+        self.h_PI_lim[N] = h_PI_lim
         
         if not Kvleak_bool:
             h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
-            if h_band < h_star:
+            if h_PI_lim < h_star:
                 h = 0
-            else:
-                # h = min(1,h_band)
-                h = min(1,h_limited)
-        else:
-            # h = max(0,min(1,h_band)) 
-            h = max(0,min(1,h_limited))
-
-
-        h = max(0, min(1, h_limited))
 
         Kv = self.linear_valve(h, Kvleak_bool)
 
@@ -138,6 +136,7 @@ class Valve:
         """
         Theoretical benchmark for bypass valve including a deadband.
         """
+        self.P_band = 3 # [°C] 
         
         if N == 0:
             h = 1

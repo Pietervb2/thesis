@@ -46,8 +46,8 @@ class CostFunction:
             'theta_2': (0.1, 3),
             'theta_3': (0,10),
             'theta_4': (100e3, 400e3),
-            'theta_5': (0, 3),
-            'theta_6': (1, 2)
+            'theta_5': (0, 1),
+            'theta_6': (0, 0.02)
         }
 
         # # Physical bounds

@@ -36,7 +36,7 @@ class Simulation:
                 self.folder = os.path.join(base_dir, "figures", "benchmark", f"Benchmark_{profile}_dt={dt}")
 
             elif run_type == 'save_optimization':
-                self.folder = os.path.join(base_dir, "figures", "optimization", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
+                self.folder = os.path.join(base_dir, "figures", "optimization_PI", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
             
             elif run_type == 'test': 
                 if file:
@@ -712,7 +712,7 @@ class Simulation:
 
                 overflow_data_debug['Kv'] = valve.Kv
                 overflow_data_debug['h'] = valve.h # actual h, with hstar taken into account
-                overflow_data_debug['h_band'] = valve.h_band # change wanted by P-band
+                overflow_data_debug['h_PI_lim'] = valve.h_PI_lim # change wanted by P-band
                 overflow_data_debug['h_tau'] = valve.h_tau   # change slowed down by tau                
                 overflow_data_debug['T_sensor'] = valve.T_sensor
                 overflow_data_debug['T node'] = valve.node.T

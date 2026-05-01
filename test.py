@@ -722,6 +722,9 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     theta_2 : Maximum supply temperature [°C]
     theta_3 : Heat demand threshold [W] (Q_set)
     theta_4 : Heat demand P-band [W]
+    theta_5: overflow valve Kp-term
+    theta_6: overflow valve Ki_term
+   
     theta_5 : Overflow valve additional temperature setpoint [°C]
     theta_6 : Overflow valve P-band [°C]
     """
@@ -749,8 +752,8 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     T_ambt = 20
 
     # Apply input parameters for BO
-    overflow_data[2] = theta_6
-    overflow_data[3] = theta_5
+    overflow_data[2] = theta_5
+    overflow_data[3] = theta_6
     overflow_data.append(True) #  True = P-band optimzation, False = benchmark with deadband
 
     # Create Network
@@ -812,7 +815,7 @@ def compare_with_benchmark(profile,
          
     # Load network instances
     opt_folder_name = f'{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}'
-    opt_folder = os.path.join(thesis_dir, 'figures', 'optimization', opt_folder_name)
+    opt_folder = os.path.join(thesis_dir, 'figures', 'optimization_PI', opt_folder_name)
 
     # file_opt = os.path.join(opt_folder, 'pickle_folder.zip')
     file_opt = os.path.join(opt_folder, 'hex_consumer_data', 'total_heat.csv')
@@ -1243,7 +1246,7 @@ if __name__ == "__main__":
 
     from BayesianOptimization import CostFunction
 
-    profile = 'Profile 4'
+    profile = 'Profile 2'
     dt = 60
     pump_pressure = 60
     curve = True
@@ -1252,12 +1255,12 @@ if __name__ == "__main__":
     cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
     # Normalized
-    theta_1 = 0.7151629
-    theta_2 = 0.4164378
+    theta_1 = 0
+    theta_2 = 0
     theta_3 = 1
-    theta_4 = 1
-    theta_5 = 0
-    theta_6 = 0
+    theta_4 = 0
+    theta_5 = 1
+    theta_6 = 0.1686823
 
     cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6)
 
