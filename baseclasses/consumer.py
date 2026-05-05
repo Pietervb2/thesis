@@ -40,7 +40,7 @@ class Consumer:
         # Pre-calculate mass flow rates based on heat demand. Only for tap water. 
         # Which is always 10 degrees, and we always want 60 degrees so dT = 50
 
-        delta_T = 50  # Temperature difference [K]
+        delta_T = 45  # Temperature difference [K]
         c_p = 4186    # Specific heat capacity of water [J/(kg·K)]
 
         self.mflow = self.Q_d / (c_p * delta_T) 

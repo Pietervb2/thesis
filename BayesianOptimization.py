@@ -21,44 +21,49 @@ class CostFunction:
         self.test_name = test_name
 
         self.w_Tr = 0.5
-        self.w_Tof = 5
         self.w_Ts = 0.1
-        self.w_Tof_var = 20
+        self.w_dTs = 3
 
         self.dict_w_Q = {
-            'Profile 1': 0.2e-7,
-            'Profile 2': 0.2e-6,
-            'Profile 3': 0.2e-5,
-            'Profile 4': 1e-4}
-
+            'Profile 1': 0.4e-7,
+            'Profile 2': 0.4e-6,
+            'Profile 3': 0.1e-5,
+            'Profile 4': 0.1e-4}
+        
+        self.dict_w_Qrespond = {
+            'Profile 1': 0.05e-3,
+            'Profile 2': 0.08e-3,
+            'Profile 3': 0.1e-3,
+            'Profile 4': 0.1e-3
+        }
         # Saving cost function values and parameters for all iterations
         self.iter = 0
         self.dict_debug = {}
 
         self.dict_debug["w_Tr"] = self.w_Tr
-        self.dict_debug["w_Tof"] = self.w_Tof
+        # self.dict_debug["w_Tof"] = self.w_Tof
         self.dict_debug["w_Ts"] = self.w_Ts
         self.dict_debug["dict_w_Q"] = self.dict_w_Q
-
-        # Physical bounds
-        self.PHYSICAL_BOUNDS = {
-            'theta_1': (60, 65), 
-            'theta_2': (0.1, 3),
-            'theta_3': (0,10),
-            'theta_4': (100e3, 400e3),
-            'theta_5': (0, 3),
-            'theta_6': (1, 2)
-        }
 
         # # Physical bounds
         # self.PHYSICAL_BOUNDS = {
         #     'theta_1': (60, 65), 
-        #     'theta_2': (65, 70),
-        #     'theta_3': (0, 500e3),
-        #     'theta_4': (0, 200e3),
-        #     'theta_5': (0, 3),
-        #     'theta_6': (1, 5)
+        #     'theta_2': (0.1, 3),
+        #     'theta_3': (0,10),
+        #     'theta_4': (100e3, 400e3),
+        #     'theta_5': (0, 55),
+        #     'theta_6': (1, 3)
         # }
+
+        # Physical bounds
+        self.PHYSICAL_BOUNDS = {
+            'theta_1': (60, 65), 
+            'theta_2': (65, 70),
+            'theta_3': (0, 300e3),
+            'theta_4': (0, 200e3),
+            'theta_5': (0, 55),
+            'theta_6': (1, 5)
+        }
         
         self.dict_debug["bounds"] = self.PHYSICAL_BOUNDS
 
@@ -68,7 +73,7 @@ class CostFunction:
         theta_2 : Maximum supply temperature [°C]
         theta_3 : Heat demand threshold [W] (Q_set)
         theta_4 : Heat demand P-band [W]
-        theta_5 : Additional temperature setpoint for overflow control [°C]
+        theta_5 : Temperature setpoint for overflow control [°C]
         theta_6 : Overflow valve P-band [°C]
         """
 
@@ -110,61 +115,68 @@ class CostFunction:
         total_heat_demand = np.zeros_like(T_overflow)
         total_heat_supply = np.zeros_like(T_overflow)
         
+        # Additional term to penalize slow response to changes in heat demand
+        Q_respond = 0
+
         # Iterate through all heat exchangers and sum consumer demands
         for hex_obj in net.hexs.values():
             consumer = hex_obj.consumer
             total_heat_demand += consumer.Q_d
             total_heat_supply += consumer.Q_supply
 
-        R = 0.1*np.diag([1e-4, 1e-4, 1e-11, 1e-10, 1e-3, 1e-1]) # Regularization matrix 
+            two_min = int(120 / self.dt) # Number of timesteps in 2 minutes
+            for idx in range(len(consumer.Q_d)-1-two_min):
+
+                Q_respond += (consumer.Q_d[idx+1] - consumer.Q_d[idx]) * softrelu((consumer.Q_d[idx+1:idx+1+two_min] - consumer.Q_supply[idx+1:idx+1+two_min])) 
+
+        R = np.diag([1e-4, 1e-4, 1e-11, 1e-10, 1e-3, 1e-1]) # Regularization matrix 
         theta = np.array([theta_1, theta_2, theta_3, theta_4, theta_5, theta_6])
         
-        # 𝑤_1 𝑇_𝑟^2+𝑤_2 (T_set−𝑇_𝑜verflow )^2+𝑤_3 (𝑄_(𝑑𝑒𝑚𝑎𝑛𝑑,𝑡𝑜𝑡)−𝑄_(𝑠𝑢𝑝,𝑡𝑜𝑡) )^2+𝜽R𝜽^T
-
         warmup_period = 4.5 #h 
         length_of_simulation = len(T_overflow)
         warmup_steps = int(warmup_period / 24 * length_of_simulation)
 
         # Obtain all idx for total heat demand above zero 
         heat_demand_idx = [idx for idx,i in enumerate(total_heat_demand) if i>0]
-        
-        term_Tr = self.w_Tr * np.mean(T_r[warmup_steps:]**2)
 
-        term_Tof = self.w_Tof * np.mean((T_set - T_overflow[warmup_steps:])**2)
-        # alpha = 5
-        # overshoot = T_set - T_overflow[warmup_steps:]
-        # weights = np.exp(alpha * overshoot)
-        # term_Tof = self.w_Tof * np.sum(weights * overshoot) / np.sum(weights)
-
+        # Cost terms        
         term_Q = self.dict_w_Q[self.profile] * np.mean((total_heat_demand[heat_demand_idx] - total_heat_supply[heat_demand_idx])**2)
+
+        term_Qrespond = self.dict_w_Qrespond[self.profile] * np.mean(Q_respond) # So averge delta_Q within those 2 minutes
+
+        term_Tr = self.w_Tr * np.mean((np.exp(-total_heat_demand[warmup_steps:]/1e5)*T_r[warmup_steps:])**2)
+
         term_Ts = self.w_Ts * np.mean(T_s[warmup_steps:]**2)
 
-        # term_Tof_var = self.w_Tof_var * np.max(abs(T_set - T_overflow[warmup_steps:]))
+        term_dTs = self.w_dTs * np.sum(np.diff(T_s[warmup_steps:])**2)
 
-        # term3 = w_3 * np.mean((total_heat_demand - total_heat_supply)[warmup_steps:]**2)
         regularization = theta.T @ R @ theta
 
-        cost = term_Tr + term_Tof + term_Q + term_Ts + regularization
+        cost = term_Tr + term_Q + term_Ts + term_Qrespond + term_dTs + regularization
 
         # Save cost function values and parameters for debugging
         self.dict_debug[f'iter {self.iter}'] = {
             'theta': theta.tolist(),
             'T_r': float(term_Tr),
-            'T_overflow': float(term_Tof),
             'Q': float(term_Q),
             'T_s': float(term_Ts),
+            'Qrespond': float(term_Qrespond),
+            'dTs': float(term_dTs),
             'regularization': float(regularization),
             'cost' : float(cost)
         }
         self.iter += 1
 
         # term Tof_var {term_Tof_var}
-        print(f'term Tr {term_Tr}, term Tof {term_Tof}, term Q {term_Q}, term Ts {term_Ts}, regularization {regularization}, cost {cost}')
+        print(f'term Tr {term_Tr}, term Q {term_Q}, term Ts {term_Ts}, term Qrespond {term_Qrespond}, term dTs {term_dTs}, regularization {regularization}, cost {cost}')
         # print(f'Regularization terms: {theta_1**2 * R[0,0]}, {theta_2**2 * R[1,1]}, {theta_3**2 * R[2,2]}, {theta_4**2 * R[3,3]}, {theta_5**2 * R[4,4]}, {theta_6**2 * R[5,5]}')
         return -cost
 
 def denormalize(val, low, high):
     return low + val * (high - low)
+
+def softrelu(x, alpha=1):
+    return np.log(1 + np.exp(alpha * x/500)) / alpha
 
 def run_bo(i, dt, pump_pressure, curve):
     start = time.time()
@@ -188,7 +200,7 @@ def run_bo(i, dt, pump_pressure, curve):
         verbose=2, # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
         random_state=random_state)
 
-    kernel = Matern(nu=1.5, 
+    kernel = Matern(nu=2.5, 
                     length_scale=np.ones(optimizer.space.dim), 
                     length_scale_bounds=(0.05, 3))
 
@@ -247,7 +259,7 @@ def run_bo(i, dt, pump_pressure, curve):
 if __name__ == '__main__':    
     if len(sys.argv) > 1:
         profile_num = int(sys.argv[1])
-        dt = 60
+        dt = 1
         pump_pressure = 60
         curve = True
         run_bo(profile_num, dt, pump_pressure, curve)

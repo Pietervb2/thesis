@@ -28,8 +28,8 @@ class Valve:
         elif node is not None:
             self.T_set_overflow = valve_data[1]
             self.P_band = valve_data[2]
-            self.T_set_add = valve_data[3]
-            self.tau = valve_data[4]
+            self.tau = valve_data[3]
+            self.max_rate = valve_data[4]
             self.steps = valve_data[5]
             self.Kvleak_bool = valve_data[6]
             self.opt = valve_data[7]
@@ -51,7 +51,6 @@ class Valve:
             self.h_band = np.zeros(num_steps) # debug, get insight in behavior
             self.h_tau = np.zeros(num_steps) # debug, get insight in behavior
             self.Kv = np.ones(num_steps)*1e-5 # a dummy variable in which way 1/Kv is not inf if we take 0 at the beginning of the simulation. 
-            self.updated_temp = 0
         else:
             self.h = self.h_overflow # set the valve displacement at a constant opening
             self.Kv = self.linear_valve(self.h)
@@ -61,7 +60,6 @@ class Valve:
         if self.hex is not None: 
             self.I_array = np.zeros(num_steps)
             self.I = 0  # Integral term for PI controller
-
 
     def equal_percentage_valve(self, h):
         """
@@ -97,25 +95,29 @@ class Valve:
         """
 
         # P-band logic
-        if self.T_sensor[N] <= self.T_set_overflow + self.T_set_add - self.P_band:  
+        if self.T_sensor[N] <= self.T_set_overflow -  self.P_band:  
             h_band = 1
-        elif self.T_sensor[N] > self.T_set_overflow + self.T_set_add:
+        elif self.T_sensor[N] > self.T_set_overflow:
             h_band = 0 
         else:
-                  
+            h_band = (self.T_set_overflow - self.T_sensor[N]) / self.P_band
+
+            # # Choice between continuous and discrete valve displacement 
+            # if self.steps == "con":
+            #     h_band = (self.T_set_overflow + self.T_set_add - self.T_sensor[N])/self.P_band
+            # else:
+            #     h_band = np.floor((self.T_set_overflow + self.T_set_add - self.T_sensor[N]) / self.P_band * self.steps) / self.steps
+
             # Choice between continuous and discrete valve displacement 
             if self.steps == "con":
-                h_band = (self.T_set_overflow + self.T_set_add - self.T_sensor[N])/self.P_band
+                h_band = (self.T_set_overflow - self.T_sensor[N])/self.P_band
             else:
-                h_band = np.floor((self.T_set_overflow + self.T_set_add - self.T_sensor[N]) / self.P_band * self.steps) / self.steps
-
-
-        max_rate = 1/120*self.dt # needs 2 minutes for fully closing.
-        h_previous = self.h[N-1] if N > 0 else 1 # Assume fully open at the start
-        h = h_previous + np.clip((h_band - h_previous), -max_rate, max_rate)
-       
+                h_band = np.floor((self.T_set_overflow - self.T_sensor[N]) / self.P_band * self.steps) / self.steps
+        
         self.h_band[N] = h_band
-       
+        h_previous = self.h[N-1] if N > 0 else 1 # Assume fully open at the start
+        h = h_previous + np.clip((h_band - h_previous), -self.max_rate*self.dt, self.max_rate*self.dt)
+            
         if not Kvleak_bool:
             h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
             if h_band < h_star:
@@ -160,7 +162,7 @@ class Valve:
         The valve position is updated based on the consumer outlet temperature.
         """
         
-        T_set_point = 60 # Temperature set point for the tapwater outlet [C] (brochure)
+        T_set_point = 55 # Temperature set point for the tapwater outlet [C] (brochure)
         dT = (T_set_point - self.hex.consumer.Tc_out[N-1])
         
         self.I += dT * self.dt
@@ -168,16 +170,16 @@ class Valve:
 
         h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
         
-        h = self.h[N-1] + delta_h
+        # h = self.h[N-1] + delta_h
 
-        max_rate = 1/120*self.dt # needs 2 minutes for fully closing.
-        h_previous = self.h[N-1] if N > 0 else 1 # Assume fully open at the start
-        h = h_previous + np.clip((h_band - h_previous), -max_rate, max_rate)
+        # if h > h_star:
+        h_previous = self.h[N-1] if N > 0 else 0 # Assume fully closed at the start
+        h = h_previous + np.clip(delta_h, -self.max_rate*self.dt, self.max_rate*self.dt)
 
-        if h < h_star:
-            h = 0
-        else:
-            h = min(1,h) # Ensure h is between 0 and 1
+        # if h < h_star:
+        #     h = 0
+        # else:
+        h = max(0, min(1, h))  # Ensure h is between 0 and 1
         
         # Anti-windup 
         if (h == 0 and dT < 0) or (h == 1 and dT > 0):
@@ -191,9 +193,7 @@ class Valve:
         """
         Update the valve position based on the consumer outlet temperature using a PI controller.
         """
-
-        # if N < len(self.h)-1: # to prevent index out of range
-            
+           
         # Heat exchanger valves
         if self.hex is not None:
 
@@ -205,9 +205,12 @@ class Valve:
                 self.Kv[N] = Kv
                 self.I_array[N] = self.I
             else:
-                # no demand, so closed.
-                self.h[N] = 0
-                self.Kv[N] = 0
+                # no demand, so closes the valve
+                h_previous = self.h[N-1] if N > 0 else 0 # Assume fully open at the start
+                h = max(0, h_previous - self.max_rate*self.dt)
+
+                self.h[N] = h
+                self.Kv[N] = self.equal_percentage_valve(h)
         
         # Overflow valve
         if self.node is not None:

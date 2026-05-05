@@ -161,7 +161,7 @@ class Network:
 
         # Create valve and couple it to the hex
         valve_id = node_id.replace('Hex','Valve')
-        valve_data = hex_data[-3:]
+        valve_data = hex_data[-4:]
         valve = Valve(valve_id, pipe_in_id, valve_data, hex=hex)
         self.valves[valve_id] = valve
   
@@ -474,11 +474,11 @@ class Network:
 
                 if result.success == True and (result.x > 0).all():
                     solved = True
-                    if lm:
-                        print(f'Used Levenbergh Marquardt at N = {N} and with precision {precision}')
-                    else:
-                        if precision < 5:
-                            print(f'Used Hybr method at N = {N} and with precision {precision}')
+                    # if lm:
+                    #     print(f'Used Levenbergh Marquardt at N = {N} and with precision {precision}')
+                    # else:
+                    #     if precision < 5:
+                    #         print(f'Used Hybr method at N = {N} and with precision {precision}')
 
 
                     break
@@ -489,17 +489,34 @@ class Network:
 
                     self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
 
+                    initial_guess = self.mflow_all[active_mask, N-1] if N > 0 else mflow0_active
                     result = minimize(
                         fun=lambda x: np.sum(self.res(x)**2),
-                        x0=mflow0_active,
+                        x0=initial_guess,
                         jac=lambda x: 2 * self.jac(x).T @ self.res(x),  # chain rule: 2 * J^T * F
                         method='L-BFGS-B',
                         tol=1e-10
                     )
 
                     if result.success == True and (result.x > 0).all():
-                        print(f'timestep {N} used minimization')
+                        print(f'timestep {N} used minimization with precision {precision}')
+                        solved = True
                         break
+
+            if not solved:
+                # Last resort, try minimization without warm start as it can sometimes escape local minima.
+                initial_guess = mflow0_active
+                result = minimize(
+                    fun=lambda x: np.sum(self.res(x)**2),
+                    x0=initial_guess,
+                    jac=lambda x: 2 * self.jac(x).T @ self.res(x),  # chain rule: 2 * J^T * F
+                    method='L-BFGS-B',
+                    tol=1e-10
+                )
+                
+                print(f'timestep {N} used minimization without warm start')
+
+            
 
         # Extract results
         mflow_active = result.x

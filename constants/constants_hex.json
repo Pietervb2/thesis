@@ -6,14 +6,14 @@
         "extra_comment_As": "Qd = U * As * F * delta_T_mean, 31kW = 4000 * As * 0.95 * 50 (tapwater)",
         "As" : 0.656,    
         "comment_Kp_dp": "Pressure loss coefficient [kg/m2], assume 35kPa dp, at 0.24 kg/s mflow because of max heat transfer tap water 30kW",
-        "Kp_dp" : 600,
-        "comment_K_vs": "Hydrualic conductivity fully open valve [m3/h/bar^0.5]",
+        "Kp_dp" : 160,
+        "comment_K_vs": "Hydrualic conductivity fully open valve [kg/s/Pa^0.5]",
         "K_vs" : 0.003,
         "comment_Kp": "Proportional gain of the PI controller [-]",
         "Kp": 0.02,
         "comment_Ki": "Integral gain of the PI controller [-]",
         "Ki": 0.00001,
         "comment_max_rate": "Maximum rate of change of the valve position [1/s] (1/120)",
-        "max_rate": 0.0833
+        "max_rate": 0.00833
     }
 }

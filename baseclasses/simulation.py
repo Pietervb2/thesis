@@ -36,7 +36,7 @@ class Simulation:
                 self.folder = os.path.join(base_dir, "figures", "benchmark", f"Benchmark_{profile}_dt={dt}")
 
             elif run_type == 'save_optimization':
-                self.folder = os.path.join(base_dir, "figures", "optimization", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
+                self.folder = os.path.join(base_dir, "figures", "optimization_set", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
             
             elif run_type == 'test': 
                 if file:
@@ -143,14 +143,14 @@ class Simulation:
             else:
                 k = i + look_ahead
 
-            # if total_heat_demand[k] < theta_3:
-            #     T_supply[i] = theta_1
-            # elif total_heat_demand[k] >= theta_3 + theta_4:
-            #     T_supply[i] = theta_2
-            # else:
-            #     T_supply[i] = theta_1 + (total_heat_demand[k] - theta_3) * (theta_2 - theta_1) / theta_4
+            if total_heat_demand[k] < theta_3:
+                T_supply[i] = theta_1
+            elif total_heat_demand[k] >= theta_3 + theta_4:
+                T_supply[i] = theta_2
+            else:
+                T_supply[i] = theta_1 + (total_heat_demand[k] - theta_3) * (theta_2 - theta_1) / theta_4
 
-            T_supply[i] = theta_1 + theta_2 * np.tanh(theta_3 * (total_heat_demand[k] - theta_4)) # Alternative formulation with tanh function
+            # T_supply[i] = theta_1 + theta_2 * np.tanh(theta_3 * (total_heat_demand[k] - theta_4)) # Alternative formulation with tanh function
 
         return T_supply 
     
@@ -525,7 +525,7 @@ class Simulation:
 
         plt.xlabel(f'Time (hours), dt = {self.dt}')
         plt.ylabel('Valve displacement (-)')
-        plt.legend()
+        plt.legend(loc = "upper right")
         plt.grid(True)
         plt.savefig(self.folder + '/valve_displacement.png')
 

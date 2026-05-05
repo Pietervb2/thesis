@@ -742,15 +742,14 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
 
     consumer_list = consumer_start_times(profile, [7.5, 21])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
-    # pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 7 
 
     # Simulation parameters
     total_time = 24 * 3600 # sec
     T_ambt = 20
 
     # Apply input parameters for BO
-    overflow_data[2] = theta_6
-    overflow_data[3] = theta_5
+    overflow_data[1] = theta_5 # Temperature setpoint
+    overflow_data[2] = theta_6 # P-band width
     overflow_data.append(True) #  True = P-band optimzation, False = benchmark with deadband
 
     # Create Network
@@ -812,7 +811,7 @@ def compare_with_benchmark(profile,
          
     # Load network instances
     opt_folder_name = f'{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}'
-    opt_folder = os.path.join(thesis_dir, 'figures', 'optimization', opt_folder_name)
+    opt_folder = os.path.join(thesis_dir, 'figures', 'optimization_set', opt_folder_name)
 
     # file_opt = os.path.join(opt_folder, 'pickle_folder.zip')
     file_opt = os.path.join(opt_folder, 'hex_consumer_data', 'total_heat.csv')
@@ -834,7 +833,7 @@ def compare_with_benchmark(profile,
     else:
         raise ValueError (f"No optimization performed for {opt_folder_name}")
 
-    output_folder = os.path.join(thesis_dir, 'figures', 'comparison_BO_benchmark', opt_folder_name)
+    output_folder = os.path.join(thesis_dir, 'figures', 'comparison_BO_benchmark_set', opt_folder_name)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -1030,12 +1029,12 @@ def read_overflow_data(overflow_data_set):
     K_vs = constants[overflow_data_set]['K_vs'] # 
     T_set = constants[overflow_data_set]['T_set'] # 
     P_band = constants[overflow_data_set]['P_band'] #
-    T_set_add = constants[overflow_data_set]['T_set_add'] #
     tau = constants[overflow_data_set]['tau'] #
+    max_rate = constants[overflow_data_set]['max_rate'] #
     steps = constants[overflow_data_set]['steps'] #
     Kvleak_bool = constants[overflow_data_set]['Kvleak_bool'] #
 
-    overflow_data = [K_vs, T_set, P_band, T_set_add, tau, steps, Kvleak_bool]
+    overflow_data = [K_vs, T_set, P_band, tau, max_rate, steps, Kvleak_bool]
 
     return overflow_data
 
@@ -1242,23 +1241,30 @@ if __name__ == "__main__":
 
     from BayesianOptimization import CostFunction
 
-    profile = 'Profile 4'
-    dt = 60
+    start = datetime.now()
+
+    i = 3
+    profile = f'Profile {i}'
+    dt = 1
     pump_pressure = 60
     curve = True
-    test_name = 'test_P4_lengthscale_BO_Ts_soepel'
+    test_name = f'test_P{i}_test_overflow_massflow_55_3'
+
+    print(f'start test: {start}, {profile} ')
 
     cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
     # Normalized
-    theta_1 = 0.7151629
-    theta_2 = 0.4164378
-    theta_3 = 1
-    theta_4 = 1
-    theta_5 = 0
-    theta_6 = 1
+    theta_1 = 1
+    theta_2 = 0
+    theta_3 = 0
+    theta_4 = 0
+    theta_5 = 1
+    theta_6 = 0.5
 
     cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6)
+
+    print(f'duration test: {datetime.now() - start}')
 
 # T_supply[i] = theta_1 + theta_2 * np.tanh(theta_3 * (total_heat_demand[k] - theta_4)) # Alternative formulation with tanh function
 
@@ -1271,5 +1277,14 @@ if __name__ == "__main__":
     #     'theta_6': (1, 2)
     # }
 
+        # # Physical bounds
+        # self.PHYSICAL_BOUNDS = {
+        #     'theta_1': (60, 65), 
+        #     'theta_2': (65, 70),
+        #     'theta_3': (0, 500e3),
+        #     'theta_4': (0, 200e3),
+        #     'theta_5': (0, 55),
+        #     'theta_6': (1, 5)
+        # }
 
 
