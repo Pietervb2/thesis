@@ -11,7 +11,7 @@
         "comment_tau": "Time constant for the valve control [s]",
         "tau" : 60,
         "comment_steps": "Number of steps for the valve control",
-        "steps" : 50,
+        "steps" : "con",
         "comment_Kvleak_bool": "Boolean indicating whether to use a Kvleak approach",
         "Kvleak_bool" : true
     }

@@ -12,6 +12,8 @@
         "comment_Kp": "Proportional gain of the PI controller [-]",
         "Kp": 0.02,
         "comment_Ki": "Integral gain of the PI controller [-]",
-        "Ki": 0.00001
+        "Ki": 0.00001,
+        "comment_max_rate": "Maximum rate of change of the valve position [1/s] (1/120)",
+        "max_rate": 0.0833
     }
 }

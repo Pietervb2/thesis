@@ -997,10 +997,9 @@ def read_hex_data(hex_data_set):
     K_vs = constants[hex_data_set]['K_vs'] # Hydrualic conductivity for valve [m3/s Pa^0.5]
     Kp = constants[hex_data_set]['Kp'] # Proportional gain coefficient for valve [-]
     Ki = constants[hex_data_set]['Ki'] # Integral gain coefficient for valve [-]
+    max_rate = constants[hex_data_set]['max_rate'] # Maximum rate of change of valve position [1/s]
 
-    # K_vleak = constants[hex_data_set]['K_vleak'] # Hydraulic conductivity for valve when closed[m3/s Pa^0.5]
-
-    hex_data = [U, As, Kp_dp, K_vs, Kp, Ki]
+    hex_data = [U, As, Kp_dp, K_vs, Kp, Ki, max_rate]
 
     return hex_data
 

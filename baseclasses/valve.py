@@ -23,6 +23,7 @@ class Valve:
         if hex is not None:
             self.Kp = valve_data[1]
             self.Ki = valve_data[2]
+            self.max_rate = valve_data[3]
  
         elif node is not None:
             self.T_set_overflow = valve_data[1]
@@ -108,6 +109,11 @@ class Valve:
             else:
                 h_band = np.floor((self.T_set_overflow + self.T_set_add - self.T_sensor[N]) / self.P_band * self.steps) / self.steps
 
+
+        max_rate = 1/120*self.dt # needs 2 minutes for fully closing.
+        h_previous = self.h[N-1] if N > 0 else 1 # Assume fully open at the start
+        h = h_previous + np.clip((h_band - h_previous), -max_rate, max_rate)
+       
         self.h_band[N] = h_band
        
         if not Kvleak_bool:
@@ -147,7 +153,40 @@ class Valve:
         
         Kv = self.linear_valve(h)
         return h, Kv
-       
+    
+    def hex_valve(self, N):
+        """
+        PI controller for the heat exchanger valve. 
+        The valve position is updated based on the consumer outlet temperature.
+        """
+        
+        T_set_point = 60 # Temperature set point for the tapwater outlet [C] (brochure)
+        dT = (T_set_point - self.hex.consumer.Tc_out[N-1])
+        
+        self.I += dT * self.dt
+        delta_h = self.Kp * dT + self.Ki * self.I
+
+        h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
+        
+        h = self.h[N-1] + delta_h
+
+        max_rate = 1/120*self.dt # needs 2 minutes for fully closing.
+        h_previous = self.h[N-1] if N > 0 else 1 # Assume fully open at the start
+        h = h_previous + np.clip((h_band - h_previous), -max_rate, max_rate)
+
+        if h < h_star:
+            h = 0
+        else:
+            h = min(1,h) # Ensure h is between 0 and 1
+        
+        # Anti-windup 
+        if (h == 0 and dT < 0) or (h == 1 and dT > 0):
+            self.I -= dT * self.dt  # unwind integral
+
+        Kv = self.equal_percentage_valve(h)
+
+        return h, Kv
+      
     def update_valve(self, N):
         """
         Update the valve position based on the consumer outlet temperature using a PI controller.
@@ -161,28 +200,7 @@ class Valve:
             # Only update valve position if there is flow on consumer side
             if self.hex.consumer.mflow[N] > 0:
 
-                # implement PI controller to determine the valve lift
-                T_set_point = 60 # Temperature set point for the tapwater outlet [C] (brochure)
-                dT = (T_set_point - self.hex.consumer.Tc_out[N-1])
-                
-                self.I += dT * self.dt
-                delta_h = self.Kp * dT + self.Ki * self.I
-
-                h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
-                
-                h = self.h[N-1] + delta_h
-
-                if h < h_star:
-                    h = 0
-                else:
-                    h = min(1,h) # Ensure h is between 0 and 1
-                
-                # Anti-windup 
-                if (h == 0 and dT < 0) or (h == 1 and dT > 0):
-                    self.I -= dT * self.dt  # unwind integral
-
-                Kv = self.equal_percentage_valve(h)
-
+                h, Kv = self.hex_valve(N)
                 self.h[N] = h
                 self.Kv[N] = Kv
                 self.I_array[N] = self.I
@@ -194,7 +212,7 @@ class Valve:
         # Overflow valve
         if self.node is not None:
 
-            # stating whether you already give it a predefined position
+            # Stating whether you already give it a predefined position
             if self.h_overflow is None:
                 
                 # Sensor temperature model
