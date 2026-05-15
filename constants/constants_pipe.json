@@ -15,7 +15,9 @@
         "comment_h_pipe_air": "Natural convection from the outer surface of the pipe to the surrounding air [W/mK]",
         "h_pipe_air": 5,
         "comment_thickness": "Thickness of the insulation layer [m]",
-        "insu_thickness": 0.013 
+        "insu_thickness": 0.013,
+        "comment_epsilon": "Rougness of inner pipe, value for commercial steel pipe [m]",
+        "epsilon" : 0.045e-3
     },
 
     "Experiment van der Heijden" : {

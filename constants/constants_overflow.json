@@ -1,13 +1,13 @@
 {
     "Overflow": {
-        "comment_K_vs": "Hydrualic conductivity fully open valve [kg/s/Pa^0.5]",
+        "comment_K_vs": "Hydrualic conductivity fully open valve not 0.000597 [kg/s/Pa^0.5]",
         "K_vs" : 0.000597,
         "comment_T_set": "Temperature setpoint [°C]",
         "T_set" : 55,
         "comment_P_band": "Proportional band for the valve control [°C]",
         "P_band" : 3,
         "comment_tau": "Time constant for sensor delay [s]",
-        "tau" : 60,
+        "tau" : 30,
         "comment_max_rate": "Maximum rate of change of the valve position [1/s] (1/120)",
         "max_rate" : 0.00833,
         "comment_steps": "Number of discrete steps for the valve position (0 for continuous)",

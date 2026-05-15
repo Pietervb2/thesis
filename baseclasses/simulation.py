@@ -1,5 +1,6 @@
 from .network import Network
 
+
 from pathlib import Path
 from scipy.signal import square
 from typing import Union
@@ -458,10 +459,26 @@ class Simulation:
         tot_Q_d = np.zeros_like(self.time).astype(float)
         tot_Q_supply = np.zeros_like(self.time).astype(float)
 
+        # Additional term to penalize slow response to changes in heat demand
+        tot_Q_respond = np.zeros_like(self.time).astype(float)
+
         for hex_key in network.hexs.keys():
             hex = network.hexs[hex_key]
             tot_Q_d += hex.consumer.Q_d
             tot_Q_supply += hex.consumer.Q_supply
+
+            two_min = int(120 / self.dt) # Number of timesteps in 2 minutes
+            for idx in range(len(hex.consumer.Q_d)-1-two_min):
+
+                # smooth event trigger
+                change_binary = (np.tanh(hex.consumer.Q_d[idx+1] - hex.consumer.Q_d[idx] - 100) + 1)/2  # indicating whether there is a change in heat demand, mapping it to zero or one, by subtracting -100 zero is really zero.     
+                
+                # how well it responded within 2 minutes based on how close the watts are. 
+                Q_response = hex.consumer.Q_d[idx+1:idx+1+two_min] - hex.consumer.Q_supply[idx+1:idx+1+two_min]
+                scaling_factor = 30000/self.dt # to prevent numerical overflow
+                Q_response_relu = softrelu(Q_response/scaling_factor)*scaling_factor # to prevent overflow error
+
+                tot_Q_respond[idx] = change_binary * np.sum(Q_response_relu) * self.dt
 
             plt.plot(self.time, hex.consumer.Q_d, label=f'Heat demand of C{hex.consumer.consumer_id.split(" ")[1]}')
             plt.plot(self.time, hex.consumer.Q_supply, label=f'Heat supplied to C{hex.consumer.consumer_id.split(" ")[1]}', linestyle='--')
@@ -502,10 +519,23 @@ class Simulation:
         plt.grid(True)
         plt.savefig(self.folder + '/total_heat_demand.png')
 
+        fig_Q_respond = plt.figure()
+        plt.title(f"Total Consumer Heat Demand Response: {np.sum(tot_Q_respond)/1e3:.3f} kJ")
+        plt.plot(self.time, tot_Q_respond/1e3, label='Total heat demand response')
+
+        format_plot_time_axis(num_hours=24)
+        plt.xlabel(f'Time (hours), dt = {self.dt}')
+        plt.ylabel('Heat (kW)')
+        plt.grid(True)
+
+        plt.savefig(self.folder + '/total_heat_response.png')
+
         if not plot:
             plt.close(fig)
             plt.close(fig_tot)
             plt.close(fig_just_demand)
+            plt.close(fig_Q_respond)
+
 
     def plot_h_valves(self, network: Network, plot = False):
 
@@ -709,6 +739,7 @@ class Simulation:
                 overflow_data_normal['T_sensor'] = valve.T_sensor
                 overflow_data_normal['T node'] = valve.node.T
                 overflow_data_normal['mflow'] = overflow_pipe.mflow
+                overflow_data_normal['dp'] = (overflow_pipe.mflow/valve.Kv)**2
 
                 overflow_data_debug['Kv'] = valve.Kv
                 overflow_data_debug['h'] = valve.h # actual h, with hstar taken into account
@@ -755,6 +786,8 @@ class Simulation:
             df_theta.to_csv(os.path.join(self.folder,'hex_consumer_data','theta.csv'), index = False)
 
 
+def softrelu(x, alpha=1):
+    return np.log(1 + np.exp(alpha * x)) / alpha
 
 def format_plot_time_axis(num_hours=24):
     """
@@ -769,5 +802,6 @@ def format_plot_time_axis(num_hours=24):
     ticks_seconds = np.arange(0, num_hours + 1, 4) * 3600
     ax.set_xticks(ticks_seconds)
     ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, num_hours + 1, 4)])
+
 if __name__ == "__main__":
     pass 

@@ -66,7 +66,7 @@ class Valve:
         Returns Kv value of the valve following the formula for an equal percentage valve, based on the valve displacement.
         For valve displacement lower than h_star Kv does not follow the standard form of the function. It becomes unpredictable. For this region we simply assume a linear behavior.
         """        
-        Kv0 = self.Kvs/50
+        Kv0 = self.Kvs / 25
         Kv = (self.Kvs/Kv0) ** (h-1) * self.Kvs
         return Kv
     
@@ -77,10 +77,10 @@ class Valve:
         """
         # self.Kvs = 0.003  # [m3/h/bar^0.5]
         
-        Kv0 = self.Kvs / 50.0  # same minimum as in equal-percentage
+        Kv0 = self.Kvs / 25  # same minimum as in equal-percentage
         Kvleak = self.Kvs / 2000
         
-        h_star = 0.05  # lower values of h make the form of the valve deviate from the equal percentage equation.
+        h_star = 0.02  # lower values of h make the form of the valve deviate from the equal percentage equation.
         
         if h < h_star and Kvleak_bool:
             Kvr = Kv0 + h_star * (self.Kvs - Kv0)
@@ -94,13 +94,15 @@ class Valve:
         Returns the valve position and Kv value of the overflow valve based on the lumped BO model. 
         """
 
+        minimal_opening = 0
+
         # P-band logic
         if self.T_sensor[N] <= self.T_set_overflow -  self.P_band:  
             h_band = 1
         elif self.T_sensor[N] > self.T_set_overflow:
-            h_band = 0 
+            h_band = minimal_opening 
         else:
-            h_band = (self.T_set_overflow - self.T_sensor[N]) / self.P_band
+            # h_band = (self.T_set_overflow - self.T_sensor[N]) / self.P_band + minimal_opening
 
             # # Choice between continuous and discrete valve displacement 
             # if self.steps == "con":
@@ -110,22 +112,22 @@ class Valve:
 
             # Choice between continuous and discrete valve displacement 
             if self.steps == "con":
-                h_band = (self.T_set_overflow - self.T_sensor[N])/self.P_band
+                h_band = (self.T_set_overflow - self.T_sensor[N])/self.P_band + minimal_opening
             else:
-                h_band = np.floor((self.T_set_overflow - self.T_sensor[N]) / self.P_band * self.steps) / self.steps
+                h_band = np.floor((self.T_set_overflow - self.T_sensor[N]) / self.P_band * self.steps) / self.steps + minimal_opening
         
         self.h_band[N] = h_band
         h_previous = self.h[N-1] if N > 0 else 1 # Assume fully open at the start
         h = h_previous + np.clip((h_band - h_previous), -self.max_rate*self.dt, self.max_rate*self.dt)
             
         if not Kvleak_bool:
-            h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
-            if h_band < h_star:
+            h_star = 0.02 # lower values of h make the form of the valve deviate from the equal percentage equation.
+            if h < h_star:
                 h = 0
             else:
-                h = min(1,h_band)
+                h = min(1,h)
         else:
-            h = max(0,min(1,h_band)) 
+            h = max(minimal_opening,min(1,h)) 
 
         Kv = self.linear_valve(h, Kvleak_bool)
 
@@ -168,7 +170,7 @@ class Valve:
         self.I += dT * self.dt
         delta_h = self.Kp * dT + self.Ki * self.I
 
-        h_star = 0.05 # lower values of h make the form of the valve deviate from the equal percentage equation.
+        h_star = 0.02 # lower values of h make the form of the valve deviate from the equal percentage equation.
         
         # h = self.h[N-1] + delta_h
 

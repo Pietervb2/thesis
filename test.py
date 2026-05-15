@@ -169,7 +169,7 @@ def initial_test_HEX():
 
     consumer = Consumer('Consumer 1',A1,A2,Period1,Period2,Phi1,Phi2,offset,tau)
 
-    pipe_data = read_pipe_data('Pipe of experiment van der Heijden')
+    pipe_data = read_pipe_data('Experiment van der Heijden')
     hex_data = read_hex_data('Standard hex constants dummy pressure')
 
     # Create network
@@ -315,7 +315,7 @@ def model_step_7():
 
 def test_incidence_and_loop_matrices():
     
-    pipe_data = read_pipe_data('Pipe of DN40')
+    pipe_data = read_pipe_data('DN40')
     hex_data = read_hex_data('Standard hex constants dummy pressure')
 
     A1 = 0.109*1.524
@@ -623,7 +623,7 @@ def model_network_Rutger(profile, run_type, dt, pump_pressure, curve):
         net = Network(f'Benchmark Rut')
         of_type = False
     elif run_type == 'test':
-        net = Network(f'Test Rut,Kvl,tau={tau},{temperature},step{steps}')
+        net = Network(f'NetRut, Qd_response')
         of_type = True
 
     consumer_list = consumer_start_times(f'{profile}', [7.5, 21])
@@ -1243,48 +1243,50 @@ if __name__ == "__main__":
 
     start = datetime.now()
 
-    i = 3
+    i = 4
     profile = f'Profile {i}'
     dt = 1
     pump_pressure = 60
-    curve = True
-    test_name = f'test_P{i}_test_overflow_massflow_55_3'
+    curve = False
+    test_name = f'test_profile4_twopercent2'
 
-    print(f'start test: {start}, {profile} ')
+    # heb per ongeluk Rut_Kvorg_HEXorg met Kvlow gedaan
+
+    print(f'start test: {start}, {profile}, {test_name} ')
 
     cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
     # Normalized
-    theta_1 = 1
-    theta_2 = 0
+    theta_1 = 0
+    theta_2 = 1
     theta_3 = 0
     theta_4 = 0
-    theta_5 = 1
-    theta_6 = 0.5
+    theta_5 = 5/25
+    theta_6 = 1/2
+
+    print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
 
     cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6)
 
+    # model_network_Rutger(profile, 'test', dt, pump_pressure, curve)
+
     print(f'duration test: {datetime.now() - start}')
 
-# T_supply[i] = theta_1 + theta_2 * np.tanh(theta_3 * (total_heat_demand[k] - theta_4)) # Alternative formulation with tanh function
 
-    # self.PHYSICAL_BOUNDS = {
-    #     'theta_1': (60, 65), 
-    #     'theta_2': (0.1, 3),
-    #     'theta_3': (0,10),
-    #     'theta_4': (100e3, 400e3),
-    #     'theta_5': (0, 3),
-    #     'theta_6': (1, 2)
-    # }
+        # self.dict_physical_bounds = {'Profile 1': {
+        #                                 'theta_1': (60, 62.5),
+        #                                 'theta_2': (62.5, 65),
+        #                                 'theta_3': (200, 500e3),
+        #                                 'theta_4': (0, 200e3),
+        #                                 'theta_5': (30, 55),
+        #                                 'theta_6': (1, 5)
+        #                                 },
 
-        # # Physical bounds
-        # self.PHYSICAL_BOUNDS = {
-        #     'theta_1': (60, 65), 
-        #     'theta_2': (65, 70),
-        #     'theta_3': (0, 500e3),
-        #     'theta_4': (0, 200e3),
-        #     'theta_5': (0, 55),
-        #     'theta_6': (1, 5)
-        # }
-
-
+                                        #        'Profile 4': {
+                                        #     'theta_1': (60, 62.5),
+                                        #     'theta_2': (62.5, 65),
+                                        #     'theta_3': (0, 150e3),
+                                        #     'theta_4': (0, 150e3),
+                                        #     'theta_5': (30, 55),
+                                        #     'theta_6': (1, 5)
+                                        # }
