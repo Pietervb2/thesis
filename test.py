@@ -993,7 +993,7 @@ def read_hex_data(hex_data_set):
     U = constants[hex_data_set]['U'] # Overall heat transfer coefficient [W/m2K]
     As = constants[hex_data_set]['As'] # Heat transfer area [m2]
     Kp_dp = constants[hex_data_set]['Kp_dp'] # Pressure loss coefficient [-]
-    K_vs = constants[hex_data_set]['K_vs'] # Hydrualic conductivity for valve [m3/s Pa^0.5]
+    K_vs = constants[hex_data_set]['K_vs'] # Hydraulic conductivity for valve [kg /s / Pa^0.5]
     Kp = constants[hex_data_set]['Kp'] # Proportional gain coefficient for valve [-]
     Ki = constants[hex_data_set]['Ki'] # Integral gain coefficient for valve [-]
     max_rate = constants[hex_data_set]['max_rate'] # Maximum rate of change of valve position [1/s]
@@ -1243,12 +1243,12 @@ if __name__ == "__main__":
 
     start = datetime.now()
 
-    i = 4
+    i = 3
     profile = f'Profile {i}'
     dt = 1
     pump_pressure = 60
-    curve = False
-    test_name = f'test_profile4_twopercent2'
+    curve = True
+    test_name = f'test_{profile}_18mei_theta5=0'
 
     # heb per ongeluk Rut_Kvorg_HEXorg met Kvlow gedaan
 
@@ -1261,32 +1261,31 @@ if __name__ == "__main__":
     theta_2 = 1
     theta_3 = 0
     theta_4 = 0
-    theta_5 = 5/25
-    theta_6 = 1/2
+    theta_5 = 0
+    # theta_6 = 1/2
 
-    print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
+    print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}')
 
-    cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6)
+    cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5)
 
     # model_network_Rutger(profile, 'test', dt, pump_pressure, curve)
 
     print(f'duration test: {datetime.now() - start}')
 
 
-        # self.dict_physical_bounds = {'Profile 1': {
-        #                                 'theta_1': (60, 62.5),
-        #                                 'theta_2': (62.5, 65),
-        #                                 'theta_3': (200, 500e3),
-        #                                 'theta_4': (0, 200e3),
-        #                                 'theta_5': (30, 55),
-        #                                 'theta_6': (1, 5)
-        #                                 },
+                                        # {'Profile 1': {
+                                        #     'theta_1': (60, 62.5),
+                                        #     'theta_2': (62.5, 65),
+                                        #     'theta_3': (200, 500e3),
+                                        #     'theta_4': (0, 300e3),
+                                        #     'theta_5': (30, 55)
+                                        #     # 'theta_6': (1, 5)
+                                        #     },
 
-                                        #        'Profile 4': {
+                                        # 'Profile 4': {
                                         #     'theta_1': (60, 62.5),
                                         #     'theta_2': (62.5, 65),
                                         #     'theta_3': (0, 150e3),
                                         #     'theta_4': (0, 150e3),
-                                        #     'theta_5': (30, 55),
-                                        #     'theta_6': (1, 5)
-                                        # }
+                                        #     'theta_5': (30, 55)
+                                        #     # 'theta_6': (1, 5)

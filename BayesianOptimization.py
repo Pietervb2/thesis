@@ -93,8 +93,8 @@ class CostFunction:
         self.dict_physical_bounds = {'Profile 1': {
                                             'theta_1': (60, 62.5),
                                             'theta_2': (62.5, 65),
-                                            'theta_3': (250, 500e3),
-                                            'theta_4': (0, 250e3),
+                                            'theta_3': (200, 500e3),
+                                            'theta_4': (0, 300e3),
                                             'theta_5': (30, 55)
                                             # 'theta_6': (1, 5)
                                             },

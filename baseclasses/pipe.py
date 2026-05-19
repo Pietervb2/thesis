@@ -200,7 +200,7 @@ class Pipe:
                 # Final outlet water temperature including heat loss to ambient
                 ref_T = self.T_lossless[N] if no_cap else self.T_cap[N]
 
-                decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.inner_cs) ) # NOTE: I used here the outer cross section   
+                decay = np.exp(-self.K * t_stay / (self.rho_water * self.c_water * self.inner_cs) ) # NOTE: I used here the inner cross section   
                 self.T[N] = T_ambt + (ref_T - T_ambt) * decay   
 
     def average_delay_bnode(self,n,m,R,S,mflow_ex,N):
