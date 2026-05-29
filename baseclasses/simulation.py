@@ -330,7 +330,6 @@ class Simulation:
             plt.close(fig_overflow_mflow)
             plt.close(fig_overflow_h)
 
-
     def plot_pipe_mflow_network(self, network: Network, plot = False):
         """
         Plot the temperature history for all nodes in the network
@@ -460,29 +459,33 @@ class Simulation:
         tot_Q_supply = np.zeros_like(self.time).astype(float)
 
         # Additional term to penalize slow response to changes in heat demand
-        tot_Q_respond = np.zeros_like(self.time).astype(float)
+        self.tot_Q_respond = np.zeros((len(network.hexs.keys()), len(self.time))).astype(float)
 
-        for hex_key in network.hexs.keys():
-            hex = network.hexs[hex_key]
-            tot_Q_d += hex.consumer.Q_d
-            tot_Q_supply += hex.consumer.Q_supply
+        for i, hex_obj in enumerate(network.hexs.values()):
+            tot_Q_d += hex_obj.consumer.Q_d
+            tot_Q_supply += hex_obj.consumer.Q_supply
 
             two_min = int(120 / self.dt) # Number of timesteps in 2 minutes
-            for idx in range(len(hex.consumer.Q_d)-1-two_min):
+            for idx in range(len(hex_obj.consumer.Q_d)-1-two_min):
 
                 # smooth event trigger
-                change_binary = (np.tanh(hex.consumer.Q_d[idx+1] - hex.consumer.Q_d[idx] - 100) + 1)/2  # indicating whether there is a change in heat demand, mapping it to zero or one, by subtracting -100 zero is really zero.     
+                change_binary = (np.tanh(hex_obj.consumer.Q_d[idx+1] - hex_obj.consumer.Q_d[idx] - 100) + 1)/2  # indicating whether there is a change in heat demand, mapping it to zero or one, by subtracting -100 zero is really zero.     
                 
                 # how well it responded within 2 minutes based on how close the watts are. 
-                Q_response = hex.consumer.Q_d[idx+1:idx+1+two_min] - hex.consumer.Q_supply[idx+1:idx+1+two_min]
-                scaling_factor = 30000/self.dt # to prevent numerical overflow
+                Q_response = hex_obj.consumer.Q_d[idx+1:idx+1+two_min] - hex_obj.consumer.Q_supply[idx+1:idx+1+two_min]
+                
+                if self.dt == 60:
+                    scaling_factor = 40
+                elif self.dt == 1:
+                    scaling_factor = 300
+                
                 Q_response_relu = softrelu(Q_response/scaling_factor)*scaling_factor # to prevent overflow error
 
-                tot_Q_respond[idx] = change_binary * np.sum(Q_response_relu) * self.dt
+                self.tot_Q_respond[i, idx] += change_binary * np.sum(Q_response_relu) * self.dt
 
-            plt.plot(self.time, hex.consumer.Q_d, label=f'Heat demand of C{hex.consumer.consumer_id.split(" ")[1]}')
-            plt.plot(self.time, hex.consumer.Q_supply, label=f'Heat supplied to C{hex.consumer.consumer_id.split(" ")[1]}', linestyle='--')
-
+            plt.plot(self.time, hex_obj.consumer.Q_d, label=f'Heat demand of C{hex_obj.consumer.consumer_id.split(" ")[1]}')
+            plt.plot(self.time, hex_obj.consumer.Q_supply, label=f'Heat supplied to C{hex_obj.consumer.consumer_id.split(" ")[1]}', linestyle='--')
+        
         # Set x-axis to 0-24 hours (data stored in seconds). Show ticks every 4 hours.
         format_plot_time_axis(num_hours=24)
 
@@ -520,8 +523,8 @@ class Simulation:
         plt.savefig(self.folder + '/total_heat_demand.png')
 
         fig_Q_respond = plt.figure()
-        plt.title(f"Total Consumer Heat Demand Response: {np.sum(tot_Q_respond)/1e3:.3f} kJ")
-        plt.plot(self.time, tot_Q_respond/1e3, label='Total heat demand response')
+        plt.title(f"Total Consumer Heat Demand Response: {np.sum(self.tot_Q_respond)/1e3:.3f} kJ, max response per hex = {np.max(np.sum(self.tot_Q_respond, axis = 1)/1e3):.3f} kJ")
+        plt.plot(self.time, np.sum(self.tot_Q_respond, axis = 0)/1e3, label='Total heat demand response')
 
         format_plot_time_axis(num_hours=24)
         plt.xlabel(f'Time (hours), dt = {self.dt}')
@@ -535,7 +538,6 @@ class Simulation:
             plt.close(fig_tot)
             plt.close(fig_just_demand)
             plt.close(fig_Q_respond)
-
 
     def plot_h_valves(self, network: Network, plot = False):
 
@@ -744,7 +746,7 @@ class Simulation:
                 overflow_data_debug['Kv'] = valve.Kv
                 overflow_data_debug['h'] = valve.h # actual h, with hstar taken into account
                 overflow_data_debug['h_band'] = valve.h_band # change wanted by P-band
-                overflow_data_debug['h_tau'] = valve.h_tau   # change slowed down by tau                
+                overflow_data_debug['tau'] = valve.tau_array   # change slowed down by tau                
                 overflow_data_debug['T_sensor'] = valve.T_sensor
                 overflow_data_debug['T node'] = valve.node.T
                 overflow_data_debug['T_pipe'] = overflow_pipe.T_pipe
@@ -771,6 +773,9 @@ class Simulation:
 
             df_total_heat = pd.DataFrame(total_heat)
             df_total_heat.to_csv(os.path.join(self.folder,'hex_consumer_data','total_heat.csv'), index = False)
+
+            df_Q_respond = pd.DataFrame({'Q_respond_hex' : [self.tot_Q_respond]})
+            df_Q_respond.to_csv(os.path.join(self.folder,'hex_consumer_data','Q_respond.csv'), index = False)
 
 
         if network.theta is not None:

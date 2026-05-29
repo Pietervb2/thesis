@@ -666,23 +666,24 @@ def overflow_test():
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('50kPa Pump curve')
+    pump_data = read_pump_data('60kPa Pump curve')
     overflow_data = read_overflow_data('Overflow')
 
     # Create network
-    tau = overflow_data[4]
+    tau = 60
+    overflow_data[3] = tau
     steps = overflow_data[5]
     temperature = 65
 
-    net = Network(f'Oftest,Kvl,tau={tau},{temperature},step{steps}')
-    overflow_data.append(False) # Indicating that it should use the benchmark
+    net = Network(f'Oftest_temp{temperature}_tau_{tau}')
+    overflow_data.append(True) # Indicating that it should use the benchmark
 
     consumer_list = consumer_start_times(profile, [1])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
    
     # Simulation parameters
     dt = 1 # s
-    total_time = 2 * 3600 # sec
+    total_time = 8 * 3600 # sec
     T_ambt = 20
 
     # Temperature input profile
@@ -1241,34 +1242,33 @@ if __name__ == "__main__":
 
     from BayesianOptimization import CostFunction
 
+
     start = datetime.now()
 
-    i = 3
+    i = 1
     profile = f'Profile {i}'
-    dt = 1
+    dt = 60
     pump_pressure = 60
     curve = True
-    test_name = f'test_{profile}_18mei_theta5=0'
+    test_name = f'test_deltaQ_{profile}_dt={dt}_pump={pump_pressure}kPa_curve={curve}'
 
-    # heb per ongeluk Rut_Kvorg_HEXorg met Kvlow gedaan
+    print(f'start test: {start}')
 
-    print(f'start test: {start}, {profile}, {test_name} ')
+    # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
-    cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
+    # # Normalized
+    # theta_1 = 1
+    # theta_2 = 1
+    # theta_3 = 0
+    # theta_4 = 0  
+    # theta_5 = 1
+    # # theta_6 = 1/2
 
-    # Normalized
-    theta_1 = 0
-    theta_2 = 1
-    theta_3 = 0
-    theta_4 = 0
-    theta_5 = 0
-    # theta_6 = 1/2
+    # print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}')
 
-    print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}')
+    # cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5)
 
-    cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5)
-
-    # model_network_Rutger(profile, 'test', dt, pump_pressure, curve)
+    model_network_Rutger(profile, 'benchmark', dt, pump_pressure, curve)
 
     print(f'duration test: {datetime.now() - start}')
 

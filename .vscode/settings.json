@@ -1,0 +1,4 @@
+{
+    "github.copilot.chat.claudeAgent.enabled": false,
+    "python.analysis.autoImportCompletions": false
+}
