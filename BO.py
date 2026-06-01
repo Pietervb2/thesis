@@ -5,10 +5,11 @@ from scipy.optimize import NonlinearConstraint
 
 from test import optimization_run 
 
-from scipy.special import logsumexp
 import numpy as np
 import time
 import sys
+import os
+import pandas as pd
 
 
 class CostFunction:
@@ -21,8 +22,8 @@ class CostFunction:
         self.run_type = run_type
         self.test_name = test_name
 
-        self.w_Tr = 8 * 1/40
-        self.w_Ts = 11 * 1/60
+        self.w_Tr = 3 * 1/4181 * 1e-3
+        self.w_Ts = 1/4181 * 1e-3
         self.w_dTs = 5
 
         # Weight placed in order to make w_Q and w_Qrespond of the same importance
@@ -69,15 +70,30 @@ class CostFunction:
                                         }
             }
 
+        # Heat constraints and tolerances        
+        thesis_dir = os.path.dirname(os.path.abspath(__file__))
+        file_loc = os.path.join(thesis_dir,
+                                'figures',
+                                'benchmark', 
+                                f'Benchmark_{profile}_dt={dt}',
+                                'hex_consumer_data',
+                                'Q_hex.csv')
+        Q_dp = pd.read_csv(file_loc, index_col=0)
+
+        self.Q_respond_benchmark = Q_dp.loc['Max', 'Q_respond']
+        self.deltaQ_benchmark = Q_dp.loc['Total', 'DeltaQ_sq']
+
+        print(f'Q_respond_benchmark = {self.Q_respond_benchmark}, deltaQ_benchmark = {self.deltaQ_benchmark}')
+
+        # Tolerances
+        self.tol_Qrespond = 0.20
+        self.tol_deltaQ = 0.20   # max allowed excess above max_deltaQ benchmark
+
+        # Return temperature constraints
+        self.T_r_max = 43.0   # smooth-max of return temperature must stay below this [°C]
+
         # Saving values for constraint to avoid redundant simulations
         self._cache = {}
-        self.Q_respond_benchmark = {'Profile 1': 18148036, 
-                                    'Profile 2': 17072126, 
-                                    'Profile 3': 15242171, 
-                                    'Profile 4': 15213633} # These are based on the best runs of the grid search. We want to be within 10% of these values.
-        self.tolerance = 0.30
-
-        self.Q_respond_benchmark = {'Profile 1': 6142761}
 
         # Debug purpose
         self.iter = 0
@@ -122,24 +138,33 @@ class CostFunction:
                                run_type = self.run_type,
                                test_name = self.test_name)
                    
-            # Extract BOTH values from the same result
+            _, _, deltaQ_sq, Q_respond = self.compute_Q_terms(net)
 
-            total_heat_demand, total_heat_supply, Q_respond = self.compute_Q_terms(net)
-            cost = self.compute_cost(net, theta, total_heat_demand, total_heat_supply, Q_respond)
-            Q_respond_val = np.sum(Q_respond)
-           
-            self._cache[key] = (cost, Q_respond_val)
+            # Compute objective and constraint values
+            Q_respond_val = np.max(Q_respond)
+            max_deltaQ = np.sum(deltaQ_sq)
+
+            # smooth-max of return temperature
+            T_r = net.nodes['Node 1.6'].T
+            warmup_steps = int(4.5 / 24 * len(T_r))
+            smooth_max_Tr = smooth_max(T_r[warmup_steps:])
+            print(f' smooth_max_Tr: {smooth_max_Tr}, max_T_r: {np.max(T_r[warmup_steps:])}')
+
+            cost = self.compute_cost(net, theta)
+            self._cache[key] = (cost, Q_respond_val, max_deltaQ, smooth_max_Tr)
         
         return self._cache[key]
 
-    def compute_cost(self, net, theta, total_heat_demand, total_heat_supply, Q_respond):
+    def compute_cost(self, net, theta):
         
         # Return temperature
         T_r = net.nodes['Node 1.6'].T
+        mflow_r = net.pipes['Pipe 1.6']['pipe_instance'].mflow
 
         # Supply temperature
         T_s = net.nodes['Node 1.1'].T
-       
+        mflow_s = net.pipes['Pipe 1.1']['pipe_instance'].mflow
+
         warmup_period = 4.5 #h 
         length_of_simulation = len(T_s)
         warmup_steps = int(warmup_period / 24 * length_of_simulation)
@@ -147,25 +172,16 @@ class CostFunction:
         # ------------------------------------------------------------------
         # Return temperature term
         # ------------------------------------------------------------------
-        term_Tr = self.w_Tr * np.mean(T_r[warmup_steps:])**2 # Only looking at moments when there is no heat demand by applying exp(-Q_d/1e5) 
-
-        # ------------------------------------------------------------------
-        # Head demand difference term
-        # ------------------------------------------------------------------     
-        heat_demand_idx = [idx for idx,i in enumerate(total_heat_demand) if i>0] # Obtain all idx for total heat demand above zero 
-
-        # Changed it to total heat demand per hex.
-        term_Q = self.dict_w_Q[self.profile] * np.sum((total_heat_demand[heat_demand_idx] - total_heat_supply[heat_demand_idx])**2)*self.dt/23
+        T_ATES_cold_well = 10 # °C, this is the temperature of the cold well of the ATES
+        c_p_water = 4186 # J/kgK, specific heat capacity of water
         
-        # ------------------------------------------------------------------
-        # Heat demand waiting time response term
-        # ------------------------------------------------------------------
-        term_Qrespond = self.dict_w_Qrespond[self.profile] * logsumexp(Q_respond) # So max delta_Q within those 2 minutes
+        term_Tr = self.w_Tr * c_p_water * np.sum((T_r[warmup_steps:] - T_ATES_cold_well) * mflow_r[warmup_steps:]) * self.dt
 
         # ------------------------------------------------------------------
         # Supply temperature term
-        # ------------------------------------------------------------------        ### Supply term delivered ###
-        term_Ts = self.w_Ts * np.mean(T_s[warmup_steps:])**2
+        # ------------------------------------------------------------------       
+        T_ATES_hot_well = 20 # °C, this is the temperature of the hot well of the ATES
+        term_Ts = self.w_Ts * c_p_water * np.sum((T_s[warmup_steps:] - T_ATES_hot_well) * mflow_s[warmup_steps:]) * self.dt # Only penalize when there is actually supply, otherwise it can be noisy when there is no flow.
 
         # ------------------------------------------------------------------
         #  Change in supply temperature term
@@ -179,22 +195,20 @@ class CostFunction:
         R = np.diag([1e-4, 1e-4, 1e-11, 1e-10, 1e-3, 1e-1]) # Regularization matrix 
         regularization = theta.T @ R @ theta
 
-        cost = term_Tr + term_Ts + term_dTs + term_Q + term_Qrespond + regularization
+        cost = term_Tr + term_Ts + term_dTs + regularization
 
         # Save cost function values and parameters for debugging
         self.dict_debug[f'iter {self.iter}'] = {
             'theta': theta.tolist(),
             'T_r': float(term_Tr),
-            'Q': float(term_Q),
             'T_s': float(term_Ts),
-            'Qrespond': float(term_Qrespond),
             'dTs': float(term_dTs),
             'regularization': float(regularization),
             'cost' : float(cost)
         }
         self.iter += 1
 
-        print(f'term Tr {term_Tr}, term Ts {term_Ts}, term dTs {term_dTs}, term Q {term_Q}, term Qrespond {term_Qrespond}, regularization {regularization}, cost {cost}, Qresond_sum {np.sum(Q_respond)}')
+        # print(f'term Tr {term_Tr}, term Ts {term_Ts}, term dTs {term_dTs}, regularization {regularization}, cost {cost}')
         # print(f'Regularization terms: {theta_1**2 * R[0,0]}, {theta_2**2 * R[1,1]}, {theta_3**2 * R[2,2]}, {theta_4**2 * R[3,3]}, {theta_5**2 * R[4,4]}, {theta_6**2 * R[5,5]}')
         return cost
     
@@ -208,15 +222,17 @@ class CostFunction:
 
         # Heat demand and supply
         T_s = net.nodes['Node 1.1'].T
-        total_heat_demand = np.zeros_like(T_s)
-        total_heat_supply = np.zeros_like(T_s)
+        total_heat_demand = np.zeros(len(net.hexs))
+        total_heat_supply = np.zeros(len(net.hexs))
+        deltaQ_sq = np.zeros(len(net.hexs))
 
         # Iterate through all heat exchangers and sum consumer demands
-        i = 0
-        for hex_obj in net.hexs.values():
+        for i, hex_obj in enumerate(net.hexs.values()):
             consumer = hex_obj.consumer
-            total_heat_demand += consumer.Q_d 
-            total_heat_supply += consumer.Q_supply
+            total_heat_demand[i] = np.sum(consumer.Q_d) 
+            total_heat_supply[i] = np.sum(consumer.Q_supply)
+
+            deltaQ_sq[i] = np.sum((consumer.Q_d - consumer.Q_supply)**2) * self.dt
 
             two_min = int(120 / self.dt) # Number of timesteps in 2 minutes
             for idx in range(len(consumer.Q_d)-1-two_min):
@@ -233,19 +249,29 @@ class CostFunction:
 
                 Q_response_relu = softrelu(Q_response/scaling_factor)*scaling_factor # relu to only look at the positive difference               
                 Q_respond[i] += change_binary * np.sum(Q_response_relu) * self.dt
-            
-            i += 1
-        
-        return total_heat_demand, total_heat_supply, Q_respond
-
+                    
+        return total_heat_demand, total_heat_supply, deltaQ_sq, Q_respond
+    
     def objective(self, theta_1, theta_2, theta_3, theta_4, theta_5):
-        cost, _ = self.run(theta_1, theta_2, theta_3, theta_4, theta_5)
+        cost, *_ = self.run(theta_1, theta_2, theta_3, theta_4, theta_5)
         return -cost  # bayes_opt maximizes
 
-    def constraint(self, theta_1, theta_2, theta_3, theta_4, theta_5):
-        _, Q_respond_val = self.run(theta_1, theta_2, theta_3, theta_4, theta_5)
-        # feasible when <= 0
-        return np.sum(Q_respond_val) - (1 + self.tolerance) * self.Q_respond_benchmark[self.profile]    
+    def constraints(self, theta_1, theta_2, theta_3, theta_4, theta_5):
+        """Returns a vector of constraint values; each must be <= 0 to be feasible."""
+        _, Q_respond_val, max_deltaQ, smooth_max_Tr = self.run(
+            theta_1, theta_2, theta_3, theta_4, theta_5
+        )
+
+        print(f'Q_respond_val: {Q_respond_val - (1 + self.tol_Qrespond) * self.Q_respond_benchmark <= 0}, max_deltaQ: {max_deltaQ - (1 + self.tol_deltaQ) * self.deltaQ_benchmark <= 0}, smooth_max_Tr: { smooth_max_Tr - self.T_r_max <= 0}')
+
+        return np.array([
+            # 1) Q_respond must not exceed (1 + tolerance) * benchmark
+            Q_respond_val - (1 + self.tol_Qrespond) * self.Q_respond_benchmark,
+            # 2) max (Q_d - Q_supply)^2 must not exceed (1 + epsilon) * benchmark
+            max_deltaQ - (1 + self.tol_deltaQ) * self.deltaQ_benchmark,
+            # 3) smooth-max of return temperature must stay below T_r_max
+            smooth_max_Tr - self.T_r_max,
+        ])
     
 def denormalize(val, low, high):
     return low + val * (high - low)
@@ -273,7 +299,10 @@ def run_bo(i, dt, pump_pressure, curve):
     cost_fn = CostFunction(profile, dt, pump_pressure, curve, run_type = 'optimization')
     pbounds = {k: (0, 1) for k in cost_fn.dict_physical_bounds[profile]}
 
-    constraint = NonlinearConstraint(cost_fn.constraint, -np.inf, 0)
+    constraint_lower = np.array([-np.inf, -np.inf, -np.inf])
+    constraint_upper = np.array([0,0,0])
+
+    constraint = NonlinearConstraint(cost_fn.constraints, constraint_lower, constraint_upper)
 
     optimizer = BayesianOptimization(
         f=cost_fn.objective,

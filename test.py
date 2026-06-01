@@ -1240,7 +1240,7 @@ def denormalize(val, low, high):
 if __name__ == "__main__":
     
 
-    from BayesianOptimization import CostFunction
+    from BO import CostFunction
 
 
     start = datetime.now()
@@ -1250,25 +1250,24 @@ if __name__ == "__main__":
     dt = 60
     pump_pressure = 60
     curve = True
-    test_name = f'test_deltaQ_{profile}_dt={dt}_pump={pump_pressure}kPa_curve={curve}'
+    test_name = f'BO_test={profile}_dt={dt}_pump={pump_pressure}kPa_curve={curve}'
 
-    print(f'start test: {start}')
+    print(f'start test: {start}, test_name: {test_name}')
 
-    # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
+    cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
     # # Normalized
-    # theta_1 = 1
-    # theta_2 = 1
-    # theta_3 = 0
-    # theta_4 = 0  
-    # theta_5 = 1
-    # # theta_6 = 1/2
+    theta_1 = 0.4191945 # Minimum supply temperature [°C]
+    theta_2 = 0.6852195 # Maximum supply temperature [°C]
+    theta_3 = 0.2044522 # Heat demand threshold [W] (Q_set)
+    theta_4 =  0.8781174 # Heat demand P-band [W]
+    theta_5 = 0.0273875 # Overflow valve additional temperature setpoint [°C]
+    theta_6 = 0.5 # Overflow valve P-band [°C]
 
-    # print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}')
+    print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
 
-    # cost = cost_function(theta_1, theta_2, theta_3, theta_4, theta_5)
+    cost = cost_function.objective(theta_1, theta_2, theta_3, theta_4, theta_5)
 
-    model_network_Rutger(profile, 'benchmark', dt, pump_pressure, curve)
 
     print(f'duration test: {datetime.now() - start}')
 

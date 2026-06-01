@@ -462,8 +462,8 @@ class Simulation:
         self.tot_Q_respond = np.zeros((len(network.hexs.keys()), len(self.time))).astype(float)
 
         for i, hex_obj in enumerate(network.hexs.values()):
-            tot_Q_d += hex_obj.consumer.Q_d
-            tot_Q_supply += hex_obj.consumer.Q_supply
+            tot_Q_d += hex_obj.consumer.Q_d*self.dt
+            tot_Q_supply += hex_obj.consumer.Q_supply*self.dt
 
             two_min = int(120 / self.dt) # Number of timesteps in 2 minutes
             for idx in range(len(hex_obj.consumer.Q_d)-1-two_min):
@@ -523,7 +523,7 @@ class Simulation:
         plt.savefig(self.folder + '/total_heat_demand.png')
 
         fig_Q_respond = plt.figure()
-        plt.title(f"Total Consumer Heat Demand Response: {np.sum(self.tot_Q_respond)/1e3:.3f} kJ, max response per hex = {np.max(np.sum(self.tot_Q_respond, axis = 1)/1e3):.3f} kJ")
+        plt.title(f"Total Consumer Heat Demand Response: {np.sum(self.tot_Q_respond)/1e3:.3f} kJ")
         plt.plot(self.time, np.sum(self.tot_Q_respond, axis = 0)/1e3, label='Total heat demand response')
 
         format_plot_time_axis(num_hours=24)
@@ -692,6 +692,10 @@ class Simulation:
         total_Q_demand = np.zeros_like(T_in)
         total_Q_supply = np.zeros_like(T_in)
 
+        Q_demand_hex = np.zeros(len(network.hexs.keys()))
+        Q_supply_hex = np.zeros(len(network.hexs.keys()))
+        DeltaQ_sq_hex = np.zeros(len(network.hexs.keys()))
+
         hex_folder = os.path.join(self.folder, 'hex_consumer_data')
         if not os.path.exists(hex_folder):
             os.makedirs(hex_folder)
@@ -712,12 +716,15 @@ class Simulation:
                 HEX_data['mflow_prim'] = hex.pipes_in[f'Pipe {valve_key.split()[-1]}.3'].mflow
                 HEX_data['mflow_sec'] = hex.consumer.mflow           
                 HEX_data['Q_d'] = hex.consumer.Q_d
-                total_Q_demand += hex.consumer.Q_d
                 HEX_data['Q_supply'] = hex.consumer.Q_supply
-                total_Q_supply += hex.consumer.Q_supply
                 HEX_data['h'] = valve.h
                 HEX_data['Integral term'] = valve.I_array
 
+                total_Q_demand += hex.consumer.Q_d * self.dt
+                total_Q_supply += hex.consumer.Q_supply * self.dt
+                Q_demand_hex[int(valve_key.split()[-1])-1] = np.sum(hex.consumer.Q_d * self.dt)
+                Q_supply_hex[int(valve_key.split()[-1])-1] = np.sum(hex.consumer.Q_supply * self.dt)
+                DeltaQ_sq_hex[int(valve_key.split()[-1])-1] = np.sum((hex.consumer.Q_d - hex.consumer.Q_supply)**2) * self.dt
 
                 hex_mflow = hex.pipes_in[f'Pipe {valve_key.split()[-1]}.3'].mflow
                 hex_dp_data[f'{valve_key}'] = (hex.Kp_rho_dp * hex_mflow**2).astype(int)
@@ -774,9 +781,19 @@ class Simulation:
             df_total_heat = pd.DataFrame(total_heat)
             df_total_heat.to_csv(os.path.join(self.folder,'hex_consumer_data','total_heat.csv'), index = False)
 
-            df_Q_respond = pd.DataFrame({'Q_respond_hex' : [self.tot_Q_respond]})
-            df_Q_respond.to_csv(os.path.join(self.folder,'hex_consumer_data','Q_respond.csv'), index = False)
-
+            Q_respond_hex = np.sum(self.tot_Q_respond, axis = 1)
+            df_Q_hex = pd.DataFrame({
+                'Q_supply': Q_supply_hex,
+                'Q_demand': Q_demand_hex,
+                'DeltaQ_sq': DeltaQ_sq_hex,
+                'Q_respond': Q_respond_hex
+            }, index=[f'Hex {i+1}' for i in range(len(Q_demand_hex))])
+            summary = pd.DataFrame({
+                col: {'Max': df_Q_hex[col].max(), 'Min': df_Q_hex[col].min(), 'Total': df_Q_hex[col].sum(), 'Mean': df_Q_hex[col].mean()}
+                for col in ['DeltaQ_sq', 'Q_respond']
+            })
+            df_Q_hex_out = pd.concat([df_Q_hex, summary])
+            df_Q_hex_out.to_csv(os.path.join(self.folder, 'hex_consumer_data', 'Q_hex.csv'))
 
         if network.theta is not None:
             theta_data = {
