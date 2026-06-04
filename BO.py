@@ -25,20 +25,7 @@ class CostFunction:
         self.w_Tr = 3 * 1/4181 * 1e-3
         self.w_Ts = 1/4181 * 1e-3
         self.w_dTs = 5
-
-        # Weight placed in order to make w_Q and w_Qrespond of the same importance
-        self.dict_w_Q = {
-            'Profile 1': 0.1 * 1/60 * 1e-6,
-            'Profile 2': 0.3 * 1/60 * 1e-6,
-            'Profile 3': 1/60 * 1e-6,
-            'Profile 4': 3 * 1/60 * 1e-6}
-        
-        self.dict_w_Qrespond = {
-            'Profile 1': 4  * 1/60*1e-3,
-            'Profile 2': 10 * 1/60*1e-3,
-            'Profile 3': 30 * 1/60*1e-3,
-            'Profile 4': 30 * 1/60*1e-3}
-        
+       
         # Physical bounds
         self.dict_physical_bounds = {'Profile 1': {
                                             'theta_1': (60, 62.5),
@@ -86,11 +73,11 @@ class CostFunction:
         print(f'Q_respond_benchmark = {self.Q_respond_benchmark}, deltaQ_benchmark = {self.deltaQ_benchmark}')
 
         # Tolerances
-        self.tol_Qrespond = 0.20
-        self.tol_deltaQ = 0.20   # max allowed excess above max_deltaQ benchmark
+        self.tol_Qrespond = 0.25
+        self.tol_deltaQ = 0.25   # max allowed excess above max_deltaQ benchmark
 
         # Return temperature constraints
-        self.T_r_max = 43.0   # smooth-max of return temperature must stay below this [°C]
+        self.T_r_max = 60   # smooth-max of return temperature must stay below this [°C]
 
         # Saving values for constraint to avoid redundant simulations
         self._cache = {}
@@ -100,7 +87,6 @@ class CostFunction:
         self.dict_debug = {}
         self.dict_debug["w_Tr"] = self.w_Tr
         self.dict_debug["w_Ts"] = self.w_Ts
-        self.dict_debug["dict_w_Q"] = self.dict_w_Q
         self.dict_debug["bounds"] = self.dict_physical_bounds[self.profile]
     
     def run(self, theta_1, theta_2, theta_3, theta_4, theta_5):      
@@ -148,8 +134,6 @@ class CostFunction:
             T_r = net.nodes['Node 1.6'].T
             warmup_steps = int(4.5 / 24 * len(T_r))
             smooth_max_Tr = smooth_max(T_r[warmup_steps:])
-            print(f' smooth_max_Tr: {smooth_max_Tr}, max_T_r: {np.max(T_r[warmup_steps:])}')
-
             cost = self.compute_cost(net, theta)
             self._cache[key] = (cost, Q_respond_val, max_deltaQ, smooth_max_Tr)
         
@@ -204,7 +188,7 @@ class CostFunction:
             'T_s': float(term_Ts),
             'dTs': float(term_dTs),
             'regularization': float(regularization),
-            'cost' : float(cost)
+            'cost' : float(cost),
         }
         self.iter += 1
 
@@ -262,7 +246,7 @@ class CostFunction:
             theta_1, theta_2, theta_3, theta_4, theta_5
         )
 
-        print(f'Q_respond_val: {Q_respond_val - (1 + self.tol_Qrespond) * self.Q_respond_benchmark <= 0}, max_deltaQ: {max_deltaQ - (1 + self.tol_deltaQ) * self.deltaQ_benchmark <= 0}, smooth_max_Tr: { smooth_max_Tr - self.T_r_max <= 0}')
+        print(f'Q_respond_val: {Q_respond_val - (1 + self.tol_Qrespond) * self.Q_respond_benchmark <= 0} ({Q_respond_val/self.Q_respond_benchmark}), max_deltaQ: {max_deltaQ - (1 + self.tol_deltaQ) * self.deltaQ_benchmark <= 0} ({max_deltaQ/self.deltaQ_benchmark}), smooth_max_Tr: { smooth_max_Tr - self.T_r_max <= 0} ({smooth_max_Tr - self.T_r_max})')
 
         return np.array([
             # 1) Q_respond must not exceed (1 + tolerance) * benchmark
@@ -293,8 +277,8 @@ def run_bo(i, dt, pump_pressure, curve):
     random_state = 1 
     n_restarts = 15
     alpha = 1e-6
-    init_points = 15
-    n_iter = 5
+    init_points = 2
+    n_iter = 2
    
     cost_fn = CostFunction(profile, dt, pump_pressure, curve, run_type = 'optimization')
     pbounds = {k: (0, 1) for k in cost_fn.dict_physical_bounds[profile]}
@@ -325,7 +309,7 @@ def run_bo(i, dt, pump_pressure, curve):
 
     gp_kernel_before = optimizer._gp.kernel
 
-    initial_point = {'theta_1': 1, 'theta_2': 1, 'theta_3': 0, 'theta_4': 0, 'theta_5': 1}
+    initial_point = {'theta_1': 1, 'theta_2': 1, 'theta_3': 0, 'theta_4': 0, 'theta_5': 0.8}
     optimizer.probe(initial_point, lazy=False)
 
     optimizer.maximize(
@@ -343,10 +327,17 @@ def run_bo(i, dt, pump_pressure, curve):
     print(f'GP kernel before optimization: {gp_kernel_before}'
         f'\nGP kernel after optimization: {gp_kernel_after}')
 
+    results = {}
+    for iter in range(len(optimizer.res)):
+        results[f'iteration {iter}'] = {
+            'theta': optimizer.res[iter]['params'],
+            'target': optimizer.res[iter]['target'],
+            'constraints' : optimizer.res[iter]['constraint'].tolist(),
+            'allowed' : str(optimizer.res[iter]['allowed'])
+        }
 
-    results = {
-        'params': optimizer.res,
-        'max': optimizer.max,
+    results['final'] = {
+        'max' : optimizer.max['params'],
         'kernel': str(optimizer._gp.kernel_),
         'bo_settings': {
             'init_points': init_points,
@@ -377,48 +368,3 @@ if __name__ == '__main__':
         pump_pressure = 60
         curve = True
         run_bo(profile_num, dt, pump_pressure, curve)
-
-
-
-             # self.dict_physical_bounds = {'Profile 1': {
-        #                                 'theta_1': (60, 62.5),
-        #                                 'theta_2': (62.5, 65),
-        #                                 'theta_3': (200, 500e3),
-        #                                 'theta_4': (0, 200e3),
-        #                                 'theta_5': (30, 55),
-        #                                 'theta_6': (1, 5)
-        #                                 },
-        #                             'Profile 2': {
-        #                                 'theta_1': (60, 62.5),
-        #                                 'theta_2': (62.5, 65),
-        #                                 'theta_3': (0, 300e3),
-        #                                 'theta_4': (0, 100e3),
-        #                                 'theta_5': (30, 55),
-        #                                 'theta_6': (1, 5)
-        #                             }, 
-        #                             'Profile 3': {
-        #                                 'theta_1': (60, 62.5),
-        #                                 'theta_2': (62.5, 65),
-        #                                 'theta_3': (0, 300e3),
-        #                                 'theta_4': (0, 200e3),
-        #                                 'theta_5': (30, 55),
-        #                                 'theta_6': (1, 5)
-        #                             },
-        #                             'Profile 4': {
-        #                                 'theta_1': (60, 62.5),
-        #                                 'theta_2': (62.5, 65),
-        #                                 'theta_3': (0, 150e3),
-        #                                 'theta_4': (0, 150e3),
-        #                                 'theta_5': (30, 55),
-        #                                 'theta_6': (1, 5)
-        #                             }
-        # }
-        # # Physical bounds
-        # self.PHYSICAL_BOUNDS = {
-        #     'theta_1': (60, 65), 
-        #     'theta_2': (0.1, 3),
-        #     'theta_3': (0,10),
-        #     'theta_4': (100e3, 400e3),
-        #     'theta_5': (0, 55),
-        #     'theta_6': (1, 3)
-        # }
