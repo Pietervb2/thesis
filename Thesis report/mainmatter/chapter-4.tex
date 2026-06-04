@@ -1,0 +1,176 @@
+\chapter{Control Policy}
+\label{chapter:ControlPolicy}
+This chapter begins by examining the commonly used methods to control the supply temperature and bypass flow, followed by an argument for the use of Bayesian Optimization. And a further  and the implications this e. The chapter concludes with the formulation of the minimization problem.
+
+\todo[inline]{Alle tekst die hier in staat moet nog worden gecontroleerd.}
+
+\section{Related work}
+Welke methodes zijn er eerder gebruikt en waarom ga ik hier nu BO gebruiken. 
+
+\subsection{Argument for using Bayesian Optimization}
+The developed simulation model is a non-convex nonlinear system. The non-convexity is caused by the Kirchhoff laws' quadratic equality constraints, the determination of the varying time delay of the water masses in the pipes, its use as time index and the presence of bilinear terms within the Node method and the bilinear terms used for the temperature mixing at the nodes and the $\epsilon$-NTU implementation of the heat exchanger. The authors of \cite{ArtikelMax} handle the Kirchhoff constraints by introducing a convex relaxation. The model proposed in  \cite{nodeMethodbin} also performs convex relaxation on these constraints and its bilinear terms. Relaxing the problem from MINLP to eventually MILP. The mixed integer relation is caused by handling the non-convexity of the Node method by introducing an auxiliary binary value for every possible time delay and also for its bilinear term. As the test network in this thesis project only contains 23 consumers it already consists of at least 100 nodes this would introduce the use of a couple of thousand of binary variables, which is significantly more than the authors' use case of an integrated six-bus electricity and three-node district heating network. By introducing a constant time delay and adopting a linear representation of the DHN, the problem can be reformulated as a MILP. This simplification, however, is not realistic as the time delay is not constant in reality \cite{linearDHN}. In \cite{Heuristicmethod}, they handle the complexity imposed by the integer time delay by proposing a Bender decomposition algorithm. In this way they reduce the Node method to a nonconvex NLP problem, but they experience problems with convergence in edge cases. 
+
+Another option would be to not perform convex relaxations but to directly optimize the non-convex nonlinear system. The gradient and Hessian cannot be determined analytically, as the use of the minimum time delay in the Node method introduces discontinuities in the derivatives. Although methods exist to circumvent these discontinuities when computing numerical gradients, the evaluation of the objective function is computationally expensive. Consequently, approaches that rely on gradient and Hessian information are not considered. Other options would be for example Simulated Annealing or the Powell and Nelder-Mead methods. However, these kind of methods require many function evaluations as well. Here Bayesian Optimization (BO) becomes interesting as it is one of the most efficient approaches in terms of the number of function evaluations required to find an optimum \cite{bo_tutorial}. Therefore this thesis proceeds with applying the Bayesian Optimization technique. 
+% While the authors already have problems with always reaching convergence, the use of a heuristic approach does not guarantee the convergence to a global optimum due to problem non-convex nature. 
+\section{Bayesian Optimization Overview}
+% All the information in this section is drawn from the tutorial on Bayesian Optimization (BO) written by Brochu, Cora, and de Freitas \cite{bo_tutorial}. The citations from this section are also drawn from them. 
+
+Bayesian Optimization (BO) is used to find the extrema of objective functions that are expensive or time-consuming to evaluate. It can be applied in situations where there is no closed-form expression of the objective function, but it is possible to gather some data points of the function. BO techniques are highly efficient considering the number of samples needed to find an extreme. This is largely due to incorporating a prior belief about the problem, helping data sampling, and maintaining a balance while sampling the search space between exploration (sampling x at high uncertainty of the objective function) and exploitation (sampling x where the objective function is likely to be high). The technique revolves around Bayes' Theorem, stated below, hence its name. 
+
+\begin{equation}
+P(f \mid \mathcal{D}_{1:t}) \propto P(\mathcal{D}_{1:t}\mid f) P(f) .
+\end{equation}
+With $x_i$ as the ith sample, $f(x_i)$ as the observation of the objective function at $x_i$ and $\mathcal{D}_{1:t}$ the collection of sampling points and observations $\mathcal{D}_{1:t} = \{x_{1:t},f(x_{1:t})\}$. The prior $P(f)$ is combined with the likelihood function $P(D_{1:t}\mid f)$, resulting in the posterior $P(f \mid \mathcal{D}_{1:t})$ capturing the information we have of the objective function. After each iteration, new observations are incorporated into the posterior, which refines our belief about the objective function. Bayesian Optimization generally uses Gaussian Processes (GP) as the prior of the objective function. A Gaussian Process is a distribution over Gaussian functions, completely specified by its mean function $m(x)$ and the covariance function $k(x,x')$ \cite{bo_tutorial}. 
+
+\begin{equation}
+    f(x) \sim \mathcal{GP}(m(x), k(x,x'))
+\end{equation}
+For convenience, the prior mean is assumed to be zero; applications in which this is not the case are, for example, \cite{MartinezCantin, Brochu2010}. The choice of covariance function is more crucial for the prior, as it determines the smoothness properties of samples drawn from the GP. Depending on the type of system you want to optimize, the kernel might vary. A common example of a kernel is the squared exponential kernel (\ref{eq::isotropic}). With $\theta$ as a hyperparameter affecting the width of the kernel. In the case of anisotropic models, this hyperparameter becomes a diagonal matrix \cite{rasmussen2006gaussian}. The entries of $diag(\theta)$ control how much influence the features have over the covariance.
+\begin{equation}\label{eq::isotropic}
+k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2 \theta^2}\left\|\mathrm{x}_i-\mathrm{x}_j\right\|^2\right),
+\end{equation}
+\begin{equation}\label{eq::anistropic}
+k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2}\left(\mathrm{x}_i-\mathrm{x}_j\right)^T \operatorname{diag}(\theta)^{-2}\left(\mathrm{x}-\mathrm{x}^{\prime}\right)\right).
+\end{equation}
+The values of the hyperparameters are usually defined by starting with random guesses of a few random samples and maximizing the log likelihood of the evidence given $\theta$ \cite{rasmussen2006gaussian, santner2003design}. The kernel choice is typically done using hierarchical Bayesian model selection \cite{mackay1992practical} or cross-validation. 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\linewidth]{figures/BayesianOptmization.png}
+    \caption{An example of Bayesian Optimization. A Gaussian Process approximating the objective function of a 1D problem after four iterations using sampled values of the objective function. In this example, the sought extreme is the maximum \cite{bo_tutorial}.}
+    \label{fig::BO}
+\end{figure}
+
+The next sample location $x_{t+1}$ is determined using an acquisition function. These functions are defined in a way that they yield high values for potentially high (or low, depending on the extreme of interest) values of the objective functions. This can be due to a high predicted objective function value, large uncertainty of this value, or a combination of both. Maximizing the acquisition function results in the next sample location. A proper trade-off between exploration and exploitation within this process is essential to BO, as it allows the method to efficiently scan the search space for potential extrema \cite{bo_tutorial}. 
+Močkus et al. \cite{Mockus1978} proposed to maximize the expected improvement with respect to the best value known thus far. Lizotte \cite{Lizotte2008} introduces an extra parameter to improve the trade-off. Cox and John \cite{CoxJohn1997} present an algorithm that selects evaluation points based on the lower confidence bound of the prediction site. 
+
+Figure \ref{fig::BO} shows three iterative steps of the BO technique. On the x-axis, the optimized feature is plotted, and on the y-axis, its performance is plotted. The black dotted line is the objective function, and the black line is the posterior mean. Around the posterior mean, the light purple region shows the upper and lower bounds of the posterior uncertainty. At each step, the next sampling point is chosen based on the maximum of the acquisition function. This information is then used to update the posterior, as can be clearly observed from the changes in its uncertainty
+
+
+
+\subsection{Discontinuities within objective function}
+Mockus states in \cite{Mockus1994} a number of conditions in order to use the Gaussian process prior. One of those conditions requires the objective function to be continuous. Within the simulation two discontinuous piece-wise non-linear functions can be found, formally breaking this condition. 
+The first one concerns the temperature at the outlet of an edge at timestep k, $T_e[k]$. The Node Method (NM) is not specified for a mass flow rate of zero, in such case I only make use of the exponential relation between the water mass temperature and the ambient temperature, which is the last step of the Node Method.   
+
+\begin{equation}
+T_e[k] =
+\begin{cases}
+\text{only exp}, & \dot{m}_e[k] = 0 \\
+\text{NM}, & \dot{m}_e[k] > 0 
+\end{cases}
+\end{equation}
+
+The other piece-wise term models the relation between the mass flow rate and the displacement of a valve. For very small valve openings (lower than $h^{\star}$, 5\% of a completely opened valve) its hydraulic conductivity ($K_v(h)$) is not well defined and it should lead to extremely high pressure differences as eventually when the valve is completely closed it theoretically requires infinite pressure to flow water through it. This causes the pressure relation over the valve: $\Delta p = \frac{|\dot{m}_e|\dot{m}_e}{K_v(h)^2}$ to spike for these small values of $h$ and become highly sensitive for small changes in the valve displacement. Including 23 valves with this behavior in the simulation model caused convergences problems for the hydraulics. To handle this problem I defined the following piece-wise function: 
+\begin{equation}
+\dot{m}_e[k] =
+\begin{cases}
+0, & h[k] \leq h^{\star} \\
+\text{Kirchhoff laws}, &  h[k] > h^{\star} 
+\end{cases}
+\end{equation}
+
+Considering the first piece-wise function, the smallest mass flows within the simulation are in the order of 0.03-0.05 kg/s, therefore they do not strictly operate around the discontinuity. This leaves the Bayesian Optimization algorithm room to approximate it with a continuous function, while not hurting its representation of the objective function. The same holds for the valves within the heat exchangers as they always operate far away from $h^{\star}$ or are completely closed, therefore they do not operate around this discontinuity within the simulation model. However, for the bypass valve it operates within this region and tends to oscillate a lot around it. In periods of no heat demand the valve plays a big role in whether there is a mass flow or not as it is the only valve actuating. One option to handle this could be to improve the thermostatic bypass valve model. However, I expect it to still oscillate within this region as it will still react to over- and undershoot of the temperature in the valve compared to the setpoint temperature of (55 $^{\circ}$C). Otherwise, I could leave out the $h^{\star}$ implementation and make use of a $K_v(h)$ implementation that produces those high pressure differences over the valve. I used this method before but it resulted in unrealistically small valve openings, so that would require me to set a minimum valve displacement step. The third option would be to argue that it is just a component of a larger model which makes the discontinuity less prominent in the resulting objective function and that a better implementation of the bypass valve is left for the recommendations of future work. 
+
+\subsection{Application}
+Because the simulation spans a full day, optimizing the supply temperature and bypass flow at every individual timestep would produce thousands of decision variables, a scale for which Bayesian optimization is poorly suited. Instead, a lumped optimization approach is adopted, reducing the problem to a handful of parameters. The thermostatic bypass valve is modeled following the P-band relation present in the FJVR. The supply temperature controller is modeled in a similar fashion using the total heat demand within the DCS as its input variable. This reduces the optimization variables to $\theta_{1:6}$, which are stated below in combination with their graphical representation.
+\begin{align*}
+    \theta_1 &: \text{Minimum supply temperature } [^{\circ}\text{C}] \\
+    \theta_2 &: \text{Maximum supply temperature } [^{\circ}\text{C}] \\
+    \theta_3 &: \text{Supply temperature threshold } [\text{W}] \\
+    \theta_4 &: \text{Supply temperature P-band } [\text{W}] \\
+    \theta_5 &: \text{Bypass valve threshold } [^{\circ}\text{C}] \\
+    \theta_6 &: \text{Bypass valve P-band } [^{\circ}\text{C}]
+\end{align*}
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/supply_control.png}
+        \caption{The lumped control relation of the supply temperature control.}
+        \label{fig:Ts_control}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/bypass_valve_control.png}
+        \caption{The lumped control relation of the thermostatic bypass valve.}
+        \label{fig:Bypass_control}
+    \end{subfigure}
+    \caption{Lumped control relations of both actuators.}
+    \label{fig:lumped control.}
+\end{figure}
+\todo[inline]{discuss sigmoid possibility for lumped control, conserving continuous gradient}
+\subsection{Kernel choice}
+The python package \texttt{bayesian-optimization} \cite{BOpackage} will be used to implement the Bayesian Optimization. It comes by default with the Matérn 2.5 kernel, the Matérn kernel is a common kernel within BO \cite{bo_tutorial}. It assumes that the objective function is twice differentiable. However, as established in Section \ref{sec:BOconditions}, the objective function contains some discontinuities. Although these discontinuities were argued to have limited impact on the overall objective, they cannot be fully excluded. The Matérn 1.5 kernel was therefore selected as a more conservative choice as it assumes that the objective function is once differentiable. 
+
+Another option would have been to apply the Matérn 0.5 kernel, which assumes that the objective is nowhere differentiable. That would suggest a very rough objective function with an exponential decay of the correlation function. As the discontinuities have a limited impact on the overall objective and that aside from these discontinuities the function is differentiable, this kernel was determined infeasible. A more sophisticated kernel choice beyond the Matérn family could potentially improve the optimization performance. However, a systematic kernel selection procedure was deemed outside the scope of this thesis due to time constraints.
+
+\todo[inline]{hier verder over alpha/white kernel en lengthscales. Dit moet blijken uit experimenten welke je hebt gekozen.}
+
+The package also provides the option to specify the level of noise the Gaussian Process can handle via the parameter $\alpha$ Although I haven't investigated it in detail, I expect it to be beneficial for handling discontinuities in the objective function. Where also the implementation of different length-scales within the kernel for the input parameters could improve the kernel.
+
+
+\section{Problem definition}
+The optimization problem is defined as follows:
+
+\begin{mini!}|s|
+  {\boldsymbol{\theta}}
+  {\sum_{k=0}^{N-1} \left[w_1 T_r(k)^2 + w_2\left(T_{\text{of}}(k)-T_{\text{set}}\right)^2 + w_3\left(Q_{\text{d,tot}}(k)-Q_{\text{s,tot}}(k)\right)^2\right]}
+  {}
+  {}
+  \addConstraint{\boldsymbol{x}(k+1)}{= f\!\left(u(k),\, \boldsymbol{x}(k:k-\gamma(k))\right)}{}
+  \addConstraint{u(k)}{= \left[T_s(k),\, h(k)\right]^\top}{}
+  \addConstraint{T_s(k)}{= f_1\!\left(Q_{\text{d,tot}}(k),\, \theta_{1}, \theta_2, \theta_3, \theta_4\right)}{}
+  \addConstraint{h(k+1)}{= f_2\!\left(T_{\text{of}}(k),\, \theta_{5}, \theta_6\right)}{}
+  \addConstraint{\boldsymbol{\theta}}{= [\theta_1, \ldots, \theta_6]^\top}{}
+  \addConstraint{(\boldsymbol{x}(k),\,\boldsymbol{\theta})&\in \mathcal{X} \times \Theta}{}
+  \addConstraint{k}{= 0,\ldots,N-1}{}
+  \addConstraint{\boldsymbol{x}(0)}{= \left[T_{\text{ambt}},\, \dot{m}_0\right]^\top}{}
+\end{mini!}
+with $T_r(k)$ being the temperature at the node where the return network ends, $T_{\text{of}}(k)$ the temperature at the node connected to the overflow valve, $T_{\text{set}}$ the temperature setpoint for the overflow and $Q_{\text{d,tot}}(k)$ and $Q_{\text{s,tot}}(k)$ respectively the total heat demand and supplied to the consumers. The state vector $\boldsymbol{x}(k)$ contains the temperatures of all the nodes ($\mathcal{N}$) and the inlet mass flow rates of all edges ($\mathcal{E}$) for timestep $k$. With $N_n$ and $N_e$ being the total number of nodes and edges present in the Graph. In my thesis report the inner working of the state transition function and its initial state will be elaborated in the section before this.
+% , \boldsymbol{x}(k:k-\gamma(k)) : \mathbb{R}^6 \times \mathbb{R}^{N_n + N_e} \rightarrow \mathbb{R}^{N_n + N_e}$.
+
+\[
+\boldsymbol{x}(k) =
+\left[
+\begin{array}{c}
+T_{1}(k) \\
+T_{2}(k) \\
+\vdots \\
+T_{N_n}(k) \\
+\dot{m}_1(k) \\
+\dot{m}_2(k) \\
+\vdots \\
+\dot{m}_{N_e}(k)
+\end{array}
+\right]
+% \quad \boldsymbol{x}(k) \in \mathcal{X}
+\]
+ The optimization variable is used to parameterize the control inputs $T_s$ and $h$ via piece-wise affine functions $f_1: \mathbb{R}^5 \rightarrow \mathbb{R} \in [\theta_1,\theta_2]$ and $f_{3}: \mathbb{R}^2 \rightarrow \mathbb{R} \in [0,1]$ . The maximum memory depth of the state vector required by the Node method is $\gamma(k)$, and defined as:
+%
+\begin{equation}
+    \begin{gathered}
+        \gamma_{e}(k) = \min_{n} \left\{ n \geq 0,\; n \in \mathbb{Z} : \sum_{i=k-n}^{k} \dot{m}_e(i)\,\Delta t > \rho A_e L_e + \dot{m}_e(k)\,\Delta t \right\} \\[6pt]
+        \gamma(k) = \max_{e \in \mathcal{E}} \; \gamma_e(k)
+    \end{gathered}
+    \label{eq:delay}
+\end{equation}
+with $\rho$ the water density, $\dot{m}_e(i)$ the mass flow rate at edge $e$, $A_e$ the edge cross-section and $L_e$ its length. 
+
+% \subsection{Implementation of Bayesian Optimization}
+% Bayesian Optimization will be implemented using the python package: 'bayesian-optimization'. It comes standard with the Matérn kernels, which are often used within BO \cite{bo_tutorial}. It assumes that the objective function is twice differentiable. But due to the discontinuities present in the objective function I will make use of the Matérn 1.5 kernel, which assumes that the objective function is once differentiable. A more sophisticated determination of the kernel might lead to better optimization results. However, due to the time restrictions of the thesis it is classified outside of the thesis scope. The package also provides the option to specify the level of noise the Gaussian Process can handle via the parameter $\alpha$ Although I haven't investigated it in detail, I expect it to be beneficial for handling discontinuities in the objective function. Where also the implementation of different length-scales within the kernel for the input parameters could improve the kernel.
+
+
+
+% Cross validation or hierachical bayesian optimization require a representative data set upfront, but with the kernl you choose the data set so this is not a good option. One could also use warm starting of the kernel by implementing priors of previous models. Or to iterate through the several kernels like bandit where after each iteration you decide how well the fit was and update its weigths of the different kernels eventually converging to one. 
+
+
+% - hoe krijg je convergence bij BO, bepaal je dat het goed genoeg is en voorkom je overfitting?
+
+
+% -nog kijken naar andere artikelen die de node method oplossen of meer algemene optimalisatie algoritms vinden. 
+
+% - other techniques used to solve MINLP
+% - why BO, when to stop and how to prevent overfitting
+% - hoe maak je de optimalisatie robust?

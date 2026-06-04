@@ -1,0 +1,86 @@
+\chapter{Discussion}
+
+\begin{itemize}
+
+    \item Hydraulic balancing has a significant impact on system performance; as discussed in 
+    [Enhancing district heating…],  even a single consumer's valve can noticeably affect the entire network.
+
+    \item The Bayesian Optimization approach introduces serious assumptions that warrant further scrutiny, 
+    including the choice of acquisition function, kernel, and hyperparameter settings.
+
+    \item The deviation between the model and the data from Van der Heijden may be partly caused by 
+    the mass flow rate not being controllable with sufficient precision.
+
+    \item The PhD thesis provides a relevant discussion on valve actuation control that could inform 
+    further refinements [phdThesis].
+
+    \item On page 54 of the PhD thesis, the valve actuator is described in detail. This level of 
+    modelling is not applied here, leaving room for increased precision. The relevance depends on 
+    the required accuracy. Additionally, hysteresis is noted to apply primarily to large valves, 
+    not necessarily to small valves used in thermal end units.
+
+    \item A constant Reynolds number is assumed, which is physically incorrect. This also renders the 
+    Haaland equation invalid in cases where the actual Reynolds number falls below its applicable range.
+
+    \item Minor losses are not accounted for in the hydraulic model.
+
+    \item Scaling the UA value based on the Reynolds number could improve the realism of the heat 
+    exchanger model, bringing it closer to physically observed behaviour.
+
+    \item The Node method limits the ability to accurately control pressure across a pipeline, 
+    though the extent of this limitation depends on the specific configuration.
+
+    \item Valve opening displacement introduces a delay, though this may be negligible given the 
+    one-minute time step used in the simulation.
+
+    \item Valve hysteresis and other non-ideal valve characteristics are not incorporated into the model.
+
+    \item The heat capacity in the Node method is overweighted because the pipe temperature $T_\text{pipe}$ 
+    is not assumed to decrease, which may cause the model to cool down more slowly than reality, 
+    particularly when convection and conduction interact differently at low or zero flow.
+
+    \item The Node method is not well-suited for zero mass flow conditions, as pipe temperatures do 
+    not decrease when water is stationary. This introduces a discrepancy between convective and 
+    conductive heat transfer, potentially causing the model to underestimate cooling rates.
+
+    \item Overshoot in heat supply may result from the PI controller being tuned for a single floor 
+    rather than being adjusted on a per-floor basis.
+
+    \item The NTU method assumes that the fluid passes through the heat exchanger within a single 
+    time step and exchanges all energy instantaneously, whereas the NTU formulation fundamentally 
+    assumes steady-state conditions. So you immediately assume that all the water within the heat exchanger is exchanged while you could also implement a time delay step. To more mimic this behavior like Femke did in here thesis p70.
+
+    \item The pump model could be extended substantially to capture more realistic behaviour.
+
+    \item Low flow rates in the model compared to reality may stem from overflow dynamics. In practice, 
+    the valve opens significantly further than what is achievable in the current modelling setup, 
+    at least within the available calibration time. See the elaboration in \textit{Obtain Realistic Parameters}.
+
+    \item Thermal end unit keep-warm settings are not accounted for in the consumer model.
+
+    \item All consumer units are modelled with identical assumptions, without accounting for the 
+    fact that upper-floor apartments receive less flow than lower-floor ones.
+
+    \item Directly adopting the pipe water temperature at small time steps may introduce errors, 
+    as in reality the pipe does not lose energy as rapidly as the model assumes.
+
+    \item Extending the valve model to include non-linearities such as hysteresis and deadband raises 
+    the question of compatibility with Bayesian Optimization, which is generally not well-suited 
+    for highly non-linear and discontinuous input-output relationships https://instrunexus.com/understanding-control-valve-hysteresis-deadband-response-time/.
+
+    \item The consumer-side flow rate naturally decreases with height in the building, which is not 
+    reflected in the current model.
+
+    \item Assuming a constant ambient temperature is a simplification that does not reflect realistic 
+    operating conditions.
+
+    \item A more realistic model for supply temperature production and return temperature handling, 
+    such as an ATES model, could be implemented to improve overall system representation.
+
+    \item The supply temperature is assumed to be directly controllable, without modelling the 
+    heat supply system itself.
+
+    \item All assumptions made in selecting the hyperparameters of the Bayesian Optimization deserve 
+    explicit justification and sensitivity analysis.
+
+\end{itemize}

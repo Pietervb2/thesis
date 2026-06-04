@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import json
-import time
+import datetime
 import shutil
 import csv
 import pandas as pd
@@ -798,7 +798,8 @@ def compare_with_benchmark(profile,
                            curve,
                            n_init_points, 
                            n_iter,
-                           new_benchmark_run = False):
+                           new_benchmark_run = False,
+                           day = None):
 
     thesis_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -812,9 +813,12 @@ def compare_with_benchmark(profile,
          
     # Load network instances
     opt_folder_name = f'{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}'
-    opt_folder = os.path.join(thesis_dir, 'figures', 'optimization_set', opt_folder_name)
 
-    # file_opt = os.path.join(opt_folder, 'pickle_folder.zip')
+    if day is None:
+        day = str(datetime.datetime.now().date())
+
+    opt_folder = os.path.join(thesis_dir, 'figures', 'optimization_set', day, opt_folder_name)
+
     file_opt = os.path.join(opt_folder, 'hex_consumer_data', 'total_heat.csv')
 
     # check if optimization has been performed
@@ -1245,7 +1249,7 @@ if __name__ == "__main__":
 
     start = datetime.now()
 
-    i = 1
+    i = 4
     profile = f'Profile {i}'
     dt = 60
     pump_pressure = 60
@@ -1254,19 +1258,21 @@ if __name__ == "__main__":
 
     print(f'start test: {start}, test_name: {test_name}')
 
-    cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
+    model_network_Rutger(profile, 'benchmark', dt, pump_pressure, curve)
 
-    # # Normalized
-    theta_1 = 0.4191945 # Minimum supply temperature [°C]
-    theta_2 = 0.6852195 # Maximum supply temperature [°C]
-    theta_3 = 0.2044522 # Heat demand threshold [W] (Q_set)
-    theta_4 =  0.8781174 # Heat demand P-band [W]
-    theta_5 = 0.0273875 # Overflow valve additional temperature setpoint [°C]
-    theta_6 = 0.5 # Overflow valve P-band [°C]
+    # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
-    print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
+    # # # Normalized
+    # theta_1 = 0.4191945 # Minimum supply temperature [°C]
+    # theta_2 = 0.6852195 # Maximum supply temperature [°C]
+    # theta_3 = 0.2044522 # Heat demand threshold [W] (Q_set)
+    # theta_4 =  0.8781174 # Heat demand P-band [W]
+    # theta_5 = 0.0273875 # Overflow valve additional temperature setpoint [°C]
+    # theta_6 = 0.5 # Overflow valve P-band [°C]
 
-    cost = cost_function.objective(theta_1, theta_2, theta_3, theta_4, theta_5)
+    # print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
+
+    # cost = cost_function.objective(theta_1, theta_2, theta_3, theta_4, theta_5)
 
 
     print(f'duration test: {datetime.now() - start}')

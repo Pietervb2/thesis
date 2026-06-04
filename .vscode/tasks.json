@@ -4,7 +4,7 @@
         {
             "label": "BO Profile 1",
             "type": "shell",
-            "command": "python BayesianOptimization.py 1",
+            "command": "python BO.py 1",
             "presentation": {
                 "panel": "new",
                 "reveal": "always"
@@ -13,7 +13,7 @@
         {
             "label": "BO Profile 2",
             "type": "shell",
-            "command": "python BayesianOptimization.py 2",
+            "command": "python BO.py 2",
             "presentation": {
                 "panel": "new",
                 "reveal": "always"
@@ -22,7 +22,7 @@
         {
             "label": "BO Profile 3",
             "type": "shell",
-            "command": "python BayesianOptimization.py 3",
+            "command": "python BO.py 3",
             "presentation": {
                 "panel": "new",
                 "reveal": "always"
@@ -31,7 +31,7 @@
         {
             "label": "BO Profile 4",
             "type": "shell",
-            "command": "python BayesianOptimization.py 4",
+            "command": "python BO.py 4",
             "presentation": {
                 "panel": "new",
                 "reveal": "always"

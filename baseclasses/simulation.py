@@ -1,10 +1,10 @@
 from .network import Network
 
-
 from pathlib import Path
 from scipy.signal import square
 from typing import Union
 
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -37,11 +37,13 @@ class Simulation:
                 self.folder = os.path.join(base_dir, "figures", "benchmark", f"Benchmark_{profile}_dt={dt}")
 
             elif run_type == 'save_optimization':
-                self.folder = os.path.join(base_dir, "figures", "optimization_set", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
+                
+                day = datetime.datetime.now().date()
+                self.folder = os.path.join(base_dir, "figures", "optimization_set", str(day), f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
             
             elif run_type == 'test': 
                 if file:
-                    sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"
+                    sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"     
                 else:
                     
                     if test_name is not None:
