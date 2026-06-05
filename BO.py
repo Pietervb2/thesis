@@ -3,7 +3,7 @@ from bayes_opt import BayesianOptimization
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel
 from scipy.optimize import NonlinearConstraint
 
-from test import optimization_run 
+from test import optimization_run, normal_run
 
 import numpy as np
 import time
@@ -13,7 +13,7 @@ import pandas as pd
 
 
 class CostFunction:
-    def __init__(self, profile, dt, pump_pressure, curve, run_type, test_name = None):
+    def __init__(self, profile, dt, pump_pressure, curve, run_type, new_benchmark_run = False,test_name = None):
         self.profile = profile
         self.dt = dt
         self.pump_pressure = pump_pressure
@@ -22,10 +22,10 @@ class CostFunction:
         self.run_type = run_type
         self.test_name = test_name
 
-        self.w_Tr = 3 * 1/4181 * 1e-3
-        self.w_Ts = 1/4181 * 1e-3
-        self.w_dTs = 5
-       
+        self.w_Tr = 9 * 1/4181 * 1e-3
+        self.w_Ts = 3 * 1/4181 * 1e-3
+        self.w_dTs = 30
+
         # Physical bounds
         self.dict_physical_bounds = {'Profile 1': {
                                             'theta_1': (60, 62.5),
@@ -57,7 +57,7 @@ class CostFunction:
                                         }
             }
 
-        # Heat constraints and tolerances        
+        # Load heat constraints and tolerances        
         thesis_dir = os.path.dirname(os.path.abspath(__file__))
         file_loc = os.path.join(thesis_dir,
                                 'figures',
@@ -77,7 +77,7 @@ class CostFunction:
         self.tol_deltaQ = 0.25   # max allowed excess above max_deltaQ benchmark
 
         # Return temperature constraints
-        self.T_r_max = 60   # smooth-max of return temperature must stay below this [°C]
+        self.T_r_max = 43   # smooth-max of return temperature must stay below this [°C]
 
         # Saving values for constraint to avoid redundant simulations
         self._cache = {}
@@ -267,18 +267,23 @@ def smooth_max(x, alpha=100):
     m = np.max(x)
     return m + np.log(np.sum(np.exp(alpha * (x - m)))) / alpha
 
-def run_bo(i, dt, pump_pressure, curve):
+def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False):
     start = time.time()
     print(f'Initiation of code profile {i} at {datetime.now()}')
     
     profile = f'Profile {i}'
 
+    if new_benchmark_run == True:
+        print("Perform benchmark simulation")
+        T_in_benchmark = 65 # °C, can be adjusted if needed
+        normal_run(profile, 'benchmark', dt, pump_pressure, curve, T_in_benchmark)
+
     # Settings 
     random_state = 1 
     n_restarts = 15
     alpha = 1e-6
-    init_points = 2
-    n_iter = 2
+    init_points = 10
+    n_iter = 15
    
     cost_fn = CostFunction(profile, dt, pump_pressure, curve, run_type = 'optimization')
     pbounds = {k: (0, 1) for k in cost_fn.dict_physical_bounds[profile]}
@@ -294,7 +299,7 @@ def run_bo(i, dt, pump_pressure, curve):
         pbounds=pbounds,
         verbose=2, # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
         random_state=random_state)
-
+    
     kernel = Matern(nu=2.5, 
                     length_scale=np.ones(optimizer.space.dim), 
                     length_scale_bounds=(0.05, 3))
@@ -309,7 +314,7 @@ def run_bo(i, dt, pump_pressure, curve):
 
     gp_kernel_before = optimizer._gp.kernel
 
-    initial_point = {'theta_1': 1, 'theta_2': 1, 'theta_3': 0, 'theta_4': 0, 'theta_5': 0.8}
+    initial_point = {'theta_1': 1, 'theta_2': 1, 'theta_3': 0, 'theta_4': 0, 'theta_5': 0.85}
     optimizer.probe(initial_point, lazy=False)
 
     optimizer.maximize(
@@ -355,7 +360,6 @@ def run_bo(i, dt, pump_pressure, curve):
                            opt_results = results, 
                            n_init_points = init_points,
                            n_iter = n_iter,
-                           new_benchmark_run = True,
                            debug_dict_BO = cost_fn.dict_debug)
     
     stop = time.time()
@@ -367,4 +371,4 @@ if __name__ == '__main__':
         dt = 60
         pump_pressure = 60
         curve = True
-        run_bo(profile_num, dt, pump_pressure, curve)
+        run_bo(profile_num, dt, pump_pressure, curve, new_benchmark_run = True)

@@ -597,62 +597,6 @@ def fit_Kv_values():
     diff = np.sum(result.x - mflow_array)
     print(f"Difference between of all mass flows supplied Rutgers values and root solution: {diff}")
 
-def model_network_Rutger(profile, run_type, dt, pump_pressure, curve):
-    
-    """
-    Replicate network of which Rutger send data from
-    """
-
-    pipe_data_DN20 = read_pipe_data('DN20')
-    pipe_data_DN25 = read_pipe_data('DN25')
-    pipe_data_DN32 = read_pipe_data('DN32')
-    pipe_data_DN40 = read_pipe_data('DN40')
-
-    hex_data = read_hex_data('Standard hex constants')
-    overflow_data = read_overflow_data('Overflow')
-
-    pump_type = f"{pump_pressure}kPa Pump {'curve' if curve else 'constant'}"
-    pump_data = read_pump_data(pump_type)
-
-    # Create network
-    tau = overflow_data[4]
-    steps = overflow_data[5]
-    temperature = 65
-
-    if run_type == 'benchmark': 
-        net = Network(f'Benchmark Rut')
-        of_type = False
-    elif run_type == 'test':
-        net = Network(f'NetRut, Qd_response')
-        of_type = True
-
-    consumer_list = consumer_start_times(f'{profile}', [7.5, 21])
-    pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
-   
-    # Simulation parameters
-    total_time = 24 * 3600 # sec
-    T_ambt = 20
-
-    # Temperature input profile
-    temp_type = 'constant'
-    T_in = generate_input_network(temp_type, total_time, dt, temperature)
-
-    # True = P-band optimzation, False = benchmark with deadband
-    overflow_data.append(of_type) 
-
-    # Create Network
-    network_builder(net, 
-                pipe_data_list,
-                pipe_data_DN20, 
-                hex_data,
-                pump_data, 
-                consumer_list,
-                overflow_data = overflow_data,
-                )
-    # Run simulation
-    sim = Simulation(profile, run_type, dt, total_time, T_ambt, net_id = net.net_id)
-    sim.simulate_network(run_type, net, T_ambt, T_ambt, T_in = T_in)
-
 def overflow_test():
     """
     Replicate network of which Rutger send data from
@@ -703,6 +647,61 @@ def overflow_test():
     sim = Simulation(profile, run_type, dt, total_time, T_ambt, net_id = net.net_id)
     sim.simulate_network(run_type, net, T_ambt, T_ambt, T_in = T_in)
 
+def normal_run(profile, run_type, dt, pump_pressure, curve, T_in_base,
+               temp_type = None, 
+               test_name = None):
+    
+    """
+    Replicate network of which Rutger send data from
+    """
+
+    pipe_data_DN20 = read_pipe_data('DN20')
+    pipe_data_DN25 = read_pipe_data('DN25')
+    pipe_data_DN32 = read_pipe_data('DN32')
+    pipe_data_DN40 = read_pipe_data('DN40')
+
+    hex_data = read_hex_data('Standard hex constants')
+    overflow_data = read_overflow_data('Overflow')
+
+    pump_type = f"{pump_pressure}kPa Pump {'curve' if curve else 'constant'}"
+    pump_data = read_pump_data(pump_type)
+
+    # Create network
+    net = Network(f'{profile}')
+
+    consumer_list = consumer_start_times(f'{profile}', [7.5, 21])
+    pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
+   
+    # Simulation parameters
+    total_time = 24 * 3600 # sec
+    T_ambt = 20
+
+    if run_type == 'benchmark': 
+        of_type = False # meaning just the deadband
+        temp_type = 'constant'
+        T_in = generate_input_network(temp_type, total_time, dt, T_in_base)
+
+    elif run_type == 'test':
+        of_type = True # meaning the P-band optimization
+        T_in = generate_input_network(temp_type, total_time, dt, T_in_base)
+
+    # True = P-band optimization, False = benchmark with deadband
+    overflow_data.append(of_type) 
+
+    # Create Network
+    network_builder(net, 
+                pipe_data_list,
+                pipe_data_DN20, 
+                hex_data,
+                pump_data, 
+                consumer_list,
+                overflow_data = overflow_data,
+                )
+    
+    # Run simulation
+    sim = Simulation(profile, run_type, dt, total_time, T_ambt, test_name = test_name)
+    sim.simulate_network(run_type, net, T_ambt, T_ambt, T_in = T_in)
+
 def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
                     profile,
                     dt,
@@ -751,7 +750,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     # Apply input parameters for BO
     overflow_data[1] = theta_5 # Temperature setpoint
     overflow_data[2] = theta_6 # P-band width
-    overflow_data.append(True) #  True = P-band optimzation, False = benchmark with deadband
+    overflow_data.append(True) #  True = P-band optimization, False = benchmark with deadband
 
     # Create Network
     network_builder(net, 
@@ -809,7 +808,8 @@ def compare_with_benchmark(profile,
     if not os.path.exists(bench_folder) or new_benchmark_run:
         # Perform benchmark simulation
         print("Perform benchmark simulation")
-        model_network_Rutger(profile, 'benchmark', dt, pump_pressure, curve)
+        T_in_benchmark = 65 # °C, can be adjusted if needed
+        normal_run(profile, 'benchmark', dt, pump_pressure, curve, T_in_benchmark)
          
     # Load network instances
     opt_folder_name = f'{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}'
@@ -1247,18 +1247,20 @@ if __name__ == "__main__":
     from BO import CostFunction
 
 
-    start = datetime.now()
+    start = datetime.datetime.now()
 
     i = 4
     profile = f'Profile {i}'
     dt = 60
     pump_pressure = 60
     curve = True
-    test_name = f'BO_test={profile}_dt={dt}_pump={pump_pressure}kPa_curve={curve}'
+    # test_name = f'BO_test={profile}_dt={dt}_pump={pump_pressure}kPa_curve={curve}'
+    test_name = "Normal_run_test_old"
 
     print(f'start test: {start}, test_name: {test_name}')
 
-    model_network_Rutger(profile, 'benchmark', dt, pump_pressure, curve)
+    normal_run(profile, 'test', dt, pump_pressure, curve, 65, 'constant', test_name = test_name)
+
 
     # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
@@ -1275,22 +1277,4 @@ if __name__ == "__main__":
     # cost = cost_function.objective(theta_1, theta_2, theta_3, theta_4, theta_5)
 
 
-    print(f'duration test: {datetime.now() - start}')
-
-
-                                        # {'Profile 1': {
-                                        #     'theta_1': (60, 62.5),
-                                        #     'theta_2': (62.5, 65),
-                                        #     'theta_3': (200, 500e3),
-                                        #     'theta_4': (0, 300e3),
-                                        #     'theta_5': (30, 55)
-                                        #     # 'theta_6': (1, 5)
-                                        #     },
-
-                                        # 'Profile 4': {
-                                        #     'theta_1': (60, 62.5),
-                                        #     'theta_2': (62.5, 65),
-                                        #     'theta_3': (0, 150e3),
-                                        #     'theta_4': (0, 150e3),
-                                        #     'theta_5': (30, 55)
-                                        #     # 'theta_6': (1, 5)
+    print(f'duration test: {datetime.datetime.now() - start}')

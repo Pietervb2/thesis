@@ -558,33 +558,54 @@ class Network:
 
     def set_T_network(self, T_ambt : float, N : int, T_in : float, no_cap = False):
             
-            """"
-            Set temperature in the network.
-            """
+        """"
+        Set temperature in the network.
+        """
 
-            # List of pipes for which the bnode method is performed.
-            self.pipes_finished = []
+        # # List of pipes for which the bnode method is performed.
+        # self.pipes_finished = []
 
-            # Done by hand as no inflow pipe connected to node, gets Pipe 1. 
-            first_pipe = self.pipes['Pipe 1.1']['pipe_instance']
-            first_node = self.nodes['Node 1.1'] 
+        # # Done by hand as no inflow pipe connected to node, gets Pipe 1. 
+        # first_pipe = self.pipes['Pipe 1.1']['pipe_instance']
+        # first_node = self.nodes['Node 1.1'] 
 
-            # set_T doesn't work as there is no mass inflow, so set it directly.
-            first_node.T[N] = T_in 
-            first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
+        # # set_T doesn't work as there is no mass inflow, so set it directly.
+        # first_node.T[N] = T_in 
+        # first_pipe.set_T_in(first_node.T[N], N) # Set inlet temperature
 
-            first_pipe.bnode_method_fast(T_ambt, N, no_cap = no_cap)
+        # first_pipe.bnode_method_fast(T_ambt, N, no_cap = no_cap)
 
-            self.pipes_finished.append(first_pipe.pipe_id)
+        # self.pipes_finished.append(first_pipe.pipe_id)
 
-            # Get node at end of pipe. 
-            next_node_id = self.pipes[first_pipe.pipe_id]['to']
-            next_node = self.nodes[next_node_id]
+        # # Get node at end of pipe. 
+        # next_node_id = self.pipes[first_pipe.pipe_id]['to']
+        # next_node = self.nodes[next_node_id]
 
-            # Update temperature 
-            next_node.set_T(N)
-            
-            self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
+        # # Update temperature 
+        # next_node.set_T(N)
+        
+        # self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
+
+        # List of pipes for which the bnode method is performed.
+        self.pipes_finished = []
+
+        # Assume that the water delivered by the ATES enters the system  
+        first_pipe = self.pipes['Pump 1']['pipe_instance']
+   
+        first_pipe.set_T_in(T_in, N) # Set inlet temperature
+
+        first_pipe.bnode_method_fast(T_ambt, N, no_cap = no_cap)
+
+        self.pipes_finished.append(first_pipe.pipe_id)
+
+        # Get node at end of pipe. 
+        next_node_id = self.pipes[first_pipe.pipe_id]['to']
+        next_node = self.nodes[next_node_id]
+
+        # Update temperature 
+        next_node.set_T(N)
+        
+        self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = False)
           
     def set_T_network_rec(self, node : Node, node_id : str, T_ambt : float, N : int, no_cap = False):
         """"
@@ -603,13 +624,17 @@ class Network:
             next_node = self.nodes[next_node_id]
 
             if all(pipes in self.pipes_finished for pipes in list(next_node.pipes_in.keys())):
+                # if next_node_id == 'Node 1.1':
+                #     continue    # Skip first node as its temperature is already set.
 
-                if next_node_id == 'Node 1.1':
+                # # here the inlet temperature for the pipe is set coming from the node. 
+                # next_node.set_T(N)  
+                # self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)    
+                next_node.set_T(N)
+                if next_node_id == 'Node 1.6':
                     continue    # Skip first node as its temperature is already set.
-
-                next_node.set_T(N)      # here the inlet temperature for the pipe is set coming from the node. 
-                self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)    
-        
+                self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)
+    
     def pipe_length(self, Node1, Node2):
         """
         Function that calculates the length of the pipe between two nodes. 

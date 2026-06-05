@@ -27,8 +27,6 @@ class Simulation:
         self.num_steps = len(self.time) 
         self.T_ambt = T_ambt
 
-        total_time_str = str(total_time)
-
         # Create simulation-specific subfolder
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
            
@@ -45,14 +43,7 @@ class Simulation:
                 if file:
                     sim_name = f"{file}_dt={dt}_Tambt={T_ambt}"     
                 else:
-                    
-                    if test_name is not None:
-                        sim_name = f"{test_name}_dt={dt}_Tambt={T_ambt}"
-                    else:
-                        sim_name = (
-                            f"{net_id}_dt={dt}_total_time={total_time_str}_"
-                            f"Tambt={T_ambt}"
-                    )
+                    sim_name = f"{test_name}_dt={dt}_Tambt={T_ambt}"
 
                 self.folder = os.path.join(base_dir, "figures", "simulation", sim_name)     
                     
