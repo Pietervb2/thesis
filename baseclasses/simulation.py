@@ -37,7 +37,7 @@ class Simulation:
             elif run_type == 'save_optimization':
                 
                 day = datetime.datetime.now().date()
-                self.folder = os.path.join(base_dir, "figures", "optimization_set", str(day), f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
+                self.folder = os.path.join(base_dir, "figures", "optimization_set", f"{str(day)}_1", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
             
             elif run_type == 'test': 
                 if file:
@@ -49,6 +49,10 @@ class Simulation:
                     
                 if no_cap:
                     self.folder = self.folder + "_no_cap"       
+
+            elif run_type == 'sweep':
+                sim_name = f"{test_name}_dt={dt}_Tambt={T_ambt}"
+                self.folder = os.path.join(base_dir, "figures", "sweeps", sim_name)
 
             if not os.path.exists(self.folder):
                 os.makedirs(self.folder)

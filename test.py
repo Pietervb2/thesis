@@ -509,7 +509,7 @@ def fit_Kv_values():
 
     # Load data of 23 floor 'stijgstrangen'. 
     thesis_dir = os.path.dirname(os.path.abspath(__file__))
-    average_v_file = os.path.join(os.path.dirname(thesis_dir),'data', 'data_23floors_Rutger.csv')
+    average_v_file = os.path.join(os.path.dirname(thesis_dir),'thesis','data', 'data_23floors_Rutger.csv')
     average_v = pd.read_csv(average_v_file)['average v'].values
 
     # Use the diameters and velocities to fill the mflow array.
@@ -541,7 +541,14 @@ def fit_Kv_values():
             radius = net.pipes[f'Pipe {i+1}.1']['pipe_instance'].r_inner
             mflow = np.pi * radius ** 2 * average_v[i] * 1000
             mflow_array[i*6+1:(i+1)*6+1] = mflow
-    print("mass flow array:", mflow_array)
+    # print("mass flow array:", mflow_array)
+
+    # check whether mass flow is correctly applied
+    residuals = net.incidence_matrix @ mflow_array
+    assert np.allclose(residuals, 0, atol=1e-6), \
+        f"Mass conservation violated! Max residual: {np.max(np.abs(residuals)):.4e}"
+    print("Mass conservation check passed: flow is conserved at all nodes.")
+       
 
     # Calculate pressure losses in loops without taking the valves into account
     friction_vector = net.pressure_friction_vector + \
@@ -570,7 +577,7 @@ def fit_Kv_values():
 
     print("Calculated Kv values for valves (from Hex 1 to Hex 23):",Kv)
 
-    # Validate Kv values
+    ### Validate Kv values ###
     for i, hex_obj in enumerate(net.hexs.values()):        
         pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
         j = net.pipe_map[pipe_id]
@@ -596,6 +603,56 @@ def fit_Kv_values():
     result = root(net.res, mflow0, jac = net.jac, method = 'hybr')
     diff = np.sum(result.x - mflow_array)
     print(f"Difference between of all mass flows supplied Rutgers values and root solution: {diff}")
+
+    # Tolerance check per pipe
+    tol = 1e-4  # kg/s, adjust based on your flow magnitudes
+    violations = np.where(np.abs(result.x - mflow_array) > tol)[0]
+    if len(violations) != 0:
+        print(f"Some pipe flows do not match within tolerance ({tol} kg/s).")
+
+    return Kv
+
+def check_Kvs_range(Kv_array, Kvs_min=0.1, Kvs_max=3.0, n_steps=100):
+    """
+    Sweep over Kvs values and check which yield valid h in [0,1] for all valves.
+    Uses the equal percentage valve formula from valve.py:
+        Kv = (Kvs/Kv0)^(h-1) * Kvs,  with Kv0 = Kvs/25
+    Inverted:
+        h = 1 + log(Kv/Kvs) / log(Kvs/Kv0)
+    """
+
+    def h_from_Kv(Kv_target, Kvs):
+        Kv0 = Kvs / 25
+        return 1 + np.log(Kv_target / Kvs) / np.log(Kvs / Kv0)
+
+    Kvs_values = np.linspace(Kvs_min, Kvs_max, n_steps)
+
+    valid_Kvs = []
+    valid_h   = []
+
+    for Kvs in Kvs_values:
+        h_values = np.array([h_from_Kv(kv, Kvs) for kv in Kv_array])
+
+        # print(f"Kvs={Kvs:.3f}: h_values_max={max(h_values):.3f}, h_values_min={min(h_values):.3f}")
+
+        if np.all(h_values >= 0) and np.all(h_values <= 1):
+            valid_Kvs.append(Kvs)
+            valid_h.append(h_values)
+
+    # Report
+    if len(valid_Kvs) == 0:
+        print("No valid Kvs found in range. All Kvs values yield h outside [0, 1] for at least one valve.")
+    else:
+        print(f"Valid Kvs range: [{min(valid_Kvs):.4f}, {max(valid_Kvs):.3f}] m3/h/sqrt(bar)")
+        print(f"({len(valid_Kvs)} out of {n_steps} Kvs values are valid)\n")
+
+        for i, Kvs in enumerate(valid_Kvs):
+            h_vals = valid_h[i]
+            print(f"Kvs={Kvs:.4f}: h_min={np.min(h_vals):.3f}, "
+                  f"h_max={np.max(h_vals):.3f}, "
+                  f"h_mean={np.mean(h_vals):.3f}")
+
+    return valid_Kvs, valid_h
 
 def overflow_test():
     """
@@ -675,6 +732,10 @@ def normal_run(profile, run_type, dt, pump_pressure, curve, T_in_base,
     # Simulation parameters
     total_time = 24 * 3600 # sec
     T_ambt = 20
+    T_init_pipe = 20
+    T_init_water = 20
+
+    print(f'init water temp: {T_init_water}, init pipe temp: {T_init_pipe}')
 
     if run_type == 'benchmark': 
         of_type = False # meaning just the deadband
@@ -700,9 +761,9 @@ def normal_run(profile, run_type, dt, pump_pressure, curve, T_in_base,
     
     # Run simulation
     sim = Simulation(profile, run_type, dt, total_time, T_ambt, test_name = test_name)
-    sim.simulate_network(run_type, net, T_ambt, T_ambt, T_in = T_in)
+    sim.simulate_network(run_type, net, T_init_water, T_init_pipe, T_in = T_in)
 
-def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
+def optimization_run(theta,
                     profile,
                     dt,
                     pump_pressure,
@@ -748,8 +809,8 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
     T_ambt = 20
 
     # Apply input parameters for BO
-    overflow_data[1] = theta_5 # Temperature setpoint
-    overflow_data[2] = theta_6 # P-band width
+    overflow_data[1] = theta[4] # Temperature setpoint
+    overflow_data[2] = theta[5] # P-band width
     overflow_data.append(True) #  True = P-band optimization, False = benchmark with deadband
 
     # Create Network
@@ -763,11 +824,10 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
                 )
     
     # Run simulation
-    theta = [theta_1, theta_2, theta_3, theta_4, theta_5, theta_6]
     net.theta = theta # debug
     
     sim = Simulation(profile, run_type, dt, total_time, T_ambt, n_init_points=n_init_points, n_iter = n_iter, test_name = test_name)
-    sim.simulate_network(run_type, net, T_ambt, T_ambt, theta_1, theta_2, theta_3, theta_4)
+    sim.simulate_network(run_type, net, T_ambt, T_ambt, theta[0], theta[1], theta[2], theta[3])
 
     if run_type == 'save_optimization':
 
@@ -788,7 +848,7 @@ def optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
         
         compare_with_benchmark(profile, dt, pump_pressure, curve, n_init_points, n_iter, new_benchmark_run = new_benchmark_run)
            
-    elif run_type == 'optimization' or run_type == 'test':
+    elif run_type == 'optimization' or run_type == 'test' or run_type == 'sweep':
         return net
 
 def compare_with_benchmark(profile, 
@@ -1244,37 +1304,46 @@ def denormalize(val, low, high):
 if __name__ == "__main__":
     
 
-    from BO import CostFunction
+    # from BO import CostFunction
 
 
-    start = datetime.datetime.now()
+    # start = datetime.datetime.now()
 
-    i = 4
-    profile = f'Profile {i}'
-    dt = 60
-    pump_pressure = 60
-    curve = True
-    # test_name = f'BO_test={profile}_dt={dt}_pump={pump_pressure}kPa_curve={curve}'
-    test_name = "Normal_run_test_old"
+    # i = 4
+    # profile = f'Profile {i}'
+    # dt = 1
+    # pump_pressure = 60
+    # curve = True
+    # # test_name = f'BO_test={profile}_dt={dt}_pump={pump_pressure}kPa_curve={curve}'
+    # test_name = f"Profile {i}_newRetest"
 
-    print(f'start test: {start}, test_name: {test_name}')
+    # print(f'start test: {start}, test_name: {test_name}')
 
-    normal_run(profile, 'test', dt, pump_pressure, curve, 65, 'constant', test_name = test_name)
-
-
-    # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
-
-    # # # Normalized
-    # theta_1 = 0.4191945 # Minimum supply temperature [°C]
-    # theta_2 = 0.6852195 # Maximum supply temperature [°C]
-    # theta_3 = 0.2044522 # Heat demand threshold [W] (Q_set)
-    # theta_4 =  0.8781174 # Heat demand P-band [W]
-    # theta_5 = 0.0273875 # Overflow valve additional temperature setpoint [°C]
-    # theta_6 = 0.5 # Overflow valve P-band [°C]
-
-    # print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
-
-    # cost = cost_function.objective(theta_1, theta_2, theta_3, theta_4, theta_5)
+    # normal_run(profile, 'test', dt, pump_pressure, curve, 65, 'constant', test_name = test_name)
 
 
-    print(f'duration test: {datetime.datetime.now() - start}')
+    # # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
+
+    # # # # Normalized
+    # # theta_1 = 0.4191945 # Minimum supply temperature [°C]
+    # # theta_2 = 0.6852195 # Maximum supply temperature [°C]
+    # # theta_3 = 0.2044522 # Heat demand threshold [W] (Q_set)
+    # # theta_4 =  0.8781174 # Heat demand P-band [W]
+    # # theta_5 = 0.0273875 # Overflow valve additional temperature setpoint [°C]
+    # # theta_6 = 0.5 # Overflow valve P-band [°C]
+
+    # # print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
+
+    # # cost = cost_function.objective(theta_1, theta_2, theta_3, theta_4, theta_5)
+
+
+    # print(f'duration test: {datetime.datetime.now() - start}')
+
+    Kvs_min = 0.1
+    Kvs_max = 3.0
+    Kvs_min_Pa = Kvs_min * 1000 / 3600 / np.sqrt(1e5)  # Convert Kvs from m3/h/sqrt(bar) to m3/s/sqrt(Pa)
+    Kvs_max_Pa = Kvs_max * 1000 / 3600 / np.sqrt(1e5)
+
+    Kv_array = fit_Kv_values()
+    valid_Kvs, valid_h = check_Kvs_range(Kv_array, Kvs_min=Kvs_min_Pa, Kvs_max=Kvs_max_Pa, n_steps=100)
+

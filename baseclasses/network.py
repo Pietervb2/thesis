@@ -296,7 +296,7 @@ class Network:
         for j, pipe_id in enumerate(self.pipes.keys()):
 
             pipe = self.pipes[pipe_id]['pipe_instance']
-            self.pressure_friction_vector[j] = pipe.pressure_friction()
+            self.pressure_friction_vector[j] = pipe.pressure_friction(0)
             self.pressure_elevation_vector[j] = pipe.pressure_elevation()
 
         # dict of pump positions per pipe and its curve coeff
@@ -320,6 +320,17 @@ class Network:
         for valve in self.valves.values():
             j = self.pipe_map[valve.pipe_id]
             self.inv_Kv_array[j] = 1/valve.Kv[0] # Not necessary but for reverse engineering Rutger's data I left it here.
+
+    def update_friction_vector(self, N : int):
+        """
+        Update the friction term based on the previous mass flow in the pipe.
+        """
+
+        for pipe_id in self.pipes.keys():
+
+            pipe = self.pipes[pipe_id]['pipe_instance']
+            j = self.pipe_map[pipe_id]
+            self.pressure_friction_vector[j] = pipe.pressure_friction(self.mflow_all[j, N-1])
 
     def update_valves(self, N : int):
         """
@@ -448,6 +459,8 @@ class Network:
         self.pump_coeff_active = self.pump_coeff[active_mask, :]
         mflow0_active = mflow0[active_mask]
 
+        self.update_friction_vector(N)
+
         friction_vector = self.pressure_friction_vector + \
                 self.Kp_array + \
                 self.inv_Kv_array**2
@@ -474,13 +487,11 @@ class Network:
 
                 if result.success == True and (result.x > 0).all():
                     solved = True
-                    # if lm:
-                    #     print(f'Used Levenbergh Marquardt at N = {N} and with precision {precision}')
-                    # else:
-                    #     if precision < 5:
-                    #         print(f'Used Hybr method at N = {N} and with precision {precision}')
-
-
+                    if lm:
+                        print(f'Used Levenbergh Marquardt at N = {N} and with precision {precision}')
+                    else:
+                        if precision < 5:
+                            print(f'Used Hybr method at N = {N} and with precision {precision}')
                     break
             
             # In case root solving didn't work.
@@ -554,7 +565,10 @@ class Network:
         for j, pipe_id in enumerate(pipe_ids[active_mask]):
             pipe = self.pipes[pipe_id]['pipe_instance']
             pipe.set_mflow(mflow_active[j],N)
-            pipe.save_dp_friction(N)
+            
+            # Save friction term
+            map_idx = self.pipe_map[pipe_id]
+            pipe.save_dp_friction(self.mflow_all[map_idx, N-1], N)
 
     def set_T_network(self, T_ambt : float, N : int, T_in : float, no_cap = False):
             
@@ -630,9 +644,28 @@ class Network:
                 # # here the inlet temperature for the pipe is set coming from the node. 
                 # next_node.set_T(N)  
                 # self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)    
-                next_node.set_T(N)
                 if next_node_id == 'Node 1.6':
+                    
+                    # Inside of set_T(N) of node but without resetting the T_in next pipe
+                    sum_T_flow = 0
+                    sum_m_inflow = 0
+                    sum_T = 0
+                    for _, pipe in next_node.pipes_in.items():
+                        
+                        m_inflow = pipe.get_mflow(N)
+                        sum_T_flow += pipe.T[N] * m_inflow
+                        sum_m_inflow += m_inflow
+
+                        sum_T += pipe.T[N]
+
+                    if sum_m_inflow == 0:
+                        next_node.T[N] = sum_T/len(next_node.pipes_in)            
+                    else:   
+                        next_node.T[N] = sum_T_flow / sum_m_inflow # set the node temperature  
+
                     continue    # Skip first node as its temperature is already set.
+                
+                next_node.set_T(N)
                 self.set_T_network_rec(next_node, next_node_id, T_ambt, N, no_cap = no_cap)
     
     def pipe_length(self, Node1, Node2):

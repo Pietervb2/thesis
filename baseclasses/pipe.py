@@ -36,6 +36,7 @@ class Pipe:
         self.insu_thickness = pipe_data[6]
         self.K = pipe_data[7]
         self.epsilon = pipe_data[8]
+        self.mu_water = 0.00089 # [Pa s] dynamic viscosity of water at room temperature
         # self.Re = pipe_data[9]
        
         # Physical constants       
@@ -235,21 +236,37 @@ class Pipe:
 
         return delay
     
-    def pressure_friction(self):
+    def compute_f(self, mflow_prev, Re):
+        D = self.r_inner*2
+
+        if Re < 2300:
+            return 64 / Re
+        elif Re < 4000:
+            f_lam = 64 / 2300
+            log_term = ((self.epsilon/D)/3.7)**1.11 + (6.9/Re)
+            f_turb= (1 / (-1.8 * np.log10(log_term)))**2
+            return f_lam + (Re - 2300)/1700 * (f_turb - f_lam)
+        else:
+            log_term = (self.epsilon/D/3.7)**1.11 + 6.9/Re
+            return (1 / (-1.8 * np.log10(log_term)))**2
+    
+    def pressure_friction(self, mflow_prev):
         """
         Darcy Weisbach equation to calculate pressure drop in pipe
         Haaland method to determine frictor factor f
-
-        #TODO: update Re per sim with flow velocity based calculation, but could lead to changing whole equation. 
         """      
         # Pipe pressure loss over HEX already in Kp term of HEX. And setting to 0 gives problem for the jacobian
-        if self.hex_pipe:
-            return 0.1
         
         D = self.r_inner*2
-        Re = 10e3 
-        log_term = ((self.epsilon/D)/3.7)**1.11 + (6.9/Re)
-        f = (1 / (-1.8 * np.log10(log_term)))**2       
+
+        if self.hex_pipe:
+            return 0.1  
+        elif mflow_prev == 0:
+           Re = 4000
+        else:
+            Re = 4 * mflow_prev / (np.pi * D * self.mu_water)
+
+        f = self.compute_f(mflow_prev, Re)        
         return 8 * f * self.L / (np.pi ** 2 * D ** 5 * self.rho_water)                                                    
 
     def pressure_elevation(self):
@@ -278,13 +295,13 @@ class Pipe:
         
         self.mflow_extended[N + self.hist_len] = mflow
 
-    def save_dp_friction(self,N):
+    def save_dp_friction(self,mflow_prev, N):
 
         """
         Total pressure drop over the pipe due to friction and valves.
         """
 
-        self.dp_friction_array[N] = self.pressure_friction() * self.mflow_extended[N + self.hist_len]**2
+        self.dp_friction_array[N] = self.pressure_friction(mflow_prev) * mflow_prev**2
 
 
 if __name__ == "__main__":

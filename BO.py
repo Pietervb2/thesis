@@ -22,22 +22,22 @@ class CostFunction:
         self.run_type = run_type
         self.test_name = test_name
 
-        self.w_Tr = 9 * 1/4181 * 1e-3
-        self.w_Ts = 3 * 1/4181 * 1e-3
-        self.w_dTs = 30
+        self.w_Tr = 3 * 1/4181 * 1e-3
+        self.w_Ts = 1 * 1/4181 * 1e-3
+        self.w_dTs = 5
 
         # Physical bounds
         self.dict_physical_bounds = {'Profile 1': {
                                             'theta_1': (60, 62.5),
                                             'theta_2': (62.5, 65),
-                                            'theta_3': (200, 500e3),
+                                            'theta_3': (200e3, 500e3),
                                             'theta_4': (0, 300e3),
                                             'theta_5': (30, 55)
                                             },
                                         'Profile 2': {
                                             'theta_1': (60, 62.5),
                                             'theta_2': (62.5, 65),
-                                            'theta_3': (40, 350e3),
+                                            'theta_3': (40e3, 350e3),
                                             'theta_4': (0, 200e3),
                                             'theta_5': (30, 55)
                                         }, 
@@ -67,14 +67,14 @@ class CostFunction:
                                 'Q_hex.csv')
         Q_dp = pd.read_csv(file_loc, index_col=0)
 
-        self.Q_respond_benchmark = Q_dp.loc['Max', 'Q_respond']
-        self.deltaQ_benchmark = Q_dp.loc['Total', 'DeltaQ_sq']
+        self.Q_respond_benchmark_max = Q_dp.loc['Max', 'Q_respond']
+        self.deltaQ_benchmark_tot = Q_dp.loc['Total', 'DeltaQ_sq']
 
-        print(f'Q_respond_benchmark = {self.Q_respond_benchmark}, deltaQ_benchmark = {self.deltaQ_benchmark}')
+        print(f'Q_respond_benchmark = {self.Q_respond_benchmark_max}, deltaQ_benchmark = {self.deltaQ_benchmark_tot}')
 
         # Tolerances
         self.tol_Qrespond = 0.25
-        self.tol_deltaQ = 0.25   # max allowed excess above max_deltaQ benchmark
+        self.tol_deltaQ = 0.25   # max allowed excess above deltaQ_tot benchmark
 
         # Return temperature constraints
         self.T_r_max = 43   # smooth-max of return temperature must stay below this [°C]
@@ -115,8 +115,8 @@ class CostFunction:
             theta_6 = 3 # NOTE: hardcoded for now
 
             theta = np.array([theta_1, theta_2, theta_3, theta_4, theta_5, theta_6])
-
-            net = optimization_run(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6,
+        
+            net = optimization_run(theta,
                                self.profile,
                                self.dt,
                                self.pump_pressure,
@@ -127,19 +127,22 @@ class CostFunction:
             _, _, deltaQ_sq, Q_respond = self.compute_Q_terms(net)
 
             # Compute objective and constraint values
-            Q_respond_val = np.max(Q_respond)
-            max_deltaQ = np.sum(deltaQ_sq)
+            Q_respond_max = np.max(Q_respond)
+            deltaQ_tot = np.sum(deltaQ_sq)
 
             # smooth-max of return temperature
             T_r = net.nodes['Node 1.6'].T
             warmup_steps = int(4.5 / 24 * len(T_r))
             smooth_max_Tr = smooth_max(T_r[warmup_steps:])
             cost = self.compute_cost(net, theta)
-            self._cache[key] = (cost, Q_respond_val, max_deltaQ, smooth_max_Tr)
+            self._cache[key] = (cost, Q_respond_max, deltaQ_tot, smooth_max_Tr)
         
         return self._cache[key]
 
     def compute_cost(self, net, theta):
+
+        if theta[0] > theta[1]: # If min supply temperature is higher than max supply temperature, return a very high cost to make it infeasible
+            return 1e6
         
         # Return temperature
         T_r = net.nodes['Node 1.6'].T
@@ -242,17 +245,17 @@ class CostFunction:
 
     def constraints(self, theta_1, theta_2, theta_3, theta_4, theta_5):
         """Returns a vector of constraint values; each must be <= 0 to be feasible."""
-        _, Q_respond_val, max_deltaQ, smooth_max_Tr = self.run(
+        _, Q_respond_max, deltaQ_tot, smooth_max_Tr = self.run(
             theta_1, theta_2, theta_3, theta_4, theta_5
         )
 
-        print(f'Q_respond_val: {Q_respond_val - (1 + self.tol_Qrespond) * self.Q_respond_benchmark <= 0} ({Q_respond_val/self.Q_respond_benchmark}), max_deltaQ: {max_deltaQ - (1 + self.tol_deltaQ) * self.deltaQ_benchmark <= 0} ({max_deltaQ/self.deltaQ_benchmark}), smooth_max_Tr: { smooth_max_Tr - self.T_r_max <= 0} ({smooth_max_Tr - self.T_r_max})')
+        print(f'Q_respond_max: {Q_respond_max - (1 + self.tol_Qrespond) * self.Q_respond_benchmark_max <= 0} ({Q_respond_max/self.Q_respond_benchmark_max}), deltaQ_tot: {deltaQ_tot - (1 + self.tol_deltaQ) * self.deltaQ_benchmark <= 0} ({deltaQ_tot/self.deltaQ_benchmark}), smooth_max_Tr: { smooth_max_Tr - self.T_r_max <= 0} ({smooth_max_Tr - self.T_r_max})')
 
         return np.array([
             # 1) Q_respond must not exceed (1 + tolerance) * benchmark
-            Q_respond_val - (1 + self.tol_Qrespond) * self.Q_respond_benchmark,
+            Q_respond_max - (1 + self.tol_Qrespond) * self.Q_respond_benchmark_max,
             # 2) max (Q_d - Q_supply)^2 must not exceed (1 + epsilon) * benchmark
-            max_deltaQ - (1 + self.tol_deltaQ) * self.deltaQ_benchmark,
+            deltaQ_tot - (1 + self.tol_deltaQ) * self.deltaQ_benchmark_tot,
             # 3) smooth-max of return temperature must stay below T_r_max
             smooth_max_Tr - self.T_r_max,
         ])
@@ -314,7 +317,7 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False):
 
     gp_kernel_before = optimizer._gp.kernel
 
-    initial_point = {'theta_1': 1, 'theta_2': 1, 'theta_3': 0, 'theta_4': 0, 'theta_5': 0.85}
+    initial_point = {'theta_1': 1, 'theta_2': 1, 'theta_3': 0, 'theta_4': 0, 'theta_5': 0.80}
     optimizer.probe(initial_point, lazy=False)
 
     optimizer.maximize(
@@ -368,7 +371,7 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False):
 if __name__ == '__main__':    
     if len(sys.argv) > 1:
         profile_num = int(sys.argv[1])
-        dt = 60
+        dt = 1
         pump_pressure = 60
         curve = True
-        run_bo(profile_num, dt, pump_pressure, curve, new_benchmark_run = True)
+        run_bo(profile_num, dt, pump_pressure, curve, new_benchmark_run = False)
