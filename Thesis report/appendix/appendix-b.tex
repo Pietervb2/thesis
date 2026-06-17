@@ -1,27 +1,38 @@
-\chapter{Task Division Example}
-%\label{chapter:title}
+\chapter{Technical comparison of simulation software of interest.}
+\label{chapter:appendixTable}
 
-\emph{If a task division is required, a simple template can be found below for convenience. Feel free to use, adapt or completely remove.}
-
-\begin{table}[htb]
-    \setlength\extrarowheight{4pt}
-    \centering
-    \caption{Distribution of the workload}
-    \label{tab:taskdivision}
-    \begin{tabularx}{\textwidth}{lXX}
-        \toprule
-        & Task & Student Name(s) \\
-        \midrule
-        & Summary & \\
-        Chapter 1 & Introduction &  \\
-        Chapter 2 &  & \\
-        Chapter 3 &  & \\
-        Chapter * &  & \\
-        Chapter * & Conclusion &  \\
-        \midrule
-        & Editors & \\
-        & CAD and Figures & \\
-        & Document Design and Layout & \\
-        \bottomrule
-    \end{tabularx}
+% Please add the following required packages to your document preamble:
+% \usepackage{lscape}
+\newpage 
+\begin{landscape}
+\thispagestyle{plain}
+\begin{table}[h!]
+% \scriptsize
+% \tiny
+\fontsize{8pt}{7.5pt}\selectfont
+\begin{tabular}{M{3cm}M{3cm}M{1.8cm}M{2.2cm}M{2cm}M{1.5cm}M{2.3cm}M{2cm}p{3cm}}
+\hline
+Name           & Technical aspects                                            &                      &                  &            &                       &             &                                                                   &                                                                                                                \\ \cline{2-9} 
+               & Thermodynamics & Hydraulics    & Optimization\footnotemark[1] & Extendable & Timestep & Components\footnotemark[2] & License                                                           & Remarks:                                                                                                       \\ \hline
+DiGriPy \cite{DIGRIPY}  & Static                                                       & Static               & No  & Yes & 1 hour                & 1/1/1/1     & Open source (Python)                                              & Focus specifically on DHN, rarely used                                                                         \\
+DHNx \cite{DHNX}          & Static                                                       & Static               & Yes & Yes & 15 min                & 1/0/1/1     & Open source (Python)                                              & Focus specifically on DHN. Some functions only in beta version                                                 \\
+EnergyPlan \cite{EnergyPlan}    & Static & Static               & Yes  & Yes & 1 hour                & 0/0/0/0     & Freeware                                                          & Simulation of entire energy systems across all sectors                                                         \\
+EnergyPlus \cite{EnergyPlus}     & \makecell{Static, \\ dynamic}                                              & \makecell{\makecell{Static, \\ dynamic}}      & Yes& Yes & 1 min                 & 1/0/1/1     & Open source                                                       & Focus on thermal behavior in buildings and heating systems                                                     \\
+Grid Penguin \cite{GridPenguin} & Dynamic                                                      & Static               & Yes & Yes & 1 hour                & 1/0/1/1     & Open source (Python)                                              & Introduced as benchmark, rarely used                                                                           \\
+IDA ICE \cite{IDAICe}      & \makecell{Static, \\ dynamic}                                              & \makecell{Static, \\ dynamic}      & Yes & Yes & \textless 1   min\footnotemark[3] & 1/1/1/1     & Commercial, educational                                           & Focus on buildings and HVAC simulation                                                                         \\
+OpenModelica \cite{OpenModelica}   & \makecell{Static, \\ dynamic}                                              & \makecell{Static, \\ dynamic}      & Yes & Yes & \textless 1   min\footnotemark[3] & 1/1/1/1     & Open source                                                       & Modelica-based \cite{Modelica} modeling and simulation environment                                                             \\
+Pandapipes \cite{pandapipes}     & Static, quasi-static                                         & Static, quasi-static & No & Yes & \textless 1   min\footnotemark[3] & 1/1/1/1     & Open source (Python)  & Focus on multi-energy networks                                                                                 \\
+PyDHN \cite{PyDHN}          & Dynamic                                                      & Static               & No & Yes & \textless 1   min\footnotemark[3] & 1/1/1/1     & Open source (Python)  & Currently a beta version.                                                                                      \\
+TESPy \cite{TESPy}          & Static                                                       & Static               & Yes & Yes & \textless 1   min\footnotemark[3] & 1/1/1/1     & Open source (Python) & Focus on thermal engineering plants. Also suitable for DHN                                                     \\
+TRNSYS \cite{trnsys1975}         & Dynamic (transient)                                          & Dynamic (transient)  & No\footnotemark[4] & Yes & \textless 1   min\footnotemark[3]     & 1/1/1/1     & Commercial, educational                                           & Specializes in building and  HVAC simulations, enabling detailed modeling with an extensive component library. \\
+WANDA \cite{deltaresWanda}          & Static                                                       & \makecell{Static, \\ dynamic}      & Yes & Yes & \textless 1   min\footnotemark[3] & 1/1/1/1     & Commercial                                                        & Advanced water hammer software                                                                          
+\end{tabular}
+\caption{Technical comparison of simulation software of interest.}
+\label{tab::simsoft}
+\end{table} 
+\footnotetext[1]{Only concerning build-in optimization.}
+\footnotetext[2]{Pipe/valve/HEX/pump.}
+\footnotetext[3]{There is no specified minimum timestep, decreasing it might introduce inaccuracies in the simulation.}
+\footnotetext[4]{Optimization possible with TRNOPT.}
+\end{landscape}
 \end{table}

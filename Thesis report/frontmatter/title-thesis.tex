@@ -48,6 +48,9 @@ to be defended publicly on Monday January 1, 2024 at 10:00 AM.
         & Ir. R. C. A. Smit, & Eneco, supervisor \\
 \end{tabular}
 
+% \includegraphics[width=100pt]{Thesis report/figures_thesis/eneco_logo.jpg}
+The work in this thesis was supported by Eneco B.V. Their cooperation is hereby gratefully acknowledged.
+% \includegraphics[width=100pt]{Thesis report/figures_thesis/eneco_logo.jpg}
 %% Only include the following 3 lines if confidentiality is applicable.
 \bigskip
 \bigskip
@@ -67,10 +70,22 @@ An electronic version of this thesis is available at \url{http://repository.tude
 \end{center}
 
 %% Insert the TU Delft logo at the bottom of the page
+% \begin{tikzpicture}[remember picture, overlay]
+%     \node[above=10mm] at (current page.south) {%
+%         \includegraphics{Thesis report/figures_thesis/logo-black.pdf}
+%     };
+% \end{tikzpicture}
+
 \begin{tikzpicture}[remember picture, overlay]
-    \node[above=10mm] at (current page.south) {%
-        \includegraphics{figures/logo-black}
+    \node[above=10mm, xshift=-3cm] at (current page.south) {%
+        \includegraphics[height=2cm]{Thesis report/figures_thesis/logo-black.pdf}
+    };
+
+    \node[above=6.5mm, xshift=3cm] at (current page.south) {%
+        \includegraphics[height=2cm]{Thesis report/figures_thesis/eneco_logo.jpg}
     };
 \end{tikzpicture}
 
 \end{titlepage}
+
+

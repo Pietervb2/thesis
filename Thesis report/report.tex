@@ -1,10 +1,14 @@
 \documentclass{tudelft-report}
 
 %% Set up the bibliography
-\usepackage{biblatex}
+% \usepackage{biblatex}
+\usepackage[backend=biber,style=ieee]{biblatex}
 \usepackage{optidef}
+\usepackage{pdflscape}
+\usepackage{makecell}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
 
-\addbibresource{report.bib}
+\addbibresource{Thesis report/report.bib }
 
 %% Additional packages and commands
 \usepackage{parskip}
@@ -27,7 +31,7 @@ operation}
 \author{P.C.M. van Bentum}
 
 \affiliation{Delft University of Technology} % Cover only
-\coverimage{figures/cover.jpg} % Aspect ratio of 2:3 (portrait) recommended
+\coverimage{Thesis report/figures_thesis/cover.jpg} % Aspect ratio of 2:3 (portrait) recommended
 \definecolor{title}{HTML}{4884d6} % Color for cover title
 
 \makecover
@@ -61,21 +65,23 @@ operation}
 \input{mainmatter/conclusion}
 
 %% Prevent urls running into margins in bibliography
+%% Prevent urls running into margins in bibliography
 \setcounter{biburlnumpenalty}{7000}
 \setcounter{biburllcpenalty}{7000}
 \setcounter{biburlucpenalty}{7000}
 
-%% Add bibliography
+%% Bibliography
 \printbibliography[heading=bibintoc,title=References]
 
-%% ----------------------------------------------------------------------
+% \addbibresource{Thesis report / report.bib}
+----------------------------------------------------------------------
 %%    Appendix (Letters for chapters)
 %% ----------------------------------------------------------------------
 
 \appendix
 
 % \input{appendix/appendix-a}
-% \input{appendix/appendix-b}
+\input{appendix/appendix-b}
 %\input{appendix/appendix-c} % Create file to add
 
 \end{document}
