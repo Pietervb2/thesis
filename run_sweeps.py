@@ -19,7 +19,7 @@ from datetime import datetime
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-WORKERS = 4          # number of parallel sweeps at any one time
+WORKERS = 2          # number of parallel sweeps at any one time
 SCRIPT  = "costfunction_parametersweep.py"
 
 # Define every sweep you want to run.
@@ -28,68 +28,68 @@ SCRIPT  = "costfunction_parametersweep.py"
 
 SWEEPS = [
     {
-        "label":       "theta_2 profile_2",
-        "theta_index": 2,
-        "min":         60,
-        "max":         70,
-        "steps":       20,
-        "profile":     2,
-        "theta":       [60, None, 150000, 200000, 38.625, 3],
-    },
-    {
-        "label":       "theta_3 profile_2",
-        "theta_index": 3,
-        "min":         40000,
-        "max":         350000,
-        "steps":       20,
-        "profile":     2,
-        "theta":       [60, 65, None, 200000, 38.625, 3],
-    },
-    {
-        "label":       "theta_4 profile_2",
-        "theta_index": 4,
-        "min":         0,
-        "max":         200e3,
-        "steps":       20,
-        "profile":     2,
-        "theta":       [60, 65, 150000, None, 38.625, 3],
-    },
-    {
-        "label":       "theta_5 profile_2",
+        "label":       "theta_5 profile_1",
         "theta_index": 5,
         "min":         30,
         "max":         55,
         "steps":       20,
-        "profile":     2,
-        "theta":       [60, 65, 150000, 200000, None, 3],
+        "profile":     3,
+        "theta":       [63, 65, 300000, 200000, None, 3],
     },
-      {
+    {
+        "label":       "theta_1 profile_3",
+        "theta_index": 1,
+        "min":         60,
+        "max":         65,
+        "steps":       20,
+        "profile":     3,
+        "theta":       [None, 65, 150e3, 100e3, 30, 3],
+    },
+    {
         "label":       "theta_2 profile_3",
         "theta_index": 2,
+        "min":         62,
+        "max":         65,
+        "steps":       20,
+        "profile":     3,
+        "theta":       [62, None, 150e3, 100e3, 38.625, 3],
+    },
+    {
+        "label":       "theta_1 profile_3",
+        "theta_index": 1,
         "min":         60,
-        "max":         70,
+        "max":         65,
         "steps":       20,
         "profile":     3,
-        "theta":       [60, None, 150000, 200000, 38.625, 3],
+        "theta":       [None, 65, 150000, 200000, 38.625, 3],
     },
-    {
-        "label":       "theta_3 profile_3",
-        "theta_index": 3,
-        "min":         40000,
-        "max":         350000,
-        "steps":       20,
-        "profile":     3,
-        "theta":       [60, 65, None, 200000, 38.625, 3],
-    },
-    {
-        "label":       "theta_4 profile_3",
-        "theta_index": 4,
-        "min":         0,
-        "max":         200e3,
-        "steps":       20,
-        "profile":     3,
-        "theta":       [60, 65, 150000, None, 38.625, 3],
-    },
+    #   {
+    #     "label":       "theta_2 profile_3",
+    #     "theta_index": 2,
+    #     "min":         60,
+    #     "max":         70,
+    #     "steps":       20,
+    #     "profile":     3,
+    #     "theta":       [60, None, 150000, 200000, 38.625, 3],
+    # },
+    # {
+    #     "label":       "theta_3 profile_3",
+    #     "theta_index": 3,
+    #     "min":         40000,
+    #     "max":         350000,
+    #     "steps":       20,
+    #     "profile":     3,
+    #     "theta":       [60, 65, None, 200000, 38.625, 3],
+    # },
+    # {
+    #     "label":       "theta_4 profile_3",
+    #     "theta_index": 4,
+    #     "min":         0,
+    #     "max":         200e3,
+    #     "steps":       20,
+    #     "profile":     3,
+    #     "theta":       [60, 65, 150000, None, 38.625, 3],
+    # },
 ]
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -97,6 +97,11 @@ def process_sweep(sweeps_dir, profile_index, theta_index, pump_pressure=60, curv
         cost = cost_fn.compute_cost(net, theta)
         terms = cost_fn.dict_debug[f'iter {cost_fn.iter - 1}']
 
+        cp = 4186.0
+        eta = 0.9
+        termTr_COP = float(np.sum(mflow_s * cp * (T_r - 10.0) ** 2 / (10.0 * eta)))
+        termTs_COP = float(np.sum(mflow_s * cp * (T_s - 20.0) ** 2 / (eta * T_s)))
+
         rows.append((
             swept_val,
             terms['cost'],
@@ -104,6 +109,8 @@ def process_sweep(sweeps_dir, profile_index, theta_index, pump_pressure=60, curv
             terms['T_s'],
             terms['dTs'],
             terms['regularization'],
+            termTr_COP,
+            termTs_COP,
         ))
 
     if not rows:
@@ -121,7 +128,7 @@ def save_results(sweep_folder, profile_index, theta_index, results):
         output_file,
         results,
         delimiter=',',
-        header=f'theta_{theta_index},cost,term_Tr,term_Ts,term_dTs,regularization',
+        header=f'theta_{theta_index},cost,term_Tr,term_Ts,term_dTs,regularization,termTr_COP,termTs_COP',
         comments='',
     )
     print(f'  Saved: {output_file}')

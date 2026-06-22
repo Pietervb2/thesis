@@ -1307,43 +1307,23 @@ if __name__ == "__main__":
     # from BO import CostFunction
 
 
-    # start = datetime.datetime.now()
+    start = datetime.datetime.now()
 
-    # i = 4
-    # profile = f'Profile {i}'
-    # dt = 1
-    # pump_pressure = 60
-    # curve = True
-    # # test_name = f'BO_test={profile}_dt={dt}_pump={pump_pressure}kPa_curve={curve}'
-    # test_name = f"Profile {i}_newRetest"
+    i = 1
+    profile = f'Profile {i}'
+    dt = 1
+    pump_pressure = 60
+    curve = True
+    test_name = f"Profile {i}_Qrespond_1mintest"
 
-    # print(f'start test: {start}, test_name: {test_name}')
+    print(f'start test: {start}, test_name: {test_name}')
 
-    # normal_run(profile, 'test', dt, pump_pressure, curve, 65, 'constant', test_name = test_name)
+    normal_run(profile, 'test', dt, pump_pressure, curve, 63, 'constant', test_name = test_name)
 
 
-    # # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
-
-    # # # # Normalized
-    # # theta_1 = 0.4191945 # Minimum supply temperature [°C]
-    # # theta_2 = 0.6852195 # Maximum supply temperature [°C]
-    # # theta_3 = 0.2044522 # Heat demand threshold [W] (Q_set)
-    # # theta_4 =  0.8781174 # Heat demand P-band [W]
-    # # theta_5 = 0.0273875 # Overflow valve additional temperature setpoint [°C]
-    # # theta_6 = 0.5 # Overflow valve P-band [°C]
-
-    # # print(f'theta_1 {theta_1}, theta_2 {theta_2}, theta_3 {theta_3}, theta_4 {theta_4}, theta_5 {theta_5}, theta_6 {theta_6}')
-
-    # # cost = cost_function.objective(theta_1, theta_2, theta_3, theta_4, theta_5)
+    # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
 
     # print(f'duration test: {datetime.datetime.now() - start}')
 
-    Kvs_min = 0.1
-    Kvs_max = 3.0
-    Kvs_min_Pa = Kvs_min * 1000 / 3600 / np.sqrt(1e5)  # Convert Kvs from m3/h/sqrt(bar) to m3/s/sqrt(Pa)
-    Kvs_max_Pa = Kvs_max * 1000 / 3600 / np.sqrt(1e5)
-
-    Kv_array = fit_Kv_values()
-    valid_Kvs, valid_h = check_Kvs_range(Kv_array, Kvs_min=Kvs_min_Pa, Kvs_max=Kvs_max_Pa, n_steps=100)
 

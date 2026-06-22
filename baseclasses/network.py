@@ -33,6 +33,8 @@ class Network:
 
         self.theta = None #debug
 
+        self.T_in = None
+
     def __repr__(self):
         return f"Network(net_id={self.net_id}, nodes={list(self.nodes.keys())}, pipes={list(self.pipes.keys())}, hexs={list(self.hexs.keys())})"
 

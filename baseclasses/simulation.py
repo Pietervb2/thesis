@@ -37,7 +37,10 @@ class Simulation:
             elif run_type == 'save_optimization':
                 
                 day = datetime.datetime.now().date()
-                self.folder = os.path.join(base_dir, "figures", "optimization_set", f"{str(day)}_1", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
+                self.folder = os.path.join(base_dir, "figures", "optimization_set", f"{str(day)}", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
+
+                if os.path.exists(self.folder):
+                    self.folder = os.path.join(base_dir, "figures", "optimization_set", f"{str(day)}_1", f"{profile}_dt={dt}_init_points={n_init_points}_n_iter={n_iter}")
             
             elif run_type == 'test': 
                 if file:
@@ -100,6 +103,8 @@ class Simulation:
             network.set_mflow_network(N)
             network.set_T_network(self.T_ambt, N, T_in[N], no_cap = no_cap)
             
+        network.T_in = T_in
+        
         if run_type != 'optimization':
             print('Simulation finished')
 
@@ -458,11 +463,17 @@ class Simulation:
         # Additional term to penalize slow response to changes in heat demand
         self.tot_Q_respond = np.zeros((len(network.hexs.keys()), len(self.time))).astype(float)
 
+        self.tot_Q_respond_1min = np.zeros((len(network.hexs.keys()), len(self.time))).astype(float)
+        self.tot_Q_respond_35sec = np.zeros((len(network.hexs.keys()), len(self.time))).astype(float)
+
         for i, hex_obj in enumerate(network.hexs.values()):
             tot_Q_d += hex_obj.consumer.Q_d*self.dt
             tot_Q_supply += hex_obj.consumer.Q_supply*self.dt
 
             two_min = int(120 / self.dt) # Number of timesteps in 2 minutes
+            one_min = int(60 / self.dt)
+            thirtyfive_sec = max(1, int(35 / self.dt))   
+            
             for idx in range(len(hex_obj.consumer.Q_d)-1-two_min):
 
                 # smooth event trigger
@@ -470,6 +481,8 @@ class Simulation:
                 
                 # how well it responded within 2 minutes based on how close the watts are. 
                 Q_response = hex_obj.consumer.Q_d[idx+1:idx+1+two_min] - hex_obj.consumer.Q_supply[idx+1:idx+1+two_min]
+                Q_response_1min = hex_obj.consumer.Q_d[idx+1:idx+1+one_min] - hex_obj.consumer.Q_supply[idx+1:idx+1+one_min]
+                Q_response_35sec = hex_obj.consumer.Q_d[idx+1:idx+1+thirtyfive_sec] - hex_obj.consumer.Q_supply[idx+1:idx+1+thirtyfive_sec]
                 
                 if self.dt == 60:
                     scaling_factor = 40
@@ -477,8 +490,12 @@ class Simulation:
                     scaling_factor = 300
                 
                 Q_response_relu = softrelu(Q_response/scaling_factor)*scaling_factor # to prevent overflow error
+                Q_response_1min_relu = softrelu(Q_response_1min/scaling_factor)*scaling_factor
+                Q_response_35sec_relu = softrelu(Q_response_35sec/scaling_factor)*scaling_factor
 
-                self.tot_Q_respond[i, idx] += change_binary * np.sum(Q_response_relu) * self.dt
+                self.tot_Q_respond[i, idx] = change_binary * np.sum(Q_response_relu) * self.dt
+                self.tot_Q_respond_1min[i, idx] = change_binary * np.sum(Q_response_1min_relu) * self.dt
+                self.tot_Q_respond_35sec[i, idx] = change_binary * np.sum(Q_response_35sec_relu) * self.dt
 
             plt.plot(self.time, hex_obj.consumer.Q_d, label=f'Heat demand of C{hex_obj.consumer.consumer_id.split(" ")[1]}')
             plt.plot(self.time, hex_obj.consumer.Q_supply, label=f'Heat supplied to C{hex_obj.consumer.consumer_id.split(" ")[1]}', linestyle='--')
@@ -779,15 +796,20 @@ class Simulation:
             df_total_heat.to_csv(os.path.join(self.folder,'hex_consumer_data','total_heat.csv'), index = False)
 
             Q_respond_hex = np.sum(self.tot_Q_respond, axis = 1)
+            Q_respond_1min_hex = np.sum(self.tot_Q_respond_1min, axis = 1)
+            Q_respond_35sec_hex = np.sum(self.tot_Q_respond_35sec, axis = 1)
+
             df_Q_hex = pd.DataFrame({
                 'Q_supply': Q_supply_hex,
                 'Q_demand': Q_demand_hex,
                 'DeltaQ_sq': DeltaQ_sq_hex,
-                'Q_respond': Q_respond_hex
+                'Q_respond': Q_respond_hex,
+                'Q_respond_1min': Q_respond_1min_hex,
+                'Q_respond_35sec': Q_respond_35sec_hex
             }, index=[f'Hex {i+1}' for i in range(len(Q_demand_hex))])
             summary = pd.DataFrame({
                 col: {'Max': df_Q_hex[col].max(), 'Min': df_Q_hex[col].min(), 'Total': df_Q_hex[col].sum(), 'Mean': df_Q_hex[col].mean()}
-                for col in ['DeltaQ_sq', 'Q_respond']
+                for col in ['DeltaQ_sq', 'Q_respond', 'Q_respond_1min', 'Q_respond_35sec']
             })
             df_Q_hex_out = pd.concat([df_Q_hex, summary])
             df_Q_hex_out.to_csv(os.path.join(self.folder, 'hex_consumer_data', 'Q_hex.csv'))
@@ -806,7 +828,7 @@ class Simulation:
 
 
 def softrelu(x, alpha=1):
-    return np.log(1 + np.exp(alpha * x)) / alpha
+    return np.log(1 + np.exp(alpha * (x-2))) / alpha
 
 def format_plot_time_axis(num_hours=24):
     """

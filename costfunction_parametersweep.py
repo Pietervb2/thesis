@@ -152,8 +152,8 @@ def main():
         base_dir,
         "thesis",
         "figures",
-        "sweeps",
-        f"cost_function_sweep_Profile_{profile_index}_theta{args.theta_index}",
+        "sweeps_theta5=30",
+        f"cost_function_sweep_Profile_{profile_index}_theta{args.theta_index}_Ts=11",
     )
     os.makedirs(sweep_folder, exist_ok=True)
 
