@@ -3,9 +3,10 @@
 This chapter begins by examining the commonly used methods to control the supply temperature and bypass flow, followed by an argument for the use of Bayesian Optimization. And a further  and the implications this e. The chapter concludes with the formulation of the minimization problem.
 
 \todo[inline]{Alle tekst die hier in staat moet nog worden gecontroleerd.}
+\todo[inline]{toevoegen van zo'n control blok diagram}
 
 \section{Related work}
-Welke methodes zijn er eerder gebruikt en waarom ga ik hier nu BO gebruiken. 
+Welke methodes zijn er eerder gebruikt en waarom ga ik hier nu BO gebruiken. Dus kijk ook naar MPC enzo
 
 \subsection{Argument for using Bayesian Optimization}
 The developed simulation model is a non-convex nonlinear system. The non-convexity is caused by the Kirchhoff laws' quadratic equality constraints, the determination of the varying time delay of the water masses in the pipes, its use as time index and the presence of bilinear terms within the Node method and the bilinear terms used for the temperature mixing at the nodes and the $\epsilon$-NTU implementation of the heat exchanger. The authors of \cite{ArtikelMax} handle the Kirchhoff constraints by introducing a convex relaxation. The model proposed in  \cite{nodeMethodbin} also performs convex relaxation on these constraints and its bilinear terms. Relaxing the problem from MINLP to eventually MILP. The mixed integer relation is caused by handling the non-convexity of the Node method by introducing an auxiliary binary value for every possible time delay and also for its bilinear term. As the test network in this thesis project only contains 23 consumers it already consists of at least 100 nodes this would introduce the use of a couple of thousand of binary variables, which is significantly more than the authors' use case of an integrated six-bus electricity and three-node district heating network. By introducing a constant time delay and adopting a linear representation of the DHN, the problem can be reformulated as a MILP. This simplification, however, is not realistic as the time delay is not constant in reality \cite{linearDHN}. In \cite{Heuristicmethod}, they handle the complexity imposed by the integer time delay by proposing a Bender decomposition algorithm. In this way they reduce the Node method to a nonconvex NLP problem, but they experience problems with convergence in edge cases. 
@@ -13,6 +14,7 @@ The developed simulation model is a non-convex nonlinear system. The non-convexi
 Another option would be to not perform convex relaxations but to directly optimize the non-convex nonlinear system. The gradient and Hessian cannot be determined analytically, as the use of the minimum time delay in the Node method introduces discontinuities in the derivatives. Although methods exist to circumvent these discontinuities when computing numerical gradients, the evaluation of the objective function is computationally expensive. Consequently, approaches that rely on gradient and Hessian information are not considered. Other options would be for example Simulated Annealing or the Powell and Nelder-Mead methods. However, these kind of methods require many function evaluations as well. Here Bayesian Optimization (BO) becomes interesting as it is one of the most efficient approaches in terms of the number of function evaluations required to find an optimum \cite{bo_tutorial}. Therefore this thesis proceeds with applying the Bayesian Optimization technique. 
 % While the authors already have problems with always reaching convergence, the use of a heuristic approach does not guarantee the convergence to a global optimum due to problem non-convex nature. 
 \section{Bayesian Optimization Overview}
+\todo[inline]{mention the possiblity to sample at the same place in case of a stochastic system [Constrained Bayesian Optimization: A Review]}
 % All the information in this section is drawn from the tutorial on Bayesian Optimization (BO) written by Brochu, Cora, and de Freitas \cite{bo_tutorial}. The citations from this section are also drawn from them. 
 
 Bayesian Optimization (BO) is used to find the extrema of objective functions that are expensive or time-consuming to evaluate. It can be applied in situations where there is no closed-form expression of the objective function, but it is possible to gather some data points of the function. BO techniques are highly efficient considering the number of samples needed to find an extreme. This is largely due to incorporating a prior belief about the problem, helping data sampling, and maintaining a balance while sampling the search space between exploration (sampling x at high uncertainty of the objective function) and exploitation (sampling x where the objective function is likely to be high). The technique revolves around Bayes' Theorem, stated below, hence its name. 
@@ -36,7 +38,7 @@ The values of the hyperparameters are usually defined by starting with random gu
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.6\linewidth]{figures/BayesianOptmization.png}
+    \includegraphics[width=0.6\linewidth]{Thesis report/figures_thesis/BayesianOptmization.png}
     \caption{An example of Bayesian Optimization. A Gaussian Process approximating the objective function of a 1D problem after four iterations using sampled values of the objective function. In this example, the sought extreme is the maximum \cite{bo_tutorial}.}
     \label{fig::BO}
 \end{figure}
@@ -46,7 +48,7 @@ Močkus et al. \cite{Mockus1978} proposed to maximize the expected improvement w
 
 Figure \ref{fig::BO} shows three iterative steps of the BO technique. On the x-axis, the optimized feature is plotted, and on the y-axis, its performance is plotted. The black dotted line is the objective function, and the black line is the posterior mean. Around the posterior mean, the light purple region shows the upper and lower bounds of the posterior uncertainty. At each step, the next sampling point is chosen based on the maximum of the acquisition function. This information is then used to update the posterior, as can be clearly observed from the changes in its uncertainty
 
-
+\todo[inline]{add part about constrained Bayesian Optimization}
 
 \subsection{Discontinuities within objective function}
 Mockus states in \cite{Mockus1994} a number of conditions in order to use the Gaussian process prior. One of those conditions requires the objective function to be continuous. Within the simulation two discontinuous piece-wise non-linear functions can be found, formally breaking this condition. 
@@ -86,14 +88,14 @@ Because the simulation spans a full day, optimizing the supply temperature and b
     \centering
     \begin{subfigure}{0.48\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/supply_control.png}
+        \includegraphics[width=\linewidth]{Thesis report/figures_thesis/supply_control.png}
         \caption{The lumped control relation of the supply temperature control.}
         \label{fig:Ts_control}
     \end{subfigure}
     \hfill
     \begin{subfigure}{0.48\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/bypass_valve_control.png}
+        \includegraphics[width=\linewidth]{Thesis report/figures_thesis/bypass_valve_control.png}
         \caption{The lumped control relation of the thermostatic bypass valve.}
         \label{fig:Bypass_control}
     \end{subfigure}

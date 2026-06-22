@@ -1,5 +1,98 @@
 \chapter{Introduction}
 \label{chapter:introduction}
-\section{Sustainability and stuff}
-\section{Heat law}
+\section{Background}
+\subsection{Sustainable Heating}
+The Paris Agreement, adopted in 2015, aims to limit global warming to well below 2$^{\circ}\text{C}$, and preferably to 1.5$^{\circ}\text{C}$ above pre-industrial levels. Achieving this goal requires significant de-carbonization across all sectors, including heating. Within the European Union in 2023, around 62.5 \% of household energy consumption is used for space heating. However, only 23.5 \% of that energy currently comes from renewable sources \cite{EUenergie}. While in the Netherlands 82 \% of homes were still heated by individual gas boilers in 2021 \cite{NLenergie}.
+This share of renewable sources must increase substantially if we are to meet the goals set by the Paris Agreement. District Heating Networks (DHN) are considered a key solution in the de-carbonization of the heating sector, as they enable the integration of local renewable heat sources, renewable electricity, and waste heat \cite{KUNTUAROVA}.
+
+\subsection{District Heating Networks}
+Current district heating/cooling networks transport thermal energy by heated or cooled water through insulated pipes. These pipes are connected in an underground local network with one (or more) energy source(s), possibly storage, and buildings. The district heating (and cooling) networks facilitate the heating (and cooling) of these buildings. The temperature of the water flowing in and out of the building is respectively called the supply and return temperature. There are a separate supply and return networks with identical topology. 
+
+District heating was commercially introduced in the late 19th century in the United States and at the beginning of the 20th century in Europe \cite{bookMax}. Currently, the use of district heating networks is increasing worldwide. The International Energy Agency predicts that 350 million housing units will be connected to a district heating network in 2030, accounting for about 20 $\%$ of the global space heating needs \cite{IEAheating}. In the first generation of district heating networks, heat was transported using steam, which led to high heat losses and too much corrosion due to condensation. Therefore, the second generation made use of pressurized water at 100 $^{\circ}\text{C}$, which still causes high heat losses \cite{FemkeJanssenLit}. Nowadays, the newest networks are of the fourth generation. These networks are implemented with a focus on de-carbonization, in contrast to the previous three generations, which heavily relied on fossil fuels. The water temperature in these systems has a maximum of 60 - 70$^{\circ}\text{C}$. This was made possible by reducing heat loss of the buildings themselves and using floor heating, requiring a lower supply temperature \cite{FemkeJanssenLit}. This supply temperature lowers grid losses and makes it economically feasible to implement waste heat sources, such as excess heat from data centers. Heat pumps and solar collectors become more efficient as well, making it more suitable for implementing (seasonal) thermal energy storage. In the literature, a fifth generation of district heating networks is discussed. The extension of adding a cooling network is often mentioned in its definitions. However, the authors of the paper "\textit{Perspectives on fourth and fifth generation district heating}" conclude that it is a complementary technology, not a new generation of district heating networks \cite{4GDH5GDH}. 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{Thesis report/figures_thesis/GDH.jpg}
+    \caption{The development of the district heating networks from the first up to the fourth generation \cite{4GDH5GDH}.}
+    \label{fig:devDHN}
+\end{figure}
+
+\subsection{Changing Legislation}
+In contrast to the electricity or gas networks, district heating networks are not connected to a national grid. This grid connects all producers and consumers and enables consumers to choose between energy providers. District heating networks are local networks connected to local heat producers. Narrowing the choice of energy providers. Most of the time, one energy provider owns and supplies the district heating networks, creating a monopoly. The Dutch government is working on new legislation, the "Collective Heat Act" (Wet Collectieve Warmte, Wcw), to change these monopolies and regulate these networks' heating and cooling prices. The government wants to stimulate the development of heating networks and guarantee their affordability, sustainability, and reliability. One of the provisions of the law states that collective heating networks serving 1,500 or more connections must be majority-owned for at least 51 $\%$ by public entities such as municipalities, provinces, or the national government \cite{WcWsite}. The Wcw allows more flexibility for heating networks with fewer than 1,500 connections. These smaller systems can be owned and operated by private entities, provided that they obtain an exemption from the municipality. The proposed law
+must still be approved by both the House of Representatives (Tweede Kamer) and the Senate (Eerste Kamer) before it comes into effect. This legislative process may lead to changes to the bill and introduces uncertainty for energy companies.
+
+\subsection{Decentralized Solutions}
+Eneco is the market leader in District Heating in the Netherlands, with 150.000 customers. They have 68 heating networks, mainly in and around the cities of Utrecht, The Hague, Rotterdam, and Amsterdam. These networks differ in size, ranging from a couple of hundred to 59.000 connections \cite{warmtenetwerkenEneco}. The profitability of large networks already faced challenges due to their high investment costs. With the additional uncertainty caused by the Wcw, Eneco decided to focus on building smaller networks, called Decentralized Solutions (DCS) \cite{nos2025warmtenetten}. \\
+
+Decentralized Solutions are small local networks with up to 1,500 connections. These networks generate, store, and manage all their thermal energy near the consumer. They consist of consumers (households and larger users), one or more heat sources often including a heat pump, and heat and cold storage in the ground, and an underground pipeline network to connect them all. In some cases, the DCS is also connected to a larger nearby district heating system as a backup for the peak demand.
+
+\begin{figure}[h]
+    \centering
+\includegraphics[width=0.9\linewidth]{Thesis report/figures_thesis/engelsDCSeneco.png}
+    \caption{Depiction of Decentralized Solution. In this image, the DCS is not connected to a larger network for backup \cite{DCSeneco}.}
+    \label{fig:DCS}
+\end{figure}
+The heat and cold underground storage is an Aquifer Thermal Energy Storage (ATES). The ATES generally consists of a heat pump and two wells. These wells are sandy layers underground where it simultaneously stores and extracts thermal energy by heating or cooling the groundwater. These are called hot or cold wells, respectively. The cold water used to cool the network is heated during the process and stored in the hot well. The same holds for the hot water that is stored in the cold well after being used for heating. When in summer the cold well is heated to above approximately 10 $^{\circ}\text{C}$, the heat pump is used as a backup cooling machine. In winter, the heat pump increases the temperature of the groundwater extracted from the hot well to around 60 degrees $^{\circ}\text{C}$ needed to heat the associated building. While during heating, the heat pump cools the used groundwater to 5-8 $^{\circ}\text{C}$ \cite{bloemendal2018hidden}. ATES addresses the seasonal mismatch between the availability and demand for heating and cooling in buildings. While it significantly reduces reliance on fossil fuels, the heat pump still requires a substantial amount of electricity to operate \cite{tudelft_ates_triplet}.
+
 \section{Problem statement and research questions}
+During summer, the demand for heat decreases significantly, leading to increased return temperatures for the Decentralized Solutions. Return temperatures can reach up to 45-55 $^{\circ}\text{C}$, which is considered excessively high. These high return temperatures cause the heat pump's efficiency to drop drastically or even cause the heat pump to fail, as the required temperature drop to store it in the cold well becomes too large. It leads to much higher electricity use, and in the event of a malfunctioning heat pump, Eneco must fall back on electric boilers, thereby jeopardizing seasonal energy storage and the DCS's sustainability. To prevent this situation, the return temperature needs to be lowered. \\
+
+The root of this problem lies in the fact that Eneco needs to comply with standards for how quickly the client obtains hot water at the tap, the so called response time. By law, a consumer must have tap water of 55 $^{\circ}\text{C}$ within two minutes, but Eneco follows stricter guidelines of at least 45 $^{\circ}\text{C}$ at the tap after 30 seconds. In periods of high heat demand, it is relatively easy to meet these requirements because hot water is frequently circulating through the pipeline risers, so hot water is already high up in the building when a consumer starts demanding heat, keeping the response time within bounds. However, when demand is low or nonexistent, water flow in the risers decreases, causing the water in the pipes to cool. Now the hot water needs to travel longer to the consumer, leading to slower response times. To prevent this from happening, all pipeline risers were fitted with a thermodynamic bypass valve at the top, where the supply network is directly connected to the return network. This valve maintains the temperature at the top of the riser at a setpoint, warming the entire pipe. Eneco sets this setpoint to 55 degrees, which enables it to reach the response time guidelines comfortably. During periods of low heat demand the water flow passing the bypass valve is not mixed with (a lot) cold water coming from the heat exchangers as they are inactive, causing high return temperatures troubling the heat pumps. Besides the return temperature problem, Eneco requires a simulation model of its Decentralized Solution networks to optimize their design and operation. Such a model should provide insight into the dynamics of heat production, network behavior, and customer demand, as well as the interactions between these components. 
+
+To meet Eneco's request for a simulation model while addressing the return temperature problem, this thesis develops a dynamic simulation model of the DCS networks. In addition to the potentially greater insight a dynamic model can offer compared to a static one, the most important reason to create a dynamic model was the short time intervals of the heat demand response time. As networks can vary in components and overall configuration, it should be sufficiently generalizable to support extension and scaling across different DCS networks. The model should at least capture the thermodynamic and hydraulic behavior of the following base components:
+\begin{itemize}
+\item Pipes
+\item Valves
+\item Thermostatic bypass valves
+\item Heat exchangers
+\item Centrifugal pumps
+\end{itemize}
+In addition to these components, heat demand and production are also modeled; however, to narrow the scope of the thesis, the dynamics of the ATES or the city heating network (which serves as a backup) are not considered. The same argument holds for not including a separate heat storage model. The developed simulation model is subsequently used to design a control policy to lower the return temperature. This control policy employs two actuators: the thermostatic bypass valve and the supply temperature. The supply temperature was added as an actuator because it can support the bypass valve in still meeting heat demand response time guidelines while lowering the return temperature. 
+
+This problem statement gives rise to the following two research questions:
+
+\begin{itemize}
+  \renewcommand\labelitemi{} % removes the bullet
+    \item \textbf{Q1: How to develop a dynamic simulation model that captures the thermodynamics and hydraulics of a small-scale heating network to enable Eneco to optimize its design and operation?}
+\end{itemize}
+
+Beyond providing Eneco's engineers with greater insight into the inner workings of Decentralized Solutions, the model should also facilitate straightforward implementation of a control policy for the thermostatic bypass valve and supply temperature.
+
+\begin{itemize}
+  \renewcommand\labelitemi{} % removes the bullet
+    \item \textbf{Q2: What control policy for the thermostatic bypass valve and supply temperature can be applied to the developed simulation model to minimize return temperature in the Decentralized Solutions while sufficiently meeting heat demand response time requirements?}
+\end{itemize}
+
+The control policy will be tested under different heat demand scenarios that vary in the degree of simultaneity of the heat demand. The results from the optimization should be compared with those from a version of the model using benchmark actuator controls. This benchmark needs to be defined.
+
+\section{Literature review on simulation software and DHN control policies}
+\subsection{Simulation models}
+Numerous tools exist for simulating energy systems, many of which are also applicable to district heating networks. A lot of the tools are commercial and require a paid license. However, Eneco prefers free simulation software, thereby shifting the main focus of this analysis to free alternatives. Given that Eneco uses Python for internal development, special attention was paid to open-source tools built in or compatible with Python. Nevertheless, to avoid overlooking well-established commercial alternatives, the paid programs WANDA from Deltares  \cite{deltaresWanda}, TRNSYS \cite{trnsys1975} and IDA ICE \cite{IDAICe} were also included in the analysis. WANDA was previously used in a master’s thesis by Femke Janssen on district heating networks \cite{FemkeJanssenLit}, and TRNSYS and IDA ICE are popular simulation tools for energy systems \cite{KUNTUAROVA}. The use of computational fluid dynamics (CFD) programs was briefly considered but deemed too detailed for this project. In the appendix chapter \ref{chapter:appendixTable}, a technical comparison of the evaluated tools is presented.  
+
+An overview of possibly suitable simulation tools was presented in Table 2-1. The paid license
+tools IDA ICE and TRNSYS could have been of high interest due to their dynamic modeling
+capability. However, it was decided to proceed with a non-commercial program due to the high
+cost and the drawback that these programs are not used at Eneco, making implementation
+more difficult. IDA ICE offers a free educational license, but it will no longer be valid once
+this thesis is completed. The second argument also holds for the programs EnergyPLAN \cite{EnergyPlan} and EnergyPlus \cite{EnergyPlus}. Besides the fact that EnergyPLAN uses an hourly timestep, EnergyPlus
+focuses on building thermal behavior without detailed network modeling. The most serious
+option of the non-Python tools was OpenModelica \cite{OpenModelica}, which is an open-source software tool that supports the Modelica language. Although the Modelica language is commonly used
+for DHN modeling \cite{KUNTUAROVA}, the OpenModelica documentation is not elaborate, making debugging
+more difficult. Since using it would also require Eneco employees to learn a new modeling
+language, we decided not to proceed with OpenModelica.
+Therefore, the focus was pointed towards Python-based open-source software. PyDHN \cite{PyDHN} and GridPenguin \cite{GridPenguin} support thermodynamic simulations. Nevertheless, PyDHN is still a beta version, and GridPenguin’s fixed timestep is 1 hour, making both tools unsuitable. Pandapipes \cite{pandapipes} offers a quasi-static approach without a fixed minimum timestep. While it is an interesting option, the time required to understand its code structure and the potential debugging time were considered greater than the time to develop our model from scratch. Therefore, it was decided to build the model from scratch in Python, using open-source projects as inspiration for its structure.
+
+\subsection{Control policy}
+
+\subsubsection{Bypass Flow Control}
+% These valves are used to redirect supply water to the return network to prevent a drop in the supply water temperature during a period of low heat demand. However, the flow redirected by the bypass valve should also be limited as it increases the return temperature, therefore causing a higher overall energy loss in the network and a decrease in efficiency of the heat pump. As mentioned in Section \ref{sec::overflowmech}, the bypass valves found in the Cooltower are thermostatic bypass valves and installed at the branch ends. 
+
+Articles revolving around the control of thermostatic bypass valves in district heating networks are scarcely present in the literature. Even though proper control of the bypasses can play an important role in lowering the return temperature \cite{app15062982,VANDERMEULEN201845}. In \cite{VANDERMEULEN201845}, the authors propose a theoretical benchmark for the performance of bypass controllers and compare it with a thermostatic bypass valve. Where Li et al. \cite{DTUlibrary} show the impact of varying thermostatic bypass flows (installed at the branch ends) on the return temperature for different heat loads, but they do not perform an optimization. Brand et al. \cite{BRAND2014256} also investigated the effect of thermostatic bypass valves, comparing them with different bypass valve configurations for bathroom floor heating to improve the overall system's energy efficiency. They concluded that the thermostatic bypass could not be completely replaced by the floor heating because its flow was limited. In \cite{BENAKOPOULOS2021120928} Benakopoulos et al. do optimize thermostatic regulation valves to achieve a better return temperature, but these are connected to the radiators on the customer side. Rong et al. \cite{RONG2025116197} developed an optimization model to maximize the heat storage capacity and economic efficiency of the DHN by selectively placing bypasses and controlling the flow through them with valves. 
+
+\subsubsection{Supply Temperature Control}
+Supply temperature control maintains the network temperature at the required level by injecting or extracting the appropriate amount of heat. Traditional supply temperature control is often achieved via a weather-compensation technique that adjusts the supply temperature based on outdoor conditions. The weather compensation curves can vary significantly depending on the research, and if the curves are incorrectly commissioned, they can perform worse than constant supply temperatures, resulting in higher return temperatures \cite{app15062982, LIAO200555}. Liao et al. \cite{LIAO200555} propose an adaptive control method that relies on real-time measurements of the space heat load to adjust the supply temperature. It results in better meeting the heat demand. Tol et al. \cite{TOL2021105} also make use of real-time data. They present a novel demand-responsive control strategy that reacts to changes in the difference between the return and supply temperatures at substations. This does not necessarily result in a lower return temperature than the weather compensation curves, but it reduces electricity use. The authors of \cite{papaKonstantikou} made a controller that determines the lowest supply temperature based on heat demand predictions and network time-delay calculations. 
+
+Following the model implementation presented in Chapter \ref{chapter:Model Implementation}, a more detailed review of the control policies relevant to the developed model is provided in Chapter \ref{chapter:ControlPolicy}
+
+\section{Outline}
+\todo[inline]{add when work is done}
