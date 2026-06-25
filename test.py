@@ -464,7 +464,7 @@ def test_network_builder():
     sim = Simulation(dt, total_time, net.net_id, T_ambt, temp_type = temp_type)
     sim.plot_network(net) 
 
-def fit_Kv_values():
+def fit_Kv_values(pump_pressure, curve):
     """
     Try to find valve positions to replicate Rutgers data
     No overflow valve is used! And simply assume that all valves are open because there goes some mass flow through them.
@@ -476,7 +476,8 @@ def fit_Kv_values():
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    pump_data = read_pump_data('60kPa Pump constant')
+    pump_data = read_pump_data(f'{pump_pressure}kPa Pump {"curve" if curve else "constant"}')
+    print(f'Pump pressure {pump_pressure}kPa {"curve" if curve else "constant"}')
 
     # Create network
     net = Network("Network Rutger")
@@ -551,8 +552,13 @@ def fit_Kv_values():
        
 
     # Calculate pressure losses in loops without taking the valves into account
-    friction_vector = net.pressure_friction_vector + \
-                            net.Kp_array 
+    # Compute friction using Re-dependent factor (Haaland) for each pipe's actual mass flow
+    pressure_friction_vector = np.zeros(len(mflow_array))
+    for pipe_id, pipe_data in net.pipes.items():
+        j = net.pipe_map[pipe_id]
+        pressure_friction_vector[j] = pipe_data['pipe_instance'].pressure_friction(mflow_array[j])
+
+    friction_vector = pressure_friction_vector + net.Kp_array
 
     net.build_loop_matrix(net.G)                           
 
@@ -573,15 +579,15 @@ def fit_Kv_values():
     valve_flows_sq = net.loop_matrix_active @ (valve_positions * np.abs(mflow_array)*mflow_array)
 
     inv_Kv_squared = loop_res / valve_flows_sq
-    Kv = np.sqrt(1 / inv_Kv_squared)
+    Kv_array = np.sqrt(1 / inv_Kv_squared)
 
-    print("Calculated Kv values for valves (from Hex 1 to Hex 23):",Kv)
+    print("Calculated Kv values for valves (from Hex 1 to Hex 23):",Kv_array)
 
     ### Validate Kv values ###
     for i, hex_obj in enumerate(net.hexs.values()):        
         pipe_id, pipe_obj = next(iter(hex_obj.get_incoming_pipes().items()))
         j = net.pipe_map[pipe_id]
-        net.inv_Kv_array[j] = 1/Kv[i]
+        net.inv_Kv_array[j] = 1/Kv_array[i]
 
     mflow0 = np.zeros(len(mflow_array))
     mflow0[:] = 0.01 
@@ -591,7 +597,13 @@ def fit_Kv_values():
     net.incidence_matrix_active = net.incidence_matrix_red
 
     # Adjust all vectors to active pipes
-    friction_vector = net.pressure_friction_vector + \
+    # Recompute friction using Re-dependent factor for each pipe's actual mass flow
+    pressure_friction_vector = np.zeros(len(mflow_array))
+    for pipe_id, pipe_data in net.pipes.items():
+        j = net.pipe_map[pipe_id]
+        pressure_friction_vector[j] = pipe_data['pipe_instance'].pressure_friction(mflow_array[j])
+
+    friction_vector = pressure_friction_vector + \
                     net.Kp_array + \
                     net.inv_Kv_array ** 2
     net.friction_vector_active = friction_vector
@@ -610,7 +622,7 @@ def fit_Kv_values():
     if len(violations) != 0:
         print(f"Some pipe flows do not match within tolerance ({tol} kg/s).")
 
-    return Kv
+    return Kv_array
 
 def check_Kvs_range(Kv_array, Kvs_min=0.1, Kvs_max=3.0, n_steps=100):
     """
@@ -622,7 +634,7 @@ def check_Kvs_range(Kv_array, Kvs_min=0.1, Kvs_max=3.0, n_steps=100):
     """
 
     def h_from_Kv(Kv_target, Kvs):
-        Kv0 = Kvs / 25
+        Kv0 = Kvs / 50
         return 1 + np.log(Kv_target / Kvs) / np.log(Kvs / Kv0)
 
     Kvs_values = np.linspace(Kvs_min, Kvs_max, n_steps)
@@ -1307,18 +1319,18 @@ if __name__ == "__main__":
     # from BO import CostFunction
 
 
-    start = datetime.datetime.now()
+    # start = datetime.datetime.now()
 
-    i = 1
-    profile = f'Profile {i}'
-    dt = 1
-    pump_pressure = 60
-    curve = True
-    test_name = f"Profile {i}_Qrespond_1mintest"
+    # i = 1
+    # profile = f'Profile {i}'
+    # dt = 1
+    # pump_pressure = 55
+    # curve = True
+    # test_name = f"Profile {i}_{pump_pressure}kPa_{curve}_Tsin=63"
 
-    print(f'start test: {start}, test_name: {test_name}')
+    # print(f'start test: {start}, test_name: {test_name}')
 
-    normal_run(profile, 'test', dt, pump_pressure, curve, 63, 'constant', test_name = test_name)
+    # normal_run(profile, 'test', dt, pump_pressure, curve, 63, 'constant', test_name = test_name)
 
 
     # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
@@ -1327,3 +1339,5 @@ if __name__ == "__main__":
     # print(f'duration test: {datetime.datetime.now() - start}')
 
 
+    Kv_array = fit_Kv_values(50, False)
+    check_Kvs_range(Kv_array, 0.001, 0.007, 100)

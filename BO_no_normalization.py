@@ -1,7 +1,8 @@
 from datetime import datetime
 from bayes_opt import BayesianOptimization
-from sklearn.gaussian_process.kernels import Matern, WhiteKernel
+from sklearn.gaussian_process.kernels import Matern
 from scipy.optimize import NonlinearConstraint
+from bayes_opt.acquisition import ExpectedImprovement
 
 from test import optimization_run, normal_run
 
@@ -278,6 +279,7 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_boun
     optimizer = BayesianOptimization(
         f=cost_fn.objective,
         constraint = constraint,
+        acquisition_function = ExpectedImprovement(xi = 15),
         pbounds=pbounds,
         verbose=2,
         random_state=random_state)

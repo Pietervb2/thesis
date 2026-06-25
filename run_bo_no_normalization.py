@@ -28,7 +28,7 @@ SCRIPT  = "BO_no_normalization.py"
 # All 8 jobs: all split=True first, then all split=False
 JOBS = [
     {"label": f"Profile {p} split={s}", "profile": p, "split": s}
-    for s in [True, False]
+    for s in [False]
     for p in range(1, 5)
 ]
 

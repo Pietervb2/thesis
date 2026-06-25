@@ -19,7 +19,7 @@ from datetime import datetime
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-WORKERS = 2          # number of parallel sweeps at any one time
+WORKERS = 3          # number of parallel sweeps at any one time
 SCRIPT  = "costfunction_parametersweep.py"
 
 # Define every sweep you want to run.
@@ -27,41 +27,41 @@ SCRIPT  = "costfunction_parametersweep.py"
 # Use None for the theta being swept — it becomes "null" automatically.
 
 SWEEPS = [
+    # {
+    #     "label":       "theta_1 profile_1",
+    #     "theta_index": 1,
+    #     "min":         60,
+    #     "max":         65,
+    #     "steps":       20,
+    #     "profile":     1,
+    #     "theta":       [None, 65, 300e3, 150e3, 42.5, 3],
+    # },
+    # {
+    #     "label":       "theta_2 profile_1",
+    #     "theta_index": 2,
+    #     "min":         63,
+    #     "max":         65,
+    #     "steps":       10,
+    #     "profile":     1,
+    #     "theta":       [63, None, 300e3, 150e3, 42.5, 3],
+    # },
+    {
+        "label":       "theta_3 profile_1",
+        "theta_index": 3,
+        "min":         200e3,
+        "max":         500e3,
+        "steps":       20,
+        "profile":     1,
+        "theta":       [64, 65, None, 150e3, 42.5, 3],
+    },
     {
         "label":       "theta_5 profile_1",
         "theta_index": 5,
         "min":         30,
         "max":         55,
         "steps":       20,
-        "profile":     3,
-        "theta":       [63, 65, 300000, 200000, None, 3],
-    },
-    {
-        "label":       "theta_1 profile_3",
-        "theta_index": 1,
-        "min":         60,
-        "max":         65,
-        "steps":       20,
-        "profile":     3,
-        "theta":       [None, 65, 150e3, 100e3, 30, 3],
-    },
-    {
-        "label":       "theta_2 profile_3",
-        "theta_index": 2,
-        "min":         62,
-        "max":         65,
-        "steps":       20,
-        "profile":     3,
-        "theta":       [62, None, 150e3, 100e3, 38.625, 3],
-    },
-    {
-        "label":       "theta_1 profile_3",
-        "theta_index": 1,
-        "min":         60,
-        "max":         65,
-        "steps":       20,
-        "profile":     3,
-        "theta":       [None, 65, 150000, 200000, 38.625, 3],
+        "profile":     1,
+        "theta":       [64, 65, 300e3, 150e3, None, 3],
     },
     #   {
     #     "label":       "theta_2 profile_3",

@@ -22,7 +22,7 @@ class CostFunction:
         self.run_type = run_type
         self.test_name = test_name
 
-        self.w_Tr = 3 * 1/4181 * 1e-3
+        self.w_Tr = 1 * 1/4181 * 1e-3
         self.w_Ts = 1 * 1/4181 * 1e-3
         self.w_dTs = 5
 
@@ -149,7 +149,7 @@ class CostFunction:
         mflow_r = net.pipes['Pipe 1.6']['pipe_instance'].mflow
 
         # Supply temperature
-        T_s = net.nodes['Node 1.1'].T
+        T_s = net.T_in
         mflow_s = net.pipes['Pipe 1.1']['pipe_instance'].mflow
 
         warmup_period = 4.5 #h 
@@ -182,14 +182,14 @@ class CostFunction:
         R = np.diag([1e-4, 1e-4, 1e-11, 1e-10, 1e-3, 1e-1]) # Regularization matrix 
         regularization = theta.T @ R @ theta
 
-        cost = term_Tr + term_Ts + term_dTs + regularization
+        cost = term_Tr + term_dTs + regularization
 
         # Save cost function values and parameters for debugging
         self.dict_debug[f'iter {self.iter}'] = {
             'theta': theta.tolist(),
             'T_r': float(term_Tr),
             'T_s': float(term_Ts),
-            'dTs': float(term_dTs),
+            'dTs_niet_in_cost': float(term_dTs),
             'regularization': float(regularization),
             'cost' : float(cost),
         }
