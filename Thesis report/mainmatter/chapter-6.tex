@@ -91,4 +91,18 @@
 
     \item verschil tussen toestel wachttijd en leidingwachttijd. Bij mij wordt er vanuit gegaan dat het water meteen bij de klant is. En ik meet vanaf het toestel. Dus dat is meteen 35 seconden, niet tot aan de tap. 
 
+    \item Daarnaast ook belangrijk om te realiseren dat het al bijna 30 seconden duurt om nu de klep te openen. Daardoor krijg je niet snel genoeg het water bij je. En dit is al bij HEX 1 dus de rest duurt nog veel langer. Maar precies model met preciezer gegevens rondom de kleppen en warmte wissellaars gaat dit preciezer maken en je een beter idee geven van de daadwerkelijke flow rate.
+
 \end{itemize}
+
+\todo[inline]{licht toe dat je het geprobeerd de natuurkundige constante in de overflow afhankelijk te maken van de flow en variatie aan te brengen in tau om zo te kijken dat er meer stroming door de overflow zou komen. Echter dat het niet hielp.}
+\todo[inline]{daarnaast ook met een minimale opening toe te passen van  1 / 2 procent alleen dat dat ook leidde tot het feit dat de overflow niks meer deed.}
+
+\todo[inline]{mogelijk verwerken van valve authority in de discussie}
+% In theory, if the differential pressure across the valve remains constant, the flow characteristic w.r.t. the valve opening would exactly match the valve characteristic. However, in reality this is not the case as the differential pressure over the valve depends on the valve position. The distortion of the $K_v$ characteristic is defined by the valve authority ($\beta$), which is the ratio of the differential pressure over the valve when it is fully opened ($\Delta p_{v,h=1}$) and fully closed ($\Delta p_{v,h=0}$). In case the system is hydraulically balanced the differential pressure over the closed valve can be replaced by the pump pressure.  
+% \begin{equation}
+%     \beta = \frac{\Delta p_{v,h=1}}{\Delta p_{v,h=0}} = \frac{\Delta p_{v,h=1}}{\Delta p_{\text{p}}}
+% \end{equation}
+% The valve authority is generally stated as a dimensionless number between 0 and 1. The lower $\beta$, the greater the distortion. A reduction of the valve size would lead to a higher valve authority but it would dissipate too much of the pump energy. In practice, valve authority is typically designed to fall between 0.3 and 0.5, for which the resulting distortion is generally considered acceptable. 
+
+% Besides the pressure changes caused by the displacement of the valve itself, other control valves or active components in the system induce pressure variations over the valve. This phenomenon is called hydraulic interactivity. Compensating for this change in pressure might lead to an oscillating valve behavior and instable control. One can counter such behavior by using a Differential Pressure Control Valve (DPCV) which ensures a constant differential pressure over the valve. The use of such a valve would be interesting in our case as the delivery sets contain dynamic control valves.
