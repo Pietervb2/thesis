@@ -1130,14 +1130,6 @@ def consumer_start_times(profile, peaks):
             consumer = Consumer(f'Consumer {i+1}',heat_demand_types, start_times)
             consumer_list.append(consumer)
 
-    elif profile == 'Profile 5':
-        # For testing
-        heat_demand_types = ['shower']
-        start_times = peaks
-        consumer_list = []
-        for i in range(23):
-            consumer = Consumer(f'Consumer {i+1}',heat_demand_types, start_times)
-            consumer_list.append(consumer)
     else:
         if profile == 'Profile 2':
 

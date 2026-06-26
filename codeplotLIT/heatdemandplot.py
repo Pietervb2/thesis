@@ -1,87 +1,113 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from scipy.optimize import curve_fit
+import sys
 
-num_steps = 1000
-t = np.linspace(0, 24, num_steps)  # time in hours
-
-# Fit the function from Max
-xfit = [0,4,8,12,13,16,18,20,24]
-yfit = [0.31, 0.43, 0.65, 0.52, 0.5,0.53,0.6,0.51,0.31]
-
-x = np.asarray(xfit)
-y = np.asarray(yfit)
-
-def two_sin(x, A1, w1, p1, A2, w2, p2, offset):
-    return A1 * np.sin(w1 * x + p1) + A2 * np.sin(w2 * x + p2) + offset
-
-# initial guesses: amplitudes, angular frequencies (rad/h), phases, offset
-p0 = [0.4, np.pi/12, 0.0, 0.2, 2.8 * np.pi / 24, -0.3, 0.0]
-bounds = ([-5, 0.0, -4*np.pi, -5, 0.0, -4*np.pi, -2],
-          [ 5, 2*np.pi,  4*np.pi,  5, 2*np.pi,  4*np.pi,  2])
-
-popt, pcov = curve_fit(two_sin, x, y, p0=p0, bounds=bounds, maxfev=200000)
-A1, w1, p1, A2, w2, p2, offset = popt
-
-print(f'Fitted parameters:\nA1={A1}, w1={w1}, p1={p1}\nA2={A2}, w2={w2}, p2={p2}\noffset={offset}')
-
-# build fitted curve on the existing fine time grid `t`
-y_fit_full = two_sin(t, *popt)
-
-# definite integral (area under the fitted curve) over the t grid
-total_area = np.trapz(3600*y_fit_full, t)  # units: y * hours
-print(f"Integrated area (0-{t[-1]} h): {total_area:.6f} MJ")
-
-# To get the heat demand for one house, divide by total_area/65*1000  to get kW
-correction_factor = 1000 / (total_area/65)
-print(f'Correction factor: {correction_factor}')
-demand_one_house = correction_factor*y_fit_full
-plt.figure()
-plt.plot(t,demand_one_house,label='Heat demand 1 house (kW)')
-plt.ylabel('Heat demand (kW)')
-plt.xlabel('Time (h)')
-plt.grid()
-plt.title(f'Heat demand profile 1 appartement, total = {np.round(3.6*np.trapz(demand_one_house,t),2)} MJ')
-
-plt.figure()
-plt.plot(x, y, 'o', label='data')
-plt.plot(t, y_fit_full, '-', label='two-sin fit')
-plt.plot(t, A1 * np.sin(w1 * t + p1), '--', label='component 1')
-plt.plot(t, A2 * np.sin(w2 * t + p2), '--', label='component 2')
-plt.xlabel('Time (h)')
-plt.legend()
-plt.grid()
-plt.show()
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from baseclasses.consumer import Consumer
 
 
-# def smooth_peak(x, x0, sigma, A=1):
-#     return A * np.exp(-(x - x0)**2 / (2*sigma**2))
+def consumer_start_times(profile, peaks):
+    if profile == 'Profile 1':
+        heat_demand_types = ['shower', 'shower']
+        start_times = peaks
 
-# # Create a time vector for one day (24 hours) with 1-minute intervals
-# t = np.linspace(0, 24*3600, 24*3600)  # time in seconds
+        consumer_list = []
+        for i in range(23):
+            consumer = Consumer(f'Consumer {i+1}', heat_demand_types, start_times)
+            consumer_list.append(consumer)
 
-# # Create a heat demand profile with two peaks (morning and evening)
-# y_pre_fit = smooth_peak(t, 8*3600, 0.07*3600) 
+    else:
+        if profile == 'Profile 2':
+            heat_demand_types = ['shower', 'shower']
+            amount = [5, 13, 5]
+            interval = 5 / 60
 
-# # + smooth_peak(t, 19*3600, 0.15*3600)  # units: W
+        elif profile == 'Profile 3':
+            heat_demand_types = ['shower', 'shower']
+            amount = [1, 2, 4, 9, 4, 2, 1]
+            interval = 5 / 60
 
-# total_area = np.trapz(y_pre_fit, t)  # units: y * hours
+        elif profile == 'Profile 4':
+            heat_demand_types = ['shower', 'shower']
+            amount = [1, 1, 2, 2, 2, 2, 3, 2, 2, 2, 2, 1, 1]
+            interval = 5 / 60
 
-# scaling_factor = 18e6 / (total_area)  # scaling factor to reach 65 MJ
-# y = y_pre_fit * scaling_factor  # scaled heat demand profile
-# plt.plot(t, y)
-# plt.title("One day heat demand profile (scaled to 18 MJ)")
-# plt.xlabel("Time (hours)")
-# plt.ylabel("Heat Demand (W)")
+        offsets = interval * np.arange(-len(amount) // 2, len(amount) // 2 + 1)
 
-# ax = plt.gca()
-# ax.set_xlim(0, 24 * 3600)  # limits in seconds
-# ticks_seconds = np.arange(0, 25, 4) * 3600
-# ax.set_xticks(ticks_seconds)
-# ax.set_xticklabels([f'{int(h)}' for h in np.arange(0, 25, 4)])
+        start_time1 = peaks[0] + offsets
+        start_time2 = peaks[1] + offsets
 
-# plt.grid()
-# plt.show()
+        consumer_list = []
+        tot_num = 0
+        for idx, num in enumerate(amount):
+            for i in range(num):
+                consumer = Consumer(
+                    f'Consumer {tot_num+i+1}',
+                    heat_demand_types,
+                    [start_time1[idx], start_time2[idx]],
+                )
+                consumer_list.append(consumer)
+            tot_num += num
 
-# print(f'Total energy demand over the day: {np.trapz(60*1e3*y, t)/1e6} MJ')  # Convert kW*min to MJ
+    return consumer_list
+
+
+def compute_total_heat_demand(profile, peaks, dt=60, total_time=24 * 3600):
+    num_steps = total_time // dt
+    t_hours = np.arange(num_steps) * dt / 3600
+
+    consumer_list = consumer_start_times(profile, peaks)
+
+    Q_total = np.zeros(num_steps)
+    for consumer in consumer_list:
+        consumer.initialize_consumer(num_steps, dt)
+        Q_total += consumer.Q_d
+
+    return t_hours, Q_total
+
+
+def plot_heat_demand_profiles():
+    peaks = [7.5, 21]
+    profiles = ['Profile 1', 'Profile 2', 'Profile 3', 'Profile 4']
+    dt = 60          # s
+    total_time = 24 * 3600  # s
+
+    thesis_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    thesis_fig_folder = os.path.join(thesis_dir, 'Thesis report', 'figures_thesis')
+
+    # Compute total heat demand for each profile
+    t_hours = None
+    Q_totals = []
+    for profile in profiles:
+        t, Q = compute_total_heat_demand(profile, peaks, dt, total_time)
+        if t_hours is None:
+            t_hours = t
+        Q_totals.append(Q)
+
+    # --- Individual figures per profile ---
+    for idx, (profile, Q) in enumerate(zip(profiles, Q_totals)):
+        fig, ax = plt.subplots(figsize=(6, 4), constrained_layout=True)
+
+        ax.plot(t_hours, Q / 1e3, lw=1.5, color='C0')
+
+        ax.set_xlabel('Time (h)')
+        ax.set_ylabel('Total heat demand (kW)')
+        ax.set_xlim(0, 24)
+        ax.set_xticks([0, 4, 8, 12, 16, 20, 24])
+        ax.set_ylim(bottom=0)
+        ax.grid(alpha=0.3)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        fname = f'heat_demand_profile_{idx + 1}.png'
+        plt.savefig(
+            os.path.join(thesis_fig_folder, fname),
+            dpi=150,
+            bbox_inches='tight',
+        )
+        # plt.show()
+
+
+if __name__ == '__main__':
+    plot_heat_demand_profiles()
