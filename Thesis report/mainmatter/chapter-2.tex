@@ -89,9 +89,9 @@ This section discusses the overall model structure used for the thermodynamics a
     \item \textbf{Black-box} modeling puts the behavior of the entire system into one function, which is determined using data-driven methods. In \cite{GUELPA2016586}\cite{KECEBAS2012339}, it is applied to district heating networks.
     \item \textbf{Grey box} modeling is a combination of the two above and can be found in a DHN context in \cite{grey1}\cite{grey2}. 
 \end{itemize}
-This thesis project makes use of an white box model approach, as Eneco prefers a more thorough understanding of the system's inner workings. 
+This thesis project uses a white-box model approach, as Eneco prefers a more thorough understanding of the system's inner workings. 
 
-District heating networks are branched or looped-based networks, making them perfectly suited for modeling with a graph approach. The graph consists of nodes, which are junctions in the system, connected by edges. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve \cite{sibeijn2025economic}. On the edges, the fluid looses energy to its surroundings, the producers can add heat, and consumers can subtract it \todo{dit klopt niet helemaal, maar weet even niet hoe ik het anders op moet schrijven}. The temperature at each node is determined by a weighted average of the incoming mass flows and their respective temperatures. All outgoing edges from the node are assigned the same temperature as the node itself. To calculate the mass flows and pressure within the network, Kirchhoff's two laws must be upheld. The first law asserts that the total mass flow entering and leaving a node must be equal, ensuring mass conservation. The second law requires that the net pressure drop around any closed loop in the network must be zero, maintaining pressure balance. The pressure loss within the pipes depends quadratically on the flow, making the hydraulics a system of non-linear equations. As we assume a decoupled system, the hydraulic problem is computed first, after which the obtained mass flow rates are used for the thermodynamic system. The thermodynamic behavior of the edge in the system is described by a PDE. Different solutions for this equation are discussed in more detail in Section \ref{sec::thermo}. The mathematical formulation of the graph is presented in Section \ref{sec::graph}, as first the component definitions need to be introduced. 
+District heating networks are branched or looped, making them well-suited for modeling using a graph approach. The graph consists of nodes, which are junctions in the system, connected by edges. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve \cite{sibeijn2025economic}. The mathematical formulation of hydraulics and thermodynamics in the graph is presented in Section \ref{sec::graph}, since the component definitions must be introduced first. First the hydraulic modeling of the components will be discussed before the thermodynamics is introduced. Assuming a decoupled system, the hydraulic problem is computed first, after which the resulting mass flow rates are used in the thermodynamic system. 
 
 \section{Hydraulic modeling}\label{sec::hydromodel}
 It is essential to know the pressure loss across all components, as this information, combined with Kirchhoff's laws, enables the determination of fluid flow throughout the district heating network. 
@@ -130,10 +130,10 @@ With the flow rate $q$ [m$^3$/s] and the length of the pipe $L$ [m]. The first t
 \subsection{Valves}\label{sec::valves}
 Several types of valves are present in the Decentralized Solutions. This project focuses on the 2-way control valves in the heat exchangers and the thermostatic bypass valve situated at the top of the risers. The following equation can express the pressure loss across a valve \cite{Artikelphdchris}:
 
-\begin{equation}\label{eq::realminorpres}
-    \Delta p_{v} = \left( \frac{\dot{m}}{K_v} \right)^{2} \frac{\rho}{\rho_{\text{ref}}}    
+\begin{equation}\label{eq::valvedp}
+    \Delta p_{v} = \left( \frac{\dot{m}}{K_v} \right)^{2} \frac{\rho}{\rho_{\text{ref}}}   =   \left( \frac{\dot{m}}{K_v} \right)^{2}
 \end{equation}
-With the hydraulic conductivity parameter $K_v$  [kg/s/$\sqrt{Pa}$], the actual fluid density during simulations $\rho$ [kg/m$^3$], and the fluid density during the manufacturer's $K_v$ measurements $\rho_{ref}$ (typically 1000 kg/m$^3$). 
+With the hydraulic conductivity parameter $K_v$  [kg/s/$\sqrt{Pa}$], the actual fluid density during simulations $\rho$ [kg/m$^3$], and the fluid density during the manufacturer's $K_v$ measurements $\rho_{ref}$ (typically 1000 kg/m$^3$). As the density of the water is assumed to be constant you end up with the right hand term. 
 
 The calculation of the valve characteristic $K_v$, which varies with the valve's opening position, depends on the valve type. For small valve lifts, the $K_v$ value cannot be determined accurately because it exceeds the required tolerances of the basic shape of the valve. The valve's control range is determined up to a 10 percent deviation of the basic shape. When it goes outside of this control range, the valve becomes unpredictable \cite{echtephdthesis}. Normally, the manufacturer provides the control range. 
 
@@ -213,13 +213,18 @@ with $K_p$ [kg/m$^{2}$] as the pressure loss coefficient of the heat exchanger.
 In addition to the pressure loss caused by the heat exchanger body, it also contains a flow control valve. Within the Arctic WKW-S 4P, several settings are available for how the valve displacement should respond to the consumer's heat demand. As modeling these settings was deemed outside the scope of this project, it was decided to control the valve with a PI controller. This controller starts operating once there is mass flow on the consumer side of the heat exchanger and aims to raise this water to 55 $^{\circ}C$. The PI-controller is equipped with anti-windup to prevent the integrator from accumulating error when the valve is saturated. The modeling of the consumer side behavior of the heat exchanger is further discussed in Section \ref{sec::heatdemand}.
 
 \subsection{Pumps}
-Pumps supply the pressure necessary for the fluid to flow through the network. Centrifugal pumps are the most commonly used pumps in district heating networks. The pump is characterized by its performance curve, as shown in Figure \ref{fig::pumpcharacteristic}, which illustrates the relationship between pump head (or pressure) and the volumetric flow rate. This figure includes curves for various rotational shaft speeds. The system head curve is also plotted, with the system's operating points located at the intersections of the pump and system curves. The figure further includes iso-efficiency lines, which represent constant pump efficiency across different operating conditions. Changes in valve positions alter the system head curve, thereby shifting the operating point. Combining the valve positions with the shaft rotational speed enables efficient pump operation. Pump curves are modeled using a polynomial law \cite{echtephdthesis}. 
+Pumps supply the pressure necessary for the fluid to flow through the network. Centrifugal pumps are the most commonly used pumps in district heating networks. The pump is characterized by its performance curve, as shown in Figure \ref{fig::pumpcharacteristic}, which illustrates the relationship between pump head (or pressure) and the volumetric flow rate. This figure includes curves for various rotational shaft speeds. The system head curve is also plotted, with the system's operating points located at the intersections of the pump and system curves. The figure further includes iso-efficiency lines, which represent constant pump efficiency across different operating conditions. Changes in valve positions alter the system head curve, thereby shifting the operating point. Combining the valve positions with the shaft rotational speed enables efficient pump operation. Pump curves are modeled using a polynomial law \cite{echtephdthesis}. The pump curves in the developed simulation model are represented by second-order polynomials, as this was deemed sufficient to reproduce a valid system curve.
 
-\begin{equation}\label{eq::pumpchar}
-    \Delta p_{p} = \sum^{\text{n}}_{\text{i=1}} \left( c_i(\omega)  \dot{m}^{i} \right)
+\begin{equation}\label{eq::pumpchar}  
+    \sum^{\text{n}}_{\text{i=1}} \left( c_i(\omega)  \dot{m}^{i} \right)
 \end{equation}
 
-With the rotational shaft speed $\omega$ and the polynomial constants $c_i(\omega)$. The pump curves in the developed simulation model are represented by second-order polynomials, as this was deemed sufficient to reproduce a valid system curve.
+With the rotational shaft speed $\omega$ and the polynomial constants $c_i(\omega)$. The pump characteristics in the developed simulation model are approximated by a second-order polynomial, which was found to be sufficient for accurately reproducing the system curve and implement by Sandou et al. aswell \cite{Sandou2005}. The pump is assumed to operate at a constant rotational shaft speed, such that its operating point remains on a single pump curve. Leading to the following relation of the delivered pump pressure:
+
+\begin{equation}\label{eq::pump2order}
+    \Delta p_{p} = c_2 \dot{m}^{2} + c_1 \dot{m} + c_3
+\end{equation}
+Where $c_1$, $c_2$ and $c_3$ are the polynomial constants.
 
 \begin{figure}[h!]
     \centering
@@ -284,7 +289,7 @@ With the thermal conductivities of the pipe and the insulation $k_{ab}, k_{bc}$ 
     \label{fig::pipe}
 \end{figure}  
 
-The PDE (\ref{eq::pipePDE} will be solved using the Node Method as it is the most widely applied approach in a dynamic district heating network setting. Although alternative methods show promise for improved accuracy or efficiency, they suffer from various limitations such as computational constraints, implementation complexity, or restrictive operating conditions, and lack the extensive real-world validation that supports the Node Method \cite{KUNTUAROVA}.
+The PDE (\ref{eq::simpipePDE}) will be solved using the Node Method as it is the most widely applied approach in a dynamic district heating network setting. Although alternative methods show promise for improved accuracy or efficiency, they suffer from various limitations such as computational constraints, implementation complexity, or restrictive operating conditions, and lack the extensive real-world validation that supports the Node Method \cite{KUNTUAROVA}.
 
 \subsection{Heat Exchanger}
 Heat exchangers exchange thermal energy between the district heating network and the domestic heating system. It was chosen to model the Arctic WKW-S 4P \cite{fortes_wkw_s_4p}, a plate heat exchanger used in several Eneco DCS projects. It consists of a series of corrugated plates mounted in a frame. Separated by the plates, the hot and cold fluids flow counter-currently, exchanging heat through the thin plate material. Although a dynamic heat exchanger model can be developed in great detail using the Finite Volume Method (FVM), insufficient information is available about the system's internal layout. Therefore, this thesis does not model the heat exchanger's internal temperature profile and focuses solely on heat transfer between the hot and cold fluids. It is assumed that the rate of heat transfer from the hot fluid ($\dot{Q_{h}}$ [J / s]) is equal to the rate of heat transfer from the cold fluid ($\dot{Q_{c}}$). That means that we do not lose thermal energy. 
@@ -381,7 +386,7 @@ The same approach within the Modelica Buildings library in the \texttt{PlateHeat
 \noindent Assuming the nominal conductance $UA_{des} = U \cdot A_s$ is equally split over both sides, $hA_{h,des} = hA_{c,des} = 2\,UA_{des}$, and substituting into \eqref{eq:UA_series}:
 
 \begin{equation}
-    \frac{1}{UA} = 
+    \frac{1}{UA_s} = 
     \frac{1}{2\,UA_{\text{des}}} \left(\frac{\dot{m}_h}{\dot{m}_{\text{h,des}}}\right)^{-0.8}
     + \frac{1}{2\,UA_{\text{des}}} \left(\frac{\dot{m}_c}{\dot{m}_{\text{c,des}}}\right)^{-0.8}
     \label{eq:UA_offdesign}
@@ -402,9 +407,7 @@ Eneco's Decentralized Solutions prioritize the use of the ATES system for heatin
 
 
 \section{Heat demand}\label{sec::heatdemand}
-Heat demand is modeled individually for each consumer. The focus is on low heat demand periods, primarily in the summer. During these periods, space heating is absent and the heat demand is solely caused by domestic hot water use from showers. 
-
-According to Eneco \cite{eneco_energieverbruik}, the average household consumes 6.6 GJ of domestic hot water per year, corresponding to approximately 18 MJ per day. Assuming two showers per day per household, each shower accounts for roughly 9 MJ. In combination with the maximum heat output of the Arctic WKW-S 4P, which is 30 kW, a single shower is modeled as a stepped demand profile: 3 minutes at 10 kW, followed by 3 minutes at 15 kW and 4 minutes at 20 kW, yielding a total of 9.3 MJ (consistent with the daily average). 
+Heat demand is modeled individually for each consumer. The focus is on low heat demand periods, primarily in the summer. During these periods, space heating is absent and the heat demand is solely caused by domestic hot water use from showers. According to Eneco \cite{eneco_energieverbruik}, the average household consumes 6.6 GJ of domestic hot water per year, corresponding to approximately 18 MJ per day. Assuming two showers per day per household, each shower accounts for roughly 9 MJ. In combination with the maximum heat output of the Arctic WKW-S 4P, which is 30 kW, a single shower is modeled as a stepped demand profile: 3 minutes at 10 kW, followed by 3 minutes at 15 kW and 4 minutes at 20 kW, yielding a total of 9.3 MJ (consistent with the daily average). 
 
 Four heat demand profiles are defined, differing in the degree of simultaneity of consumer demand, decreasing from Profile 1 to Profile 4. All profiles contain two daily peaks centered at 7:30 and 21:00, representing morning and evening shower activity. The consumer distributions centered on both peaks concerning the starting times of consumer heat demand are summarized in Table \ref{tab::simulprofile}. The resulting profiles of the total heat demand are plotted in Figure \ref{fig::heatdemandprofiles}. To translate the heat demand into the variables required by the NTU-method, the consumer-side inlet temperature ($T_{\text{c,in}}$) is fixed at 10$^{\circ}C$ and the desired outlet temperature ($T_{\text{c,out}}$) at 55$^{\circ}C$. The secondary mass flow rate at each timestep then follows directly from:
 \begin{equation}
@@ -432,14 +435,14 @@ Profile 4 & $1,\;1,\;2,\;2,\;2,\;2,\;3,\;2,\;2,\;2,\;2,\;1,\;1$ & 5 min \\
     \centering
     \begin{subfigure}[b]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{t}
+        \includegraphics[width=\textwidth]{Thesis report/figures_thesis/heat_demand_profile_1.png}
         \caption{Profile 1}
         \label{fig:profile1}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/profile2.png}
+        \includegraphics[width=\textwidth]{Thesis report/figures_thesis/heat_demand_profile_2.png}
         \caption{Profile 2}
         \label{fig:profile2}
     \end{subfigure}
@@ -448,26 +451,25 @@ Profile 4 & $1,\;1,\;2,\;2,\;2,\;2,\;3,\;2,\;2,\;2,\;2,\;1,\;1$ & 5 min \\
     
     \begin{subfigure}[b]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/profile3.png}
+        \includegraphics[width=\textwidth]{Thesis report/figures_thesis/heat_demand_profile_3.png}
         \caption{Profile 3}
         \label{fig:profile3}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/profile4.png}
+        \includegraphics[width=\textwidth]{Thesis report/figures_thesis/heat_demand_profile_4.png}
         \caption{Profile 4}
         \label{fig:profile4}
-    \end{subfigure}
-    
-    \caption{Heat demand profiles for the four consumer distributions.}
+    \end{subfigure}   
+    \caption{The total heat demand for the four heat demand profiles.}
     \label{fig::heatdemandprofiles}
 \end{figure}
 
+\section{Graph}\label{sec::Graph}
+% District heating networks are branched or looped, making them well-suited for modeling using a graph approach. The graph consists of nodes, which are junctions in the system, connected by edges. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve \cite{sibeijn2025economic}. On the edges, the fluid loses energy to its surroundings, the producers can add heat, and consumers can subtract it \todo{dit klopt niet helemaal, maar weet even niet hoe ik het anders op moet schrijven}. The temperature at each node is determined by a weighted average of the incoming mass flows and their respective temperatures. All outgoing edges from the node are assigned the same temperature as the node itself. To calculate the mass flows and pressure within the network, Kirchhoff's two laws must be upheld. The first law asserts that the total mass flow entering and leaving a node must be equal, ensuring mass conservation. The second law requires that the net pressure drop around any closed loop in the network must be zero, maintaining pressure balance. The pressure loss within the pipes depends quadratically on the flow, making the hydraulics a system of non-linear equations. As we assume a decoupled system, the hydraulic problem is computed first, after which the obtained mass flow rates are used for the thermodynamic system. The thermodynamic behavior of the edge in the system is described by a PDE. Different solutions for this equation are discussed in more detail in Section \ref{sec::thermo}. The mathematical formulation of the graph is presented in Section \ref{sec::graph}, as first the component definitions need to be introduced. 
 
-
-\subsection{Graph}\label{sec::Graph}
-The overall model structure of the district heating network was decided to be a strongly connected directed graph. The looped and branched nature of district heating networks makes them well suited for a graph, which is commonly used in the literature \cite{sibeijn2025economic, Krug2020,OPPELT2016336,Simonssongraph}. The strong connectedness indicates that no water leaves the system. The graph is defined as $\mathcal{G}=(\mathcal{N}, \mathcal{E})$, with a set of nodes $\mathcal{N}$ that represent the junctions in the network. In our model, the nodes correspond to volumeless junctions. Nodes are connected by the edges $\mathcal{E} \subseteq \mathcal{N} \times \mathcal{N}$. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve. 
+The overall model structure of the district heating network was decided to be a strongly connected directed graph. The looped and branched nature of district heating networks makes them well-suited for a graph, which is commonly used in the literature \cite{sibeijn2025economic, Krug2020,OPPELT2016336,Simonssongraph}. The strong connectedness indicates that no water leaves the system. The graph is defined as $\mathcal{G}=(\mathcal{N}, \mathcal{E})$, with a set of nodes $\mathcal{N}$ that represent the junctions in the network. In our model, the nodes correspond to volumeless junctions. Nodes are connected by the edges $\mathcal{E} \subseteq \mathcal{N} \times \mathcal{N}$. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve. 
 
 \subsection{Edges}
 The dynamics of an edge ($e \in \mathcal{E}$) can be described with the two PDEs, derived in Sections \ref{sec::hydropipes} and \ref{sec::thermopipes}.
@@ -495,14 +497,6 @@ with $R_{f}$ a combined constant term representing the frictional resistance of 
 \begin{equation}
     \sum_{e  \in \mathcal{E}_{\text{loop}}} \Delta p_e = 0.
 \end{equation}
-The use of the Kirchhoff laws leads to a system of nonlinear equations. Hardy-Cross \cite{HardyCross} and the Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods make an initial guess of the flow and then iteratively adjust this guess until it converges. Where the Hardy-Cross method runs through each loop independently, the Newton–Raphson method runs through all loops simultaneously \cite{NewtonenHard}. As a result, Newton-Raphson generally converges more quickly than Hardy-Cross. While there are several articles claiming a faster convergence or more accurate determination of the mass flows in cases with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Raphson was selected for this work, given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
-
-
-% In \cite{STEVANOVIC}, the authors claim that they developed a method of square roots for solving the linearized system that outperforms the Hardy-Cross method in convergence time and validated it with real data. Also the aggregated models from \cite{LARSEN2002995} (also tested with real data) converge quicker (which is mainly interesting for big district heating networks) and overcome some of the limitations of the Hardy-Cross method. Where Arsene et al. \cite{ARSENE} found that for low flow rates the Newton-Raphson and Hardy-Cross methods experienced weak convergence and propose a new method which is a combination of the Newton-Raphson method and a loop corrective method. 
-However, in the case of a low flow rate, these methods experience weak convergence. The method developed by Arsene et al. \cite{ARSENE}, which can handle lower flow rates and will therefore be used within the simulation models created in this study.
-
-
-In the thermodynamic PDE, \ref{eq::thermopde}, the term $w$ [J/(m s)] is added, representing the power transfer per meter of pipe with a heat exchanger. The equation will be solved using the Node Method as it is the most widely applied approach in a dynamic district heating network setting. Although alternative methods show promise for improved accuracy or efficiency, they suffer from various limitations such as computational constraints, implementation complexity, or restrictive operating conditions, while lacking the extensive real-world validation that supports the Node Method \cite{KUNTUAROVA}.
 
 \subsection{Nodes}
 The first Kirchhoff law states that the sum of flows entering a node equals the sum of flows exiting the node. This results in the conservation of mass over every node due to the assumed incompressibility of the water. For any node $n \in \mathcal{N}$, the edge sets $\mathcal{E}_{\rightarrow n} = \left\{ e \in \mathcal{E} : e \  \text{enters} \ n\right\}$ and $\mathcal{E}_{n\rightarrow } = \left\{ e \in \mathcal{E} : e \  \text{exits} \ n\right\}$ are respectively the entering and exiting sets of edges. The mass conservation is given by
@@ -518,13 +512,6 @@ with the nodal temperature being the temperature of all the exiting edges \cite{
     T_n(t) = T_e(t), \quad \forall \ n \in \mathcal{N}, e \in \mathcal{E}_{n \rightarrow} 
 \end{equation}
 
-\subsection{Heat demand}
-The individual user heat demand profile is assumed to be deterministic and will be represented by a summation of sines approximating the user demand profile from \cite{Krug2020}. 
-
-\begin{equation}
-Q_{d,n_c}(t)=A_1(n_c) \sin(\frac{2 \pi}{T_1(n_c)} t + \phi_1(n_c)) + A_2(n_c)\sin(\frac{2 \pi}{T_2(n_c)} t + \phi_2(n_c))
-\end{equation}
-with $Q_{d,n_c}(t)$ [W] as the heat demand for individual user $n_c \in \left\{1,2,...,N_c \right\}$ and $N_c$ as the total number of customers. The array of all the individual user profiles is called $Q_d(t)$, and all entries contain a time shift variable $\tau_{n_c}$, introduced to create a difference in timing between the individual user heat demand profiles.
 
 \begin{equation}
 Q_d(k) = 
@@ -536,10 +523,6 @@ Q_{d,N_c}(k - \tau_{N_c})
 \end{array}\right].
 \end{equation}
 
-\subsection{Heat production}
-The total heat production can be divided into two components: heat extracted from the ATES and backup heat supplied by a larger district heating network. The relation of the heat pump connected to the ATES in combination with the backup network is defined in the energy balance below.
-\begin{equation}
-    \rho_w c_w q_e(t) \left(T_s(t) - T_r(t)\right) = \rho_w c_w q_{A}(t)\left(T_{s,A} - T_{r,A}\right) + Q_e(t) + Q_{b}(t),
-\end{equation}
-with the flow rate on the ATES side $q_A(t)$ [m$^3$/s], the supply and return temperature on the ATES side respectively $T_{s,A}$ and $T_{r,A}$ [K] and the electric power delivered to the compressor $Q_e(t)$ [W]. The temperatures $T_{r,A}$ and $T_{s,A}$ are assumed constant. In case the ATES cannot provide enough energy, the backup network fills the energy gap. The amount of heat delivered by the backup network is stated as $Q_{b}(t)$ [W].
+The use of the Kirchhoff laws leads to a system of nonlinear equations. The Hardy-Cross \cite{HardyCross} and Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods start with an initial guess of the flow and adjust it iteratively until it converges. While the Hardy-Cross method iterates through each loop independently, the Newton–Raphson method iterates through all loops simultaneously \cite{NewtonenHard}. As a result, Newton-Raphson generally converges more quickly than Hardy-Cross. While there are several articles claiming a faster convergence or more accurate determination of the mass flows in cases with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Raphson was selected for this work, given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
 
+\todo[inline]{ingaan op hoe het netwerk van non-linear equations eruit ziet dus met matrix en shit}
