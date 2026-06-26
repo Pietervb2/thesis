@@ -15,9 +15,9 @@ Furthermore, these are the other assumptions applied throughout this thesis proj
 \begin{enumerate}
     \item The water is incompressible. 
     \item The fluid flow is fully developed.
-    \item The pipes are cylindrical and are completely filled with water.
+    \item The pipes are cylindrical and are filled with water.
     \item The fluid flow is one-directional. 
-    \item The fluid velocity and temperature are assumed to be uniform across the pipe cross-section.
+    \item The fluid velocity and temperature are spatially homogeneous throughout the cross-section of the pipeline.
     \item Minor pressure losses are neglected.
     \item No water leaves the pipe system.
     \item Homogeneous mixing at the pipe junctions.
@@ -48,7 +48,7 @@ Where $c_p$ [J / (kg K)] is the specific heat capacity and $k$ [W /(m K)] is the
 
 \textbf{The Nusselt Number (Nu)} represents the ratio of convective to conductive heat transfer across a boundary. It is characterized by the relation below:
 
-\begin{equation}
+\begin{equation}\label{eq::Nusselt}
     Nu = \frac{h D}{k}
 \end{equation}
 
@@ -120,11 +120,11 @@ Where the pressure in the pipe $p$ [Pa], the slope of the pipe $\hat{z}$ [-] and
 \end{equation}
 Substituting $v = \frac{4 \dot{q}}{\pi D^2}$ into \eqref{eq::mom} and discretizing $\partial_x p = \frac{\Delta p}{L}$ leads to:
 \begin{equation}\label{eq::DisPresQ}
-    \Delta p = p_{p} =  f \frac{8\rho_w L}{\pi^2 D^5}\left|q\right| q + \rho_w g L \hat{z}
+    \Delta p_p =  f \frac{8\rho_w L}{\pi^2 D^5}\left|q\right| q + \rho_w g L \hat{z}
 \end{equation}
 With the flow rate $q$ [m$^3$/s] and the length of the pipe $L$ [m]. The first term on the right side of the equation is equal to the Darcy-Weisbach equation, which describes the pressure loss due to the friction of the fluid with the pipe wall. Throughout this project, the mass flow rate, $\dot{m}$ [kg/s], is used in place of the volumetric flow rate. Therefore, (\ref{eq::DisPresQ}) becomes:
 \begin{equation}\label{eq::DisPresQ}
-R = f\frac{8 L}{\pi^2 D^5 \rho} |\dot{m}|\dot{m} + \rho_w g L \hat{z}
+\Delta p_p = f\frac{8 L}{\pi^2 D^5 \rho} |\dot{m}|\dot{m} + \rho_w g L \hat{z}
 \end{equation}
 
 \subsection{Valves}\label{sec::valves}
@@ -147,123 +147,190 @@ The 2-way control valves focus on controlling the flow. When this valve is a bas
     \frac{K_v}{K_{vs}} = {\left(\frac{K_{vs}}{K_{v,0}} \right)}^{h - 1}
 \end{equation}
 
-With the $K_v$ value for the completely opened valve as $K_{vs}$, the $K_v$ value at the points where the basic shape of the valve characteristic intersects with the y-axis as $K_{v,0}$, and the dimensionless valve displacement $h$, which ranges from 0 to 1 \cite{Artikelphdchris}. However, in practical applications, the valve is not ideal. The actual pressure difference across it may deviate from the setpoint. Especially for small valve lifts, the shape of the actual $K_v$ value cannot be accurately defined anymore. Therefore, $K_{vr}$ is defined as the minimum $K_v$ value for which the deviation from the reference curve remains within 10\% and the $h_{\text{lift}}$ associated with it is called $h^{*}$. Below this threshold, the valve operates outside its controllable range, and its behavior becomes unreliable. The modeling of such non-ideal behavior is further elaborated in \cite{echtephdthesis}. In case the valve is closed, the valve leakage $K_{\text{v,leak}}$ is defined.  
+With the $K_v$ value for the completely opened valve as $K_{vs}$, the $K_v$ value at the points where the basic shape of the valve characteristic intersects with the y-axis as $K_{v,0}$, and the dimensionless valve displacement $h$, which ranges from 0 to 1 \cite{Artikelphdchris}. However, in practical applications, the valve is not ideal. The actual pressure difference across it may deviate from the setpoint. Especially for small valve lifts, the shape of the actual $K_v$ value cannot be accurately defined anymore. Therefore, $K_{vr}$ is defined as the minimum $K_v$ value for which the deviation from the reference curve remains within 10\% and the $h_{\text{lift}}$ associated with it is called $h^{*}$. Below this threshold, the valve operates outside its controllable range, and its behavior becomes unreliable. The modeling of such non-ideal behavior is further elaborated in \cite{echtephdthesis}. In case the valve is closed, the valve leakage $K_{\text{v,leak}}$ is defined. 
+
+\todo[inline]{mention the ratio between Kv,0 and Kv,leak to Kvs}
+
+No data was available on the valve characteristics of the components considered in this project. Therefore, assumptions are made based on common practice. The thermostatic bypass valve is assumed to be linear, since this gives a proportional relationship between $K_v$ and the valve lift $h(t)$ over the full operating range. The valves in the heat exchangers are assumed to be equal percentage valves, as the flow variations are larger, and this characteristic provides better controllability over a wider operating range.
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.65\linewidth]{Thesis report/figures_thesis/}
+    \includegraphics[width=0.65\linewidth]{Thesis report/figures_thesis/Kvplots_ideal.png}
     \caption{The characteristic of a linear valve, below the valve lift of $h^*$, the control is unstable. It was assumed that the $K_v$ value is linear in the unstable region \cite{echtephdthesis}.}
     \label{fig:enter-label}
 \end{figure}
 
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.65\linewidth]{Thesis report/figures_thesis/Kvplots_linear_real.png}
+    \caption{Realistic valve characteristic of a linear valve including $K_{\text{v,leak}}$. For illustrative purposes, the values of $K_{\text{v,leak}}$ and $h^{*}$ are significantly increased.}
+    \label{fig:kv_extra}
+\end{figure}
+
+% \subsubsection{Thermostatic bypass valve}\label
+% The bypass control valves are found on the top floor of each riser, connected to the apartment's delivery set. When customers consume little or no heat, the flow rate of the water will decrease, causing the temperature within the supply network to decrease. In such a scenario, the bypass valve's function is to maintain a high enough water temperature to still comply with water heating regulations. It performs this task by opening the valve, thereby increasing the flow rate. A commonly used thermostatic bypass valve by Eenco is a FJVR-10 from Danfoss. An FJVR is a thermostatic regulation valve controlled by the fluid temperature. It includes a temperature-sensitive component that adjusts the valve position according to the desired temperature setpoint, which Eneco sets at 55 [$^{\circ}\text{C}$]. The valve is a self-acting P-band regulator, meaning it automatically adjusts its displacement proportionally to the temperature deviation of the setpoint without requiring external power. Based on the proportional relation, the displacement of the valve can be stated as
+% \begin{equation}\label{eq::FJVRdisp}
+%     h(t) = (T_s(t) - T_{\text{set}})K_p, \quad h \in [0,1]
+% \end{equation}
+% with $T_s(t)$ [K] the supply temperature, $T_{\text{set}}$ [K] the temperature setpoint and $K_p$ [K$^{-1}$] the proportional gain. To mimic the delay of the valve displacement one can introduce a delay variable $\tau$, transforming \ref{eq::FJVRdisp} into
+% \begin{equation}
+%     \tau \frac{d}{dt}h(t) + h(t) = (T_s(t) - T_{\text{set}})K_p 
+% \end{equation} 
+% However, there is no data available concerning the behavior of the thermostatic sensor which makes it difficult to define the values for $K_p$ and $\tau$. Also the valve's datasheet and Danfoss' site do not disclose what type of valve characteristic is present in the bypass valve. For terms of simplicity, both parameters are set to 1, during the simulation this value could be tuned to recreate a more realistic behavior. 
+
 \subsubsection{Thermostatic bypass valve}\label{sec::overflowmech}
-The bypass control valves of the Cooltower can be found on the top floor of each riser, where they are connected to the apartment's delivery set. When customers consume little or no heat, the flow rate of the water will decrease, causing the temperature within the supply network to decrease. In such a scenario, the bypass valve's function is to maintain a high enough water temperature to still comply with water heating regulations. It performs this task by opening the valve, thereby increasing the flow rate. A commonly used thermostatic bypass valve by Eenco is a FJVR-10 from Danfoss. An FJVR is a thermostatic regulation valve controlled by the fluid temperature. It includes a temperature-sensitive component that adjusts the valve position according to the desired temperature setpoint, which Eneco sets at 55 [$^{\circ}\text{C}$]. The valve is a self-acting P-band regulator, meaning it automatically adjusts its displacement proportionally to the temperature deviation of the setpoint without requiring external power. Based on the proportional relation, the displacement of the valve can be stated as
-\begin{equation}\label{eq::FJVRdisp}
-    h(t) = (T_s(t) - T_{\text{set}})K_p, \quad h \in [0,1]
-\end{equation}
-with $T_s(t)$ [K] the supply temperature, $T_{\text{set}}$ [K] the temperature setpoint and $K_p$ [K$^{-1}$] the proportional gain. To mimic the delay of the valve displacement one can introduce a delay variable $\tau$, transforming \ref{eq::FJVRdisp} into
-\begin{equation}
-    \tau \frac{d}{dt}h(t) + h(t) = (T_s(t) - T_{\text{set}})K_p 
-\end{equation} 
-However, there is no data available concerning the behavior of the thermostatic sensor which makes it difficult to define the values for $K_p$ and $\tau$. Also the valve's datasheet and Danfoss' site do not disclose what type of valve characteristic is present in the bypass valve. For terms of simplicity, both parameters are set to 1, during the simulation this value could be tuned to recreate a more realistic behavior. Also it is assumed that the valve characteristic is linear because it allows for a proportional change of $K_v$ over the full range of $h(t)$.
-
-In addition to its current function, this thesis seeks to decrease the flow rate using the bypass control valve to lower the eventual return temperature. This way the water stays longer in the distribution network and loses more heat to its surroundings. However, the original working of the valve mainly increases the flow rate. With the optimization of the valve displacement, we try to find the optimal trade-off between the opposing actions, achieving both functions. This will be further discussed in Section \ref{chap::optimization}.
-
-\subsection{Pumps}
-Pumps supply the pressure necessary for the fluid to flow through the network. Centrifugal pumps are the most commonly used pumps in district heating networks. The pump is characterized by its performance curve, as shown in Figure \ref{fig::pumpcharacteristic}, which illustrates the relationship between pump head (or pressure) and the volumetric flow rate. This figure includes curves for various rotational shaft speeds. Also plotted is the system head curve, with the operating points of the system located at the intersections between the pump and system curves. The figure further includes iso-efficiency lines, which represent constant pump efficiency across different operating conditions. Changes in valve positions alter the system head curve, thereby shifting the operating point. Combining the position of the valves and the rotational speed of the shaft makes it possible to keep the pump operation efficient. Pump curves can be modeled using a polynomial law \cite{echtephdthesis}. 
-
-\begin{equation}\label{eq::pumpchar}
-    \Delta p_{p} = \sum^{\text{n}}_{\text{i=1}} \left( c_i(\omega)  \dot{V}^{i} \right)
-\end{equation}
-
-With the rotational shaft speed $\omega$ and the polynomial constants $c_i(\omega)$. 
+The thermostatic bypass valve on the top floor of each riser is an FJVR-10 from Danfoss. An FJVR is a thermostatic regulation valve that is controlled by fluid temperature. It includes a temperature-sensitive component that adjusts the valve position according to the desired temperature setpoint, which in the case of Eneco is 55 [$^{\circ}\text{C}$]. The valve is a self-acting P-band regulator, meaning it automatically adjusts its displacement in proportion to the temperature deviation from the setpoint without requiring external power. This relation is shown in Figure \ref{fig:pband}.
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.6\linewidth]{Literature Survey - DCSC template/figuresLIT/pumpgoed.png}
+    \includegraphics[width=0.65\linewidth]{Thesis report/figures_thesis/P_band_valve.png}
+    \caption{The theoretical P-band relation between the valve displacement and the water temperature within the FJVR. With the desired temperature $T_{\text{set}}$ [$^{\circ}\text{C}$] and $X$ [$^{\circ}\text{C}$] the additional bound.} 
+    \label{fig:pband}
+\end{figure}
+To prevent fluctuations of the valve displacement, a first-order model with time constant ($\tau_{\text{sen}}$) between the water temperature ($T$) and the sensor temperature ($T_{\text{sen}}$) is implemented \cite{delay1,delay2}.
+
+\begin{equation}\label{eq:delay}
+    \tau_{\text{sen}} \dot{T}_{\text{sen}} = T - T_{\text{sen}}
+\end{equation}
+
+In practice, these valves exhibit hysteresis or deadband-like behavior. However, within Eneco, no further detailed information was available, and experience suggests that these valves often show varying behavior even though they are of the same type. For this reason, this behavior is excluded from the model.
+
+For the benchmark simulation used to compare the optimization results, the model for realistic bypass operation presented in \cite{BRAND2014256} is adopted. In this model, the thermostat maintains the water temperature around the setpoint by applying a deadband of width $T_{\text{db}}$ $^{\circ}\text{C}$, opening the valve at $T_{\text{set}} - \frac{T_{\text{db}}}{2}$ and closing it at $T_{\text{set}} + \frac{T_{\text{db}}}{2}$. The authors of \cite{theoreticalbenchmark} also employ this formulation in their theoretical benchmark for bypass controllers. In line with these studies, a deadband width of 3 $^{\circ}\text{C}$ is used.
+
+
+% However, no values for the P-band region or $X$ for this specific thermostatic valve were found. The authors of \cite{gasTRV} implemented this relation for a thermostatic valve, which is another type of thermostatic valve that measures the ambient air temperature, giving an indication of the size of the parameters. But in Eneco's experience the thermostatic bypass valves tend to show quite some defects in operation and also contain some unspecified hysteresis or deadband behavior. In combination with the fact that there is also no proper data present to analyze the behavior of the valve in relation with the water temperature it was decided to make use of the model for realistic bypass operation presented in \cite{BRAND2014256}. Here the thermostat keeps the water temperature around the setpoint by implementing a deadband of $T_{\text{db}}$ $^{\circ}\text{C}$ width, opening the valve at $T_{\text{set}}-\frac{T_{\text{db}}}{2}$ and closing it at $T_{\text{set}}+\frac{T_{\text{db}}}{2}$. The authors of \cite{theoreticalbenchmark} use this implementation for their theoretical benchmark for bypass controllers. In correspondence with these two articles, the deadband width of 3 $^{\circ}\text{C}$ will be copied. This model will be used within the benchmark simulation model to compare with the optimization results. 
+
+% In addition to its current function, this thesis seeks to decrease the flow rate using the bypass control valve to lower the eventual return temperature. This way the water stays longer in the distribution network and loses more heat to its surroundings. However, the original working of the valve mainly increases the flow rate. With the optimization of the valve displacement, we try to find the optimal trade-off between the opposing actions, achieving both functions. This will be further discussed in Section \ref{chap::optimization}.
+
+\subsection{Heat Exchangers}\label{sec:::hydroHEX}
+To accurately capture the pressure drop across a heat exchanger, the individual pressure losses associated with the plates and ports can be modeled. Where the pressure loss over the plates depends on the Reynolds number \cite{FemkeJanssenLit}. However, as the information required for such a detailed approach is unavailable, a simplified pressure-drop model is adopted. The pressure drop is assumed to be proportional to the square of the mass flow rate, in correspondence to the more detailed pressure-drop correlations, while neglecting the effect of the Reynolds number.
+
+\begin{equation}
+    \Delta p_{\text{hex}} = K_p |\dot{m}| \dot{m}
+\end{equation}
+with $K_p$ [kg/m$^{2}$] as the pressure loss coefficient of the heat exchanger.
+
+In addition to the pressure loss caused by the heat exchanger body, it also contains a flow control valve. Within the Arctic WKW-S 4P, several settings are available for how the valve displacement should respond to the consumer's heat demand. As modeling these settings was deemed outside the scope of this project, it was decided to control the valve with a PI controller. This controller starts operating once there is mass flow on the consumer side of the heat exchanger and aims to raise this water to 55 $^{\circ}C$. The PI-controller is equipped with anti-windup to prevent the integrator from accumulating error when the valve is saturated. The modeling of the consumer side behavior of the heat exchanger is further discussed in Section \ref{sec::heatdemand}.
+
+\subsection{Pumps}
+Pumps supply the pressure necessary for the fluid to flow through the network. Centrifugal pumps are the most commonly used pumps in district heating networks. The pump is characterized by its performance curve, as shown in Figure \ref{fig::pumpcharacteristic}, which illustrates the relationship between pump head (or pressure) and the volumetric flow rate. This figure includes curves for various rotational shaft speeds. The system head curve is also plotted, with the system's operating points located at the intersections of the pump and system curves. The figure further includes iso-efficiency lines, which represent constant pump efficiency across different operating conditions. Changes in valve positions alter the system head curve, thereby shifting the operating point. Combining the valve positions with the shaft rotational speed enables efficient pump operation. Pump curves are modeled using a polynomial law \cite{echtephdthesis}. 
+
+\begin{equation}\label{eq::pumpchar}
+    \Delta p_{p} = \sum^{\text{n}}_{\text{i=1}} \left( c_i(\omega)  \dot{m}^{i} \right)
+\end{equation}
+
+With the rotational shaft speed $\omega$ and the polynomial constants $c_i(\omega)$. The pump curves in the developed simulation model are represented by second-order polynomials, as this was deemed sufficient to reproduce a valid system curve.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.6\linewidth]{Thesis report/figures_thesis/pumpgoed.png}
     \caption{Pump characteristic head curves, containing iso-efficiency curves \cite{pumpcharacteristics}.}
     \label{fig::pumpcharacteristic}
 \end{figure}
 
-Variations in the operation of the pumps can be described using the affinity laws. These laws correlate changes in rotational shaft speed with changes in volumetric flow rate, head, and shaft power, assuming constant efficiency. 
+Variations in pump operation can be described using the affinity laws. These laws correlate changes in rotational shaft speed with changes in volumetric flow rate, head, and shaft power, assuming constant efficiency. 
 \begin{equation}
 \frac{\dot{V}_1}{\dot{V}_2}=\frac{\omega_1}{\omega_2} \quad \frac{H_1}{H_2}=\left(\frac{\omega_1}{\omega_2}\right)^2 \quad \frac{P_1}{P_2}=\left(\frac{\omega_1}{\omega_2}\right)^3
 \end{equation}
-For larger changes in the angular velocity of the shaft the affinity laws do not hold as parameters like the Reynolds number and friction change accordingly, influencing the efficiency of the pump. 
-The pump's efficiency consists of three parts: volumetric ($\eta_v$), hydraulic ($\eta_h$), and mechanical ($\eta_m$), their relation is given by
-\begin{equation}\label{eq::effpump}
-    \eta = \eta_v\eta_h\eta_m
-\end{equation}
-Efficiency is in the following way related to the power delivered to the fluid ($P_w$).
 
-\begin{equation}\label{eq::}
-    \eta = \frac{P_w}{P_{in}} = \frac{\rho_w g \dot{V} H}{\omega T}
-\end{equation}
-With input power $P_{in}$ [W] and the shaft torque $T$ [N m] \cite{white2011fluid}. 
+% For larger changes in the angular velocity of the shaft the affinity laws do not hold as parameters like the Reynolds number and friction change accordingly, influencing the efficiency of the pump. 
+% The pump's efficiency consists of three parts: volumetric ($\eta_v$), hydraulic ($\eta_h$), and mechanical ($\eta_m$), their relation is given by
+% \begin{equation}\label{eq::effpump}
+%     \eta = \eta_v\eta_h\eta_m
+% \end{equation}
+% Efficiency is in the following way related to the power delivered to the fluid ($P_w$).
+
+% \begin{equation}\label{eq::}
+%     \eta = \frac{P_w}{P_{in}} = \frac{\rho_w g \dot{V} H}{\omega T}
+% \end{equation}
+% With input power $P_{in}$ [W] and the shaft torque $T$ [N m] \cite{white2011fluid}. 
 
 \section{Thermo-Dynamic modeling}\label{sec::thermo}
-After the calculation of the hydraulics is performed the resulting mass flows will be used for the thermodynamic system. As the fractional heat losses are assumed to be negligible (see Section \ref{sec::preliminaries}), the thermodynamic model of the heat distribution network in the Cooltower consists of two main components: the pipelines and the heat exchangers. These components are discussed in more detail below. 
+Once the hydraulics calculation is performed, the resulting mass flows will be used for the thermodynamic system. As the fractional heat losses are assumed to be negligible (see Section \ref{sec::preliminaries}), the thermodynamic model of the Decentralized Solutions consists of two main components: the pipelines and the heat exchangers. These components are discussed in more detail below. 
 
 \subsection{Pipes}\label{sec::thermopipes}
-In the district heating literature many pipeline modeling methods solve the energy balance in the fluid for the one-dimensional PDE pipe model stated in  Equation \ref{eq::pipePDE}.
+The thermodynamic behavior of the water within a pipeline is modeled using the fluid's energy balance in the one-dimensional PDE pipe model given by (\ref{eq::pipePDE}).
 
 \begin{equation}\label{eq::pipePDE}
 \underbrace{\rho_w c_w A \frac{\partial T}{\partial t}}_1+\underbrace{\dot{m} c_w \frac{\partial T}{\partial x}}_2=\underbrace{\kappa_w A \frac{\partial^2 T}{\partial x^2}}_3+\underbrace{\frac{\left(T_a-T\right)}{R'}}_4
 \end{equation}
 
 With the specific heat capacity $c_w$ [kJ / (kg K)], the cross-sectional area of the pipe A [m$^2$], the temperature of the water T [K], the thermal conductivity of water $\kappa_w$ [W / (m K)], the ambient temperature $T_a$ [K], and the total thermal resistance per unit length of the pipe $R'$ [(m K) / W]. The total heat transmission coefficient $k_h$ can also be used instead of $R'$, as $k_h = \frac{1}{R'}$. 
-In Equation \ref{eq::pipePDE}, the first term represents the change in internal energy, the second term accounts for the enthalpy flux of the water, the third represents conductive heat transfer within the water, and the last term describes convective heat transfer from the fluid to its surroundings.
+In (\ref{eq::pipePDE}), the first term represents the change in internal energy, the second term accounts for the enthalpy flux of the water, the third represents conductive heat transfer within the water, and the last term describes convective heat transfer from the fluid to its surroundings.
 
-In addition to the assumptions stated in Section \ref{sec::preliminaries}, it is assumed that throughout the cross-section of the pipeline, the velocity and temperature are spatially homogeneous. This assumption contradicts the statement that the flow is turbulent. However, the flow turbulence is needed for the hydraulic modeling, where this assumption is used to simplify the thermodynamics. Because of the decoupling of the thermodynamics and hydraulics both assumptions can be used. 
-
-It is also assumed that heat in the axial direction can be neglected, simplifying the PDE as follows:
-
+Applying assumptions 5 and 10 from Section \ref{sec::preliminaries} simplifies the PDE into: 
+Using modeling assumptions 5 and 10  
+ 
 \begin{equation}\label{eq::simpipePDE}
 \rho_w c_w A \frac{\partial T}{\partial t} + \dot{m} c_w \frac{\partial T}{\partial x}=\frac{\left(T_a-T\right)}{R'}
 \end{equation}
-In this research, a dynamic model of the pipeline thermodynamics is applied. If it had been a steady-state model, the first term would also be neglected. In the case of a pseudo-transient approach, the steady-state model is combined with a variable transport delay of the fluid \cite{PipePDE}.
+In this research, a dynamic model of the pipeline thermodynamics is applied. If it had been a steady-state model, the first term would also be neglected. In the case of a pseudo-transient approach, the steady-state model is combined with a variable fluid transport delay \cite{PipePDE}.
 
-\subsubsection{Thermal Resistance}
 The total thermal resistance per unit length of the pipe is determined as: 
 
 \begin{equation}
-R^{\prime}=\frac{1}{2 \pi r_a \bar{h}}+\frac{\ln \left(\frac{r_b}{r_a}\right)}{2 \pi k_{a b}}+\frac{\ln \left(\frac{r_c}{r_b}\right)}{2 \pi k_{b c}}+\frac{\ln \left(\frac{r_d}{r_c}\right)}{2 \pi k_{c d}}+\frac{1}{S k_s}
+R^{\prime}=\frac{\ln \left(\frac{r_b}{r_a}\right)}{2 \pi k_{a b}}+\frac{\ln \left(\frac{r_c}{r_b}\right)}{2 \pi k_{b c}}+\frac{1}{2 \pi r_{c} \bar{h} }
 \end{equation}
-with the average convection heat transfer coefficient in the pipe $\bar{h}$ [W/m$^2$K], the thermal conductivities of the pipe, insulation, casing, and soil, $k_{ab}, k_{bc}, k_{cd}$ and $k_s$ [W/mK], the radii are depicted in Figure \ref{fig::pipe}, and the conduction shape factor $S$ [m]. For an isothermal, buried horizontal pipe $S$ can be approximated using the equation below \cite{PipePDE}. 
 
-\begin{equation}\label{eq::shapefactor}
-S=\frac{2 \pi}{\cos ^{-1}\left(\frac{d}{r_a}\right)}
-\end{equation}
-Where the distance from the soil surface to the center of the pipe is $d$ [m]. 
+% \frac{1}{S k_s}
+% +\frac{\ln \left(\frac{r_d}{r_c}\right)}{2 \pi k_{c d}}
 
-In \cite{booklowT}, the authors claim that the convective heat resistance between the fluid and the pipe can be neglected as it is relatively small compared to the other thermal resistances.  
+With the thermal conductivities of the pipe and the insulation $k_{ab}, k_{bc}$ [W/mK], the radii are depicted in Figure \ref{fig::pipe} and the average convection heat transfer coefficient from the pipe to the air $\bar{h}$ [W/m$^2$K]. The convective heat transfer between the fluid and the pipe is neglected as it is relatively small compared to the other thermal resistances \cite{booklowT}.
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.5\linewidth]{Literature Survey - DCSC template/figuresLIT/pijpdoorsnede.jpg}
-    \caption{Schematic overview of a pipe containing insulation and casing buried in the soil \cite{PipePDE}.}
+    \includegraphics[width=0.3\linewidth]{Thesis report/figures_thesis/pijpdoorsnede.jpg}
+    \caption{Schematic overview of a pipe containing insulation and casing. In this thesis project, the casing is omitted. \cite{PipePDE}.}
     \label{fig::pipe}
 \end{figure}  
 
-\subsubsection{Modeling Approaches}\label{sec::thermodynamicmethods}
-Various methods have been developed to solve the PDE presented in Equation \ref{eq::simpipePDE}. According to the authors of \cite{KUNTUAROVA}, the Node Method is the most widely used approach. Consequently, it has been extensively tested and validated using real-world data. Alternative methods, despite potentially offering greater accuracy or efficiency, have not been subjected to the same level of validation. The Node Method, introduced by Benonysson \cite{BENONYSSON1995297}, calculates the water temperature solely at network node locations, often located at the end of the pipeline. It uses a weighted average of the temperature of the water masses that have entered the pipeline at previous time steps. In \cite{NMvsEM}, the Node Method is compared with the Element Method, which is based on a temperature profile along the pipe. The Node Method turned out to be superior to the Element Method on accuracy and computational cost. It was primarily caused by the problem the Element Method experienced with artificial diffusion (smoothing effect that damps sharp gradients or discontinuities) of the temperature profiles along the pipe. The Node Method experienced the same problem for a Courant Number of around 0.75; this could be easily avoided by choosing a smaller time step. 
-
-In \cite{MAURER2021244}, the authors compare several Finite Difference (FD) approaches to the Node Method. The FD methods approximate the derivatives of the PDE by Difference Quotients (DQ). They only considered the implicit DQ approaches, as the explicit approaches need to fulfill the Courant-Friedrichs-Lewy (CFL) condition, resulting in too many optimization variables because the time step needs to be decreased. It concludes that the Node Method has the smallest computational error with the measurement data for the most discretization steps compared to the FD approaches. Another advantage of the Node Method is that it can handle varying mass flows. However, FD approaches are easier to implement and have a constant number of variables. They also mention an approximation of the Node Method, speeding up the optimization, but only for constant mass flow.
-
-The paper \cite{OPPELT2016336} presents an extension to the Node Method, trying to increase the accuracy of the model by defining the temperature throughout the water masses using a linear interpolation. Van der Heijde et al. \cite{VANDERHEIJDE2017158} validated the model using an experimental pipe setup and demonstrated that it achieves accuracy comparable to the dynamic pipe model in the Modelica Standard Library, while being significantly more computationally efficient. Nevertheless, the Lagrangian method is non-differentiable, making it more difficult to apply for real-time optimization. 
-
-Another method, developed by Zheng et al. \cite{ZHENG2017682}, is known as the Function Method. This approach employs a Fourier series expansion to derive an analytical solution to the transient energy equation. The authors compared it with the Node Method using data from a district heating network in Changchun, China. The Function Method achieved a 37 \% decrease in computation time and notably improved accuracy relative to the Node Method. However, these benefits were observed only under the condition of a constant mass flow rate. 
+The PDE (\ref{eq::pipePDE} will be solved using the Node Method as it is the most widely applied approach in a dynamic district heating network setting. Although alternative methods show promise for improved accuracy or efficiency, they suffer from various limitations such as computational constraints, implementation complexity, or restrictive operating conditions, and lack the extensive real-world validation that supports the Node Method \cite{KUNTUAROVA}.
 
 \subsection{Heat Exchanger}
-Heat exchangers are crucial components of the heat distribution system. They exchange thermal energy between the district heating network and the domestic heating system. The Cooltower's heat interface units use plate heat exchangers, which consist of a series of corrugated plates mounted in a frame. Separated by the plates, the hot and cold fluids flow in counter-current or co-current fashion, where they experience a thermal exchange through the thin plate material. 
-For this section's modeling approaches it is assumed that the rate of heat transfer from the hot fluid ($\dot{Q_{h}}$, [J / s]) is equal to the rate of heat transfer from the cold fluid ($\dot{Q_{c}}$). That means that we do not lose thermal energy. 
+Heat exchangers exchange thermal energy between the district heating network and the domestic heating system. It was chosen to model the Arctic WKW-S 4P \cite{fortes_wkw_s_4p}, a plate heat exchanger used in several Eneco DCS projects. It consists of a series of corrugated plates mounted in a frame. Separated by the plates, the hot and cold fluids flow counter-currently, exchanging heat through the thin plate material. Although a dynamic heat exchanger model can be developed in great detail using the Finite Volume Method (FVM), insufficient information is available about the system's internal layout. Therefore, this thesis does not model the heat exchanger's internal temperature profile and focuses solely on heat transfer between the hot and cold fluids. It is assumed that the rate of heat transfer from the hot fluid ($\dot{Q_{h}}$ [J / s]) is equal to the rate of heat transfer from the cold fluid ($\dot{Q_{c}}$). That means that we do not lose thermal energy. 
 
 \begin{align}
     \dot{Q_h} &= \dot{m}_hc_h(T_{h,out} - T_{h,in}) = C_h (T_{h,out} - T_{h,in}) \\  
     \dot{Q_c} &= \dot{m}_cc_c(T_{c,out} - T_{c,in}) = C_c (T_{c,out} - T_{c,in})
 \end{align}
 
-With the mass flow rates of the hot and cold fluids denoted by \( \dot{m}_h \) and \( \dot{m}_c \) [kg/s], and the specific heat capacities by \( c_h \) and \( c_c \) [J/(kg K)], the inlet and outlet temperatures of the hot fluid are given as \( T_{h,\text{in}} \) and \( T_{h,\text{out}} \) [\( ^\circ \)C], and those of the cold fluid as \( T_{c,\text{in}} \) and \( T_{c,\text{out}} \) [\( ^\circ \)C], respectively. The corresponding heat capacity rates are \( C_h \) and \( C_c \) [J/(K s)] for the hot and cold fluids.
+With the mass flow rates of the hot and cold fluids denoted by \( \dot{m}_h \) and \( \dot{m}_c \) [kg/s], and the specific heat capacities by \( c_h \) and \( c_c \) [J/(kg K)], the inlet and outlet temperatures of the hot fluid are given as \( T_{h,\text{in}} \) and \( T_{h,\text{out}} \) [\( ^\circ \)C], and those of the cold fluid as \( T_{c,\text{in}} \) and \( T_{c,\text{out}} \) [\( ^\circ \)C], respectively. The corresponding heat capacity rates are \( C_h \) and \( C_c \) [J/(K s)] for the hot and cold fluids. 
+
+\subsubsection{Effectiveness-NTU method}
+The Effectiveness-NTU ($\epsilon$-NTU) is based on a steady-state formulation. Consequently, it is assumed that the mass flow rates and inlet temperatures remain constant during each time step, and that the fluid entering the heat exchanger passes through it completely within that time step. In addition, the heat transfer coefficient is assumed to be uniform along the entire heat exchanger. To maintain compatibility with the CFD model, a time step of 1 s is used. Such a small time step challenges the steady-state assumptions, as temperatures and mass flow rates may vary rapidly over these short intervals. However, the objective of this study is to simulate the operation of multiple heat exchangers over an entire day, over which the effects of short-term fluctuations are expected to be partially averaged out. Therefore, given both the scope of the study and the lack of detailed information regarding the internal configuration of the heat exchangers, the steady-state approach is considered acceptable for the present work. Nevertheless, the validity of this assumption should be assessed in future research.
+
+The method revolves around the dimensionless parameter $\epsilon$, the thermodynamic efficiency. 
+
+\begin{equation}\label{eq::epsilon}
+    \epsilon = \frac{\dot{Q}}{\dot{Q}_{max}} = \frac{\dot{Q}}{{C}_{min}(T_{h,in} - T_{c,in})}
+\end{equation}
+\begin{equation}
+    C_{min} = \min(C_h, C_c)
+\end{equation}
+With the thermodynamic maximum achievable power $\dot{Q}_{max}$ [J/s], and the minimum heat capacity rate $C_{min}$ [J/ (K s)]. After performing an energy balance, these values are combined to calculate the heat exchanger effectiveness \cite{cengel2025heat}.
+\begin{equation}
+    \epsilon = \frac{1 - e^{-NTU  (1 - C^*)}}{1 - C^*  e^{-NTU (1 - C^*)}}
+\end{equation}
+\begin{equation}
+    NTU = \frac{U A_s}{C_{min}}
+\end{equation}
+\begin{equation}
+    C^{*} = \frac{C_{\min}}{C_{\max}}
+\end{equation}
+With the overall heat transfer coefficient of the heat exchanger $U$ [J / ($m^2$ K  s)] and the heat transfer surface area $A_{s}$ [m$^2$].
+
+\subsubsection{Logarithmic Mean Temperature Difference}
+The Logarithmic Mean Temperature Difference (LMTD) is used to determine the overall heat transfer coefficient and the heat transfer surface area, the derivation of the variables can be found in Chapter \ref{chap::constants}. Figure \ref{fig::counterhex} shows a basic counter-flow heat exchanger. When there is a difference in heat capacity rates, the temperature difference along the heat exchanger is not consistent, illustrated in Figure \ref{fig::counterflowHEX}. This requires the use of a mean temperature difference ($\Delta T_m$) to be able to use Newton's law of cooling, Equation \ref{eq::newtoncooling}. The Logarithmic Mean Temperature Difference ($\Delta_{LM}$) is developed for this case. However, the formula depicted in Equation \ref{eq::LMTD} is determined for the basic counter-flow heat exchanger from Figure \ref{fig::counterhex}, where the plate heat exchanger uses a multi-pass arrangement. To account for this design difference, a correction factor ($F$) is typically applied, with a value of around 0.95 for plate heat exchangers \cite{FemkeJanssenLit}. This factor depends on the flow arrangement and the number of transform units (NTU). 
+
+\begin{equation}\label{eq::newtoncooling}
+    \dot{Q} =  U A_{s} \Delta T_{m}
+\end{equation}
+\begin{equation}
+    \Delta T_m = F \Delta T_{LM}
+\end{equation}
+\begin{equation}\label{eq::LMTD}
+\Delta T_{\operatorname{lm}}=\frac{(T_{h,in} - T_{c,out}) - (T_{h,out} - T_{c,in})}{\ln \left(\frac{T_{h,in} - T_{c,out}}{T_{h,out} - T_{c,in}}\right)}
+\end{equation}
 
 \begin{figure}[htbp]
   \centering
@@ -282,70 +349,122 @@ With the mass flow rates of the hot and cold fluids denoted by \( \dot{m}_h \) a
   \end{minipage}
 \end{figure}
 
-\subsubsection{Logarithmic Mean Temperature Difference}
+\subsubsection{Heat transfer coefficient}
+To obtain a more physically realistic heat transfer model, particularly to compensate for the overestimation of heat transfer at low flow rates, the overall heat transfer coefficient is modeled as a function of the mass flow rate. In the NTU method, the thermal conductance of the heat exchanger wall material is neglected, so the overall heat transfer is determined solely by the convective heat transfer between the hot and cold fluids. Resulting in the following relation for the thermal conductance ($UA_s$ [W/K]).
 
-Figure \ref{fig::counterhex} shows a basic counter-flow heat exchanger. When there is a difference in heat capacity rates, the temperature difference along the heat exchanger is not consistent, illustrated in Figure \ref{fig::counterflowHEX}. This requires the use of a mean temperature difference ($\Delta T_m$) to be able to use Newton's law of cooling, Equation \ref{eq::newtoncooling}. 
-The Logarithmic Mean Temperature Difference ($\Delta_{LM}$) is developed for this case. However, the formula depicted in Equation \ref{eq::LMTD} is determined for the basic counter-flow heat exchanger from Figure \ref{fig::counterhex}, where the plate heat exchanger uses a multi-pass arrangement. To account for this difference in design, a correction factor ($F$) is applied, which is usually around 0.95 for plate heat exchangers \cite{FemkeJanssenLit}. This factor depends on the flow arrangement and the number of transform units (NTU). 
+\begin{equation}
+    \frac{1}{UA_s} = \frac{1}{hA_h} + \frac{1}{hA_c}
+    \label{eq:UA_series}
+\end{equation}
 
-\begin{equation}\label{eq::newtoncooling}
-    \dot{Q} =  U A_{s} \Delta T_{m}
-\end{equation}
-\begin{equation}
-    \Delta T_m = F \Delta T_{LM}
-\end{equation}
-\begin{equation}\label{eq::LMTD}
-\Delta T_{\operatorname{lm}}=\frac{(T_{h,in} - T_{c,out}) - (T_{h,out} - T_{c,in})}{\ln \left(\frac{T_{h,in} - T_{c,out}}{T_{h,out} - T_{c,in}}\right)}
-\end{equation}
-With the overall heat transfer coefficient of the heat exchanger $U$ [J / ($m^2$ K  s)] and the heat transfer surface area $A_{s}$ [m$^2$].
+\noindent where $hA_h$ and $hA_c$ are the convective thermal conductances of the hot and cold side, respectively. The convective heat transfer coefficient $h$ is related to the Nusselt number through, see \ref{eq::Nusselt}. For turbulent flow, the Nusselt number is described by the Dittus-Boelter equation:
 
-\subsubsection{Effectiveness-NTU method}
-In case the outlet temperatures are unknown the Effectiveness-NTU ($\epsilon$-NTU) method can be used. This method revolves around the dimensionless parameter $\epsilon$, the thermodynamic efficiency. 
+\begin{equation}
+    Nu = 0.023 \cdot Re^{0.8} \cdot Pr^{n}
+    \label{eq:dittus_boelter}
+\end{equation}
 
-\begin{equation}\label{eq::epsilon}
-    \epsilon = \frac{\dot{Q}}{\dot{Q}_{max}} = \frac{\dot{Q}}{{C}_{min}(T_{h,in} - T_{c,in})}
-\end{equation}
+\noindent where $n = 0.4$ for heating and $n = 0.3$ for cooling. Since $Re \propto \dot{m}$, and all fluid and geometry properties can be collected into a constant, it follows directly that:
+
 \begin{equation}
-    C_{min} = \min(C_h, C_c)
+    h \propto \dot{m}^{0.8}
+    \label{eq:h_scaling}
 \end{equation}
-With the thermodynamic maximum achievable power $\dot{Q}_{max}$ [J/s], and the minimum heat capacity rate $C_{min}$ [J/ (K s)]. After performing an energy balance, these values are combined to calculate the heat exchanger effectiveness \cite{cengel2025heat}.
+
+The same approach within the Modelica Buildings library in the \texttt{PlateHeatExchangerEffectivenessNTU} module is applied, which uses the proportional relation in their analogy to couple the mass flow to the thermal conductance by scaling around the heat exchanger's design point \cite{BuildingsLibrary}:
+
 \begin{equation}
-    \epsilon = \frac{1 - e^{-NTU  (1 - C^*)}}{1 - C^*  e^{-NTU (1 - C^*)}}
+    hA(\dot{m}) = hA_{\text{des}} \left(\frac{\dot{m}}{\dot{m}_{\text{des}}}\right)^{0.8}
+    \label{eq:hA_scaling}
 \end{equation}
+
+\noindent Assuming the nominal conductance $UA_{des} = U \cdot A_s$ is equally split over both sides, $hA_{h,des} = hA_{c,des} = 2\,UA_{des}$, and substituting into \eqref{eq:UA_series}:
+
 \begin{equation}
-    NTU = \frac{U A_s}{C_{min}}
+    \frac{1}{UA} = 
+    \frac{1}{2\,UA_{\text{des}}} \left(\frac{\dot{m}_h}{\dot{m}_{\text{h,des}}}\right)^{-0.8}
+    + \frac{1}{2\,UA_{\text{des}}} \left(\frac{\dot{m}_c}{\dot{m}_{\text{c,des}}}\right)^{-0.8}
+    \label{eq:UA_offdesign}
 \end{equation}
-\begin{equation}
-    C^{*} = \frac{C_{\min}}{C_{\max}}
-\end{equation}
+
+% - It was decided to further elaborate on the overall heat transfer coefficient, to implement a more realistic heat transfer for the small mass flows. Otherwise the smaller mass flows prevent a too high heat transfer for low flows. As the convective heat transfer depends on the mass flow (the thermal conductance of the heat exchanger material is neglected)
+% - Within the NTU model the thermal conductance of the heat exchanger material is neglected, we only look at the convective heat transfer of the fluids, convective heat coefficient dependents on mass flow.
+% - It will be done based ont he Dittus-Boiter equation (implement formula):
+% - then do same analogy like in the url with h 
+% - then derive to formula from heatexchanger.py used for UAs
+% - assume the total nominal UAs is equally split over both sides
+
+% In the Modelica Buildings library the following relation is implemented: 
+
 
 \section{Heat supply}
-In Section \ref{chap::intro}, it was mentioned that the DCS of the Cooltower is connected to an ATES and a larger district heating network, which serves as a backup during peak demand. In 2024, the heat supplied by this backup network originated primarily from gas boilers (35\%), and excess heat from electricity plants and a waste processing plant (30\% and 16\% respectively) Other contributions came from a biomass power plant (14\%) and residual heat from other sources (5\%) \cite{heatsupply}. 
-
-The ATES dynamics require a complex model as several ground conditions influence heat losses within the aquifers. Additionally, heat losses occur through conduction, advection, and dispersion as the used groundwater is unconfined. Many studies try to capture this by applying the Finite Element Method (FEM) or Finite Volume Method (FVM). \cite{ZHOU2013240,GALGARO2013107,YAPPAROVA20141011}. In a more recent paper, the authors utilized a dynamic mesh optimization, resulting in significantly faster computational time compared to an equivalent fixed mesh while maintaining accuracy \cite{Salinas2022}. System complexity further increases when considering heat/cold injection and extraction integrated with a building or district heating network and coupled with a heat pump. The authors of \cite{BOZKAYA2017620} developed an FEM model and achieved an absolute mean error of less than 0.2 [K] for the wells' temperature. Rostampour et al. \cite{TAMASRostampour} presented a mathematical model for the dynamics of building heating and cooling equipment and ground source heat pump coupled to an ATES, implemented in a model predictive framework. According to \cite{YvoPutter}, buffers can also be approached by a simple discrete state $x(k+1) = \eta_s(x(k) + u_{in}(k)) - u_{out}(k)$, with $\eta_{s}$ as the buffer storage efficiency and $x(k)$ being the level of energy stored at time $k$.  Alternatively, one could completely omit the buffer and assume constant heat or cold injection and extraction, or set it equal to the heat demand. Although it doesn't require a more thorough understanding of the ATES, these simplified approaches might introduce inaccuracies. 
-
-The waste processing plant functions as a combined heat and power (CHP) unit. Sartor et al. \cite{SARTOR2014474} incorporated the dynamics of the CHP system using a quasi steady-state model into their optimization and simulation of a district heating network. Another frequently applied method to replicate its dynamics is the use of Mollier diagrams or Temperature-entropy charts \cite{Laakkonen2017}. These methods provide a better insight into the dynamics of the power production at the cost of a higher computational time. However, as power production can be directly controlled, one can also choose to use a simplified model based on its efficiency and heat generation output. The same holds for the power production of gas boilers and the biomass plant \cite{Talebi,Tamasboilers}. The power coming from excess heat is harder to model. If the necessary data is available, one can choose to apply either a function-fitting or data-driven approach to handle these dynamics. Alternatively, one can simplify the approach by assuming a constant heat output, as the author of \cite{Spruit2020} did for the excess heat of a data center.
-
-Sandou et al.\cite{Sandou2005} chose to use an aggregated model to combine all the power sources of a district heating network and represent it as a quadratic function. They applied a least squares method to find the coefficients. The model was tested on a district heating network benchmark. However, as the production facilities were highly simplified, it is questionable whether this approach would work for this project. More sophisticated predictive time-series methods might be applied, which are discussed in the next Section concerning the heat demand. Eneco holds power production data at a minute-level or more aggregated resolutions, making this type of method a possibility.  
+Eneco's Decentralized Solutions prioritize the use of the ATES system for heating and cooling due to its sustainable operation. Depending on the system configuration, the season, and whether the heating or cooling demand is at peak load, the system can operate in several different modes. This study focuses on periods of low heating demand, which primarily occur in summer, regardless of whether demand is at peak conditions. During these periods, the ATES mode supplies the required heat through its backup heating network. This backup network can obtain heat from various sources, including gas-fired boilers, excess heat from power plants, and waste processing facilities \cite{heatsupply}. The dynamics of the heat supply system are beyond the scope of this thesis and are therefore not explicitly modeled. The heat supply will be modeled as a supply temperature, which can be set up front or determined by the optimization scheme. 
 
 
-\section{Heat demand}
-Heat demand prediction is based on heating demand profiles. These profiles can be tailored for a house, building, or a complete district heating network for various time intervals. The accurate prediction of these profiles influences the network's efficiency and its optimization procedure \cite{ORTIGA20071121}. According to Talebi et al. \cite{Talebi}, heating demand profiles largely consist of three parts: physical and environmental characteristics of the building, occupant behavior, and random factors taking uncertainties into account. They also distinguish three different types of modeling approaches, which are discussed below. 
+\section{Heat demand}\label{sec::heatdemand}
+Heat demand is modeled individually for each consumer. The focus is on low heat demand periods, primarily in the summer. During these periods, space heating is absent and the heat demand is solely caused by domestic hot water use from showers. 
 
-\subsubsection{Historical Methods}
-These methods use historical data from the system's supply and demand to create a demand profile. One approach is to use measurement data as the profile. However, this requires a complete and high-frequency dataset. Eneco collects measurements at the heat interface units of every apartment in the Cooltower. If the user permits sharing the data they can set the data frequency to quarter-hourly, hourly, daily, or monthly. This introduces discrepancies into the data set making direct use of these measurements for the heat profile unlikely. Eneco also has developed their own user heat demand profiles for individual customers with a 15 minute interval. One could also use the Energy Transition Model of Quintel \cite{quintel} that generates the heat demand profile per geographical location based on collected datasets. However, the downside of using such a method is that it provides an average that doesn't take into account real-time parameter values. 
+According to Eneco \cite{eneco_energieverbruik}, the average household consumes 6.6 GJ of domestic hot water per year, corresponding to approximately 18 MJ per day. Assuming two showers per day per household, each shower accounts for roughly 9 MJ. In combination with the maximum heat output of the Arctic WKW-S 4P, which is 30 kW, a single shower is modeled as a stepped demand profile: 3 minutes at 10 kW, followed by 3 minutes at 15 kW and 4 minutes at 20 kW, yielding a total of 9.3 MJ (consistent with the daily average). 
 
-Another method is the use of prototype or archetype buildings. They group buildings in subcategories based on their occupancy. Each category has a reference building from which the demand profiles for the buildings are derived. Lara et al. \cite{ARAMBULALARA2015160} implemented this method using a linear regression model. Other techniques are the Energy Use Intensity (EUI) \cite{sharp1996energy} in combination with the Load Factor (LF) \cite{DALLAROSA20116890}. Where EUI is the rate of energy use per unit area, and LF is the ratio of energy consumption over the maximum possible energy generation of the supply side.
+Four heat demand profiles are defined, differing in the degree of simultaneity of consumer demand, decreasing from Profile 1 to Profile 4. All profiles contain two daily peaks centered at 7:30 and 21:00, representing morning and evening shower activity. The consumer distributions centered on both peaks concerning the starting times of consumer heat demand are summarized in Table \ref{tab::simulprofile}. The resulting profiles of the total heat demand are plotted in Figure \ref{fig::heatdemandprofiles}. To translate the heat demand into the variables required by the NTU-method, the consumer-side inlet temperature ($T_{\text{c,in}}$) is fixed at 10$^{\circ}C$ and the desired outlet temperature ($T_{\text{c,out}}$) at 55$^{\circ}C$. The secondary mass flow rate at each timestep then follows directly from:
+\begin{equation}
+\dot{m}_{\text{sec}}[k] = \frac{Q_d[k]}{c_p (T_{\text{c,out}} -T_{\text{c,in}})}
+\end{equation}
+\noindent 
+with $Q_d[k]$ [kW] denoting the individual consumer heat demand at timestep $k$. 
+\begin{table}[h]
+\centering
+\caption{Overview of the consumer distribution across the demand profiles}
+\label{tab::simulprofile}
+\begin{tabular}{lcl}
+\hline
+\textbf{Profile} & \textbf{Consumer distribution} & \textbf{Interval} \\
+\hline
+Profile 1 & 23 & -- \\
+Profile 2 & $5,\;13,\;5$ & 5 min \\
+Profile 3 & $1,\;2,\;4,\;9,\;4,\;2,\;1$ & 5 min \\
+Profile 4 & $1,\;1,\;2,\;2,\;2,\;2,\;3,\;2,\;2,\;2,\;2,\;1,\;1$ & 5 min \\
+\hline
+\end{tabular}
+\end{table}
 
-% \todo[inline]{hier aanvullen}
-% Heating Degree Day Method and Bin method are other historical methods, but their accuracy is limited due to not including human behavior \cite{ALHOMOUD2001421}.    
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{t}
+        \caption{Profile 1}
+        \label{fig:profile1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/profile2.png}
+        \caption{Profile 2}
+        \label{fig:profile2}
+    \end{subfigure}
+    
+    \vspace{0.5cm}
+    
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/profile3.png}
+        \caption{Profile 3}
+        \label{fig:profile3}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/profile4.png}
+        \caption{Profile 4}
+        \label{fig:profile4}
+    \end{subfigure}
+    
+    \caption{Heat demand profiles for the four consumer distributions.}
+    \label{fig::heatdemandprofiles}
+\end{figure}
 
-\subsubsection{Deterministic Methods}
-Deterministic methods are physics-based models. Depending on the approach, the demand profile may be modeled with high detail of the physical behavior of the system or in a simplified form to reduce computational complexity. There are various energy simulation software that can model the thermal behavior of buildings, like Energy Plus \cite{EnergyPlus} and TRNSYS \cite{trnsys1975}. They produce accurate demand profiles, but they come with a big computational cost and require high input data quality \cite{GUADALFAJARA20141096}. The use of simulation software is further discussed in Section \ref{sec::simsoft}. Kim et al. \cite{KIM} applied a simplified method which considered the shape, orientation and occupancy of the building and linearized the dynamics. It achieved an accurate estimate of hourly peak loads with reduced computational time.
- 
-\subsubsection{Predictive Time-Series Methods}
-Predictive time-series methods perform curve fitting to predict the thermal profile of users. One of the common methods is the ARMA model, in which previous demand values are linearly combined with previous and current noise values to predict the user heat demand \cite{GRossGaliana}. Depending on different assumptions relating to the dynamics of the heat demand and the noise, other kinds of ARMA-type models can be used, such as the Box-Jenkins \cite{BoxJenkins}, the ARIMA \cite{ARINA} or SARINA \cite{SARINA}. 
 
-A Finland-based study proposed a day-ahead forecasting approach with a 1-hour interval for various building types, making use of an SVM \cite{SVMFinland}. Neural networks are another machine learning technique widely used in prediction forecasting \cite{ZHANG199835,Hippert,FRISON2024132745}. The Neural networks often outperform other simulation-based methods due to their high adaptability. Although predictive methods achieve a high accuracy, there is a chance of over-fitting and a strong dependence on the quality of the training data \cite{Talebi}.
 
 \subsection{Graph}\label{sec::Graph}
 The overall model structure of the district heating network was decided to be a strongly connected directed graph. The looped and branched nature of district heating networks makes them well suited for a graph, which is commonly used in the literature \cite{sibeijn2025economic, Krug2020,OPPELT2016336,Simonssongraph}. The strong connectedness indicates that no water leaves the system. The graph is defined as $\mathcal{G}=(\mathcal{N}, \mathcal{E})$, with a set of nodes $\mathcal{N}$ that represent the junctions in the network. In our model, the nodes correspond to volumeless junctions. Nodes are connected by the edges $\mathcal{E} \subseteq \mathcal{N} \times \mathcal{N}$. An edge is a pipe, potentially equipped with a heat exchanger, pump, or valve. 
@@ -372,15 +491,15 @@ When a pump is connected to an edge, the pressure loss over the edge becomes
 \end{equation}
 
 % h_e(r) = c_er_e$ being the pressure increase applied by the pump, $c_e$ the maximum pumping power capacity, and $r_e \in [0,1]$ the pump frequency rate
-with $R_{f}$ a combined constant term representing the frictional resistance of the pipe \cite{sibeijn2025economic}. In case of the edge containing a valve, the extra pressure drop over the edge changes accordingly to its definition from Section \ref{sec::valves}. The second Kirchhoff law states that the net pressure difference over a closed loop must be zero. A set of edges connected in a closed loop is defined as $\mathcal{E}_{\text{loop}} = \left\{e \in \mathcal{E}: e \ \text{in closed loop}\right\}$, formulating the relation as:
+with $R_{f}$ a combined constant term representing the frictional resistance of the pipe \cite{sibeijn2025economic}. In case of the edge containing a valve, the extra pressure drop over the edge changes according to its definition from Section \ref{sec::valves}. The second Kirchhoff law states that the net pressure difference over a closed loop must be zero. A set of edges connected in a closed loop is defined as $\mathcal{E}_{\text{loop}} = \left\{e \in \mathcal{E}: e \ \text{in closed loop}\right\}$, formulating the relation as:
 \begin{equation}
     \sum_{e  \in \mathcal{E}_{\text{loop}}} \Delta p_e = 0.
 \end{equation}
-The use of the Kirchhoff laws leads to a system of non-linear equations. Hardy-Cross \cite{HardyCross} and the Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods make an initial guess of the flow and then iteratively adjust this guess until it converges. Where the Hardy-Cross method runs through each loop independently, the Newton–Raphson method runs through all loops simultaneously \cite{NewtonenHard}. As a result Newton-Raphson generally converges quicker than Hardy-Cross. While there are several articles claiming a faster convergence or more accurate determination of the mass flows in case with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Rapshon was selected for this work  given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
+The use of the Kirchhoff laws leads to a system of nonlinear equations. Hardy-Cross \cite{HardyCross} and the Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods make an initial guess of the flow and then iteratively adjust this guess until it converges. Where the Hardy-Cross method runs through each loop independently, the Newton–Raphson method runs through all loops simultaneously \cite{NewtonenHard}. As a result, Newton-Raphson generally converges more quickly than Hardy-Cross. While there are several articles claiming a faster convergence or more accurate determination of the mass flows in cases with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Raphson was selected for this work, given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
 
 
 % In \cite{STEVANOVIC}, the authors claim that they developed a method of square roots for solving the linearized system that outperforms the Hardy-Cross method in convergence time and validated it with real data. Also the aggregated models from \cite{LARSEN2002995} (also tested with real data) converge quicker (which is mainly interesting for big district heating networks) and overcome some of the limitations of the Hardy-Cross method. Where Arsene et al. \cite{ARSENE} found that for low flow rates the Newton-Raphson and Hardy-Cross methods experienced weak convergence and propose a new method which is a combination of the Newton-Raphson method and a loop corrective method. 
-However, in the case of low flow rate, these methods experience weak convergence. The method developed by Arsene et al. \cite{ARSENE}, which can handle lower flow rates and will therefore be used within the simulation models created in this study.
+However, in the case of a low flow rate, these methods experience weak convergence. The method developed by Arsene et al. \cite{ARSENE}, which can handle lower flow rates and will therefore be used within the simulation models created in this study.
 
 
 In the thermodynamic PDE, \ref{eq::thermopde}, the term $w$ [J/(m s)] is added, representing the power transfer per meter of pipe with a heat exchanger. The equation will be solved using the Node Method as it is the most widely applied approach in a dynamic district heating network setting. Although alternative methods show promise for improved accuracy or efficiency, they suffer from various limitations such as computational constraints, implementation complexity, or restrictive operating conditions, while lacking the extensive real-world validation that supports the Node Method \cite{KUNTUAROVA}.
