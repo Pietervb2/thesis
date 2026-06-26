@@ -1,5 +1,6 @@
 \chapter{Introduction}
 \label{chapter:introduction}
+\todo[inline]{alle parameters met [k] er in zetten en dat allemaal netjes maken}
 \section{Background}
 \subsection{Sustainable Heating}
 The Paris Agreement, adopted in 2015, aims to limit global warming to well below 2$^{\circ}\text{C}$, and preferably to 1.5$^{\circ}\text{C}$ above pre-industrial levels. Achieving this goal requires significant de-carbonization across all sectors, including heating. Within the European Union in 2023, around 62.5 \% of household energy consumption is used for space heating. However, only 23.5 \% of that energy currently comes from renewable sources \cite{EUenergie}. While in the Netherlands 82 \% of homes were still heated by individual gas boilers in 2021 \cite{NLenergie}.
@@ -22,6 +23,7 @@ In contrast to the electricity or gas networks, district heating networks are no
 must still be approved by both the House of Representatives (Tweede Kamer) and the Senate (Eerste Kamer) before it comes into effect. This legislative process may lead to changes to the bill and introduces uncertainty for energy companies.
 
 \subsection{Decentralized Solutions}
+\todo[inline]{benoem secundairy en primairy flows}
 Eneco is the market leader in District Heating in the Netherlands, with 150.000 customers. They have 68 heating networks, mainly in and around the cities of Utrecht, The Hague, Rotterdam, and Amsterdam. These networks differ in size, ranging from a couple of hundred to 59.000 connections \cite{warmtenetwerkenEneco}. The profitability of large networks already faced challenges due to their high investment costs. With the additional uncertainty caused by the Wcw, Eneco decided to focus on building smaller networks, called Decentralized Solutions (DCS) \cite{nos2025warmtenetten}. \\
 
 Decentralized Solutions are small local networks with up to 1,500 connections. These networks generate, store, and manage all their thermal energy near the consumer. They consist of consumers (households and larger users), one or more heat sources often including a heat pump, and heat and cold storage in the ground, and an underground pipeline network to connect them all. In some cases, the DCS is also connected to a larger nearby district heating system as a backup for the peak demand.
@@ -55,7 +57,7 @@ This problem statement gives rise to the following two research questions:
   \renewcommand\labelitemi{} % removes the bullet
     \item \textbf{Q1: How to develop a dynamic simulation model that captures the thermodynamics and hydraulics of a small-scale heating network to enable Eneco to optimize its design and operation?}
 \end{itemize}
-
+\todo[inline][benoem dat het je kijkt naar een gebouw van 23 verdiepingen.]
 Beyond providing Eneco's engineers with greater insight into the inner workings of Decentralized Solutions, the model should also facilitate straightforward implementation of a control policy for the thermostatic bypass valve and supply temperature.
 
 \begin{itemize}
@@ -64,6 +66,7 @@ Beyond providing Eneco's engineers with greater insight into the inner workings 
 \end{itemize}
 
 The control policy will be tested under different heat demand scenarios that vary in the degree of simultaneity of the heat demand. The results from the optimization should be compared with those from a version of the model using benchmark actuator controls. This benchmark needs to be defined.
+\todo[inline]{benoem dat het gaat over een optimalisatie van een dag}
 
 \section{Literature review on simulation software and DHN control policies}
 \subsection{Simulation models}
