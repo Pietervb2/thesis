@@ -1,77 +1,175 @@
 \chapter{Control Policy}
 \label{chapter:ControlPolicy}
-This chapter begins by examining the commonly used methods to control the supply temperature and bypass flow, followed by an argument for the use of Bayesian Optimization. And a further  and the implications this e. The chapter concludes with the formulation of the minimization problem.
+This chapter begins by presenting the argument for using Bayesian Optimization. Afterward, the use of Bayesian Optimization in district heating will be discussed, and several applications in other fields will be briefly touched on. Next, the mathematical framework for constraint Bayesian Optimization will be introduced. The chapter concludes with the problem definition and the applied settings for Bayesian Optimization. 
 
-\todo[inline]{Alle tekst die hier in staat moet nog worden gecontroleerd.}
-\todo[inline]{toevoegen van zo'n control blok diagram}
+\todo[inline]{klopt intro nog?}
 
-\section{Related work}
-Welke methodes zijn er eerder gebruikt en waarom ga ik hier nu BO gebruiken. Dus kijk ook naar MPC enzo
+\section{Argument for using Bayesian Optimization}
+The developed simulation model is a non-convex nonlinear system. The causes of the non-convexity are listed below:
 
-\subsection{Argument for using Bayesian Optimization}
-The developed simulation model is a non-convex nonlinear system. The non-convexity is caused by the Kirchhoff laws' quadratic equality constraints, the determination of the varying time delay of the water masses in the pipes, its use as time index and the presence of bilinear terms within the Node method and the bilinear terms used for the temperature mixing at the nodes and the $\epsilon$-NTU implementation of the heat exchanger. The authors of \cite{ArtikelMax} handle the Kirchhoff constraints by introducing a convex relaxation. The model proposed in  \cite{nodeMethodbin} also performs convex relaxation on these constraints and its bilinear terms. Relaxing the problem from MINLP to eventually MILP. The mixed integer relation is caused by handling the non-convexity of the Node method by introducing an auxiliary binary value for every possible time delay and also for its bilinear term. As the test network in this thesis project only contains 23 consumers it already consists of at least 100 nodes this would introduce the use of a couple of thousand of binary variables, which is significantly more than the authors' use case of an integrated six-bus electricity and three-node district heating network. By introducing a constant time delay and adopting a linear representation of the DHN, the problem can be reformulated as a MILP. This simplification, however, is not realistic as the time delay is not constant in reality \cite{linearDHN}. In \cite{Heuristicmethod}, they handle the complexity imposed by the integer time delay by proposing a Bender decomposition algorithm. In this way they reduce the Node method to a nonconvex NLP problem, but they experience problems with convergence in edge cases. 
+\begin{enumerate}
+    \item  The quadratic equality constraints imposed by Kirchhoff's second law \eqref{eq::secondKirchhoff}.
+    \item The use of the varying time delay of the water masses in the pipes, \eqref{eq::gammadelay} and \eqref{eq::epsilondelay}, as time indexes.
+    \item The bilinear terms introduced in the Node Method, \eqref{eq::averagestay}, \eqref{eq::NMTout}, \eqref{eq::Theatcapacity}, the temperature mixing of the nodes, \eqref{eq::TempMix}, and the $\epsilon-NTU$ implementation of the heat exchangers, \eqref{eq::epsilon}.
+\end{enumerate}
 
-Another option would be to not perform convex relaxations but to directly optimize the non-convex nonlinear system. The gradient and Hessian cannot be determined analytically, as the use of the minimum time delay in the Node method introduces discontinuities in the derivatives. Although methods exist to circumvent these discontinuities when computing numerical gradients, the evaluation of the objective function is computationally expensive. Consequently, approaches that rely on gradient and Hessian information are not considered. Other options would be for example Simulated Annealing or the Powell and Nelder-Mead methods. However, these kind of methods require many function evaluations as well. Here Bayesian Optimization (BO) becomes interesting as it is one of the most efficient approaches in terms of the number of function evaluations required to find an optimum \cite{bo_tutorial}. Therefore this thesis proceeds with applying the Bayesian Optimization technique. 
+The authors of \cite{ArtikelMax} handle the Kirchhoff constraints by introducing a convex relaxation. The model proposed in  \cite{nodeMethodbin} also performs convex relaxation on these constraints and their bilinear terms. Relaxing the problem from MINLP to eventually MILP. The mixed-integer relation arises from handling the non-convexity of the Node method by introducing an auxiliary binary variable for each possible time delay and for its bilinear terms. As the test network in this thesis project contains only 23 consumers, it already comprises at least 100 nodes. This would introduce the use of a couple of thousand binary variables, which is significantly more than the authors' use case of an integrated six-bus electricity and three-node district heating network. By introducing a constant time delay and adopting a linear representation of the DHN, the problem can be reformulated as an MILP. This simplification, however, is unrealistic, as the time delay is not constant in practice \cite{linearDHN}. In \cite{Heuristicmethod}, they handle the complexity imposed by the integer time delay by proposing a Bender decomposition algorithm. In this way, they reduce the Node method to a nonconvex NLP problem, but they encounter convergence issues in edge cases. 
+
+Another option would be to not perform convex relaxations but to directly optimize the non-convex nonlinear system. The gradient and Hessian cannot be determined analytically because the Node method's use of the minimum time delay introduces discontinuities in the derivatives. Although methods exist to circumvent these discontinuities when computing numerical gradients, evaluating the objective function is computationally expensive. Consequently, approaches that rely on gradient and Hessian information are not considered. Other options would be, for example, Simulated Annealing or the Powell and Nelder-Mead methods. However, these methods also require many function evaluations. Here, Bayesian Optimization (BO) is particularly interesting, as it is one of the most efficient approaches in terms of the number of function evaluations required to find an optimum \cite{bo_tutorial}. Therefore, this thesis proceeds with applying the (constraint) Bayesian Optimization technique. 
 % While the authors already have problems with always reaching convergence, the use of a heuristic approach does not guarantee the convergence to a global optimum due to problem non-convex nature. 
-\section{Bayesian Optimization Overview}
-\todo[inline]{mention the possiblity to sample at the same place in case of a stochastic system [Constrained Bayesian Optimization: A Review]}
-% All the information in this section is drawn from the tutorial on Bayesian Optimization (BO) written by Brochu, Cora, and de Freitas \cite{bo_tutorial}. The citations from this section are also drawn from them. 
+\section{Related work}
+A popular application of Bayesian Optimization has been for the tuning of hyperparameters of machine learning algorithms \cite{gardner2014bayesian}. But it can be found in a wide range of applications. For example, Pelz et al. \cite{Pelz} use Bayesian Optimization to address the non-convexity inherent in electron ptychography, enabling phase-sensitive imaging at atomic or near-atomic resolution. Neumann-Brosig et al. \cite{thermalNetworkBO} found that Bayesian Optimization significantly outperformed particle swarm optimization and genetic algorithm in terms of the computation time required for the thermal design optimization of an electronic circuit board layout. Nevertheless, the literature on Bayesian Optimization used in the context of district heating networks is scarce. The few articles that apply the technique use it to find the hyperparameters of an artificial neural network (ANN). Li et al. \cite{LIbayesian} use it to optimize their LSTM for short-term heating load forecasting, and Abokersh et al. \cite{ABOKERSH2020403} develop an ANN model based on BO to find an alternative for the computationally expensive heuristic optimization models used for solar district heating systems. The master's thesis by de Koning \cite{deKoning2020} uses BO to determine the hyperparameters of an LSTM model that accurately simulates large district heating networks, which are computationally expensive to simulate. The developed LSTM was not able to achieve a lower cost. Aslan et al. \cite{Aslan06062025} use BO to optimize the hyperparameters of boiler-efficiency degradation models in district heating and cooling substations, thereby increasing the efficiency and reliability of energy systems.
 
-Bayesian Optimization (BO) is used to find the extrema of objective functions that are expensive or time-consuming to evaluate. It can be applied in situations where there is no closed-form expression of the objective function, but it is possible to gather some data points of the function. BO techniques are highly efficient considering the number of samples needed to find an extreme. This is largely due to incorporating a prior belief about the problem, helping data sampling, and maintaining a balance while sampling the search space between exploration (sampling x at high uncertainty of the objective function) and exploitation (sampling x where the objective function is likely to be high). The technique revolves around Bayes' Theorem, stated below, hence its name. 
+\section{Bayesian Optimization overview}
+Bayesian Optimization (BO) is used to find the extrema of objective functions 
+that are expensive or time-consuming to evaluate. It can be applied in situations 
+where there is no closed-form expression of the objective function, but it is 
+possible to gather some data points of the function. BO techniques are highly 
+efficient considering the number of samples needed to find an extreme. This is 
+largely due to incorporating a prior belief about the problem, helping data 
+sampling, and maintaining a balance while sampling the search space between 
+exploration (sampling $x$ at high uncertainty of the objective function) and 
+exploitation (sampling $x$ where the objective function is likely to be high). 
+The technique revolves around Bayes' Theorem, stated below, hence its name.
 
 \begin{equation}
-P(f \mid \mathcal{D}_{1:t}) \propto P(\mathcal{D}_{1:t}\mid f) P(f) .
+    P(f \mid \boldsymbol{X},f(\boldsymbol{X})) \propto P(\boldsymbol{X},f(\boldsymbol{X})\mid f)\, P(f).
 \end{equation}
-With $x_i$ as the ith sample, $f(x_i)$ as the observation of the objective function at $x_i$ and $\mathcal{D}_{1:t}$ the collection of sampling points and observations $\mathcal{D}_{1:t} = \{x_{1:t},f(x_{1:t})\}$. The prior $P(f)$ is combined with the likelihood function $P(D_{1:t}\mid f)$, resulting in the posterior $P(f \mid \mathcal{D}_{1:t})$ capturing the information we have of the objective function. After each iteration, new observations are incorporated into the posterior, which refines our belief about the objective function. Bayesian Optimization generally uses Gaussian Processes (GP) as the prior of the objective function. A Gaussian Process is a distribution over Gaussian functions, completely specified by its mean function $m(x)$ and the covariance function $k(x,x')$ \cite{bo_tutorial}. 
 
-\begin{equation}
-    f(x) \sim \mathcal{GP}(m(x), k(x,x'))
-\end{equation}
-For convenience, the prior mean is assumed to be zero; applications in which this is not the case are, for example, \cite{MartinezCantin, Brochu2010}. The choice of covariance function is more crucial for the prior, as it determines the smoothness properties of samples drawn from the GP. Depending on the type of system you want to optimize, the kernel might vary. A common example of a kernel is the squared exponential kernel (\ref{eq::isotropic}). With $\theta$ as a hyperparameter affecting the width of the kernel. In the case of anisotropic models, this hyperparameter becomes a diagonal matrix \cite{rasmussen2006gaussian}. The entries of $diag(\theta)$ control how much influence the features have over the covariance.
-\begin{equation}\label{eq::isotropic}
-k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2 \theta^2}\left\|\mathrm{x}_i-\mathrm{x}_j\right\|^2\right),
-\end{equation}
-\begin{equation}\label{eq::anistropic}
-k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2}\left(\mathrm{x}_i-\mathrm{x}_j\right)^T \operatorname{diag}(\theta)^{-2}\left(\mathrm{x}-\mathrm{x}^{\prime}\right)\right).
-\end{equation}
-The values of the hyperparameters are usually defined by starting with random guesses of a few random samples and maximizing the log likelihood of the evidence given $\theta$ \cite{rasmussen2006gaussian, santner2003design}. The kernel choice is typically done using hierarchical Bayesian model selection \cite{mackay1992practical} or cross-validation. 
+\noindent With $x_i$ as the $i$th sample, $f(x_i)$ as the observation of the 
+objective function at $x_i$, and $X = \{x_1, \ldots x_n\}$ as the sampling points samples and $f(\boldsymbol{X}) = \{f(x_1), \ldots, f(x_n)\}$ the set of its observations of the performed experiments. The prior $P(f)$ is combined with the likelihood function $P(\boldsymbol{X},f(\boldsymbol{X})\mid f)$, resulting in the posterior 
+$P(f \mid\boldsymbol{X},f(\boldsymbol{X}))$, capturing the information we have of the objective function. Bayesian Optimization generally uses Gaussian Processes (GP) as the prior of the objective function. The newly found observation is then incorporated into the posterior, refining our belief about the objective function. This process is iterated until an optimum is found, with each subsequent sample location $x_{n+1}$ determined using the acquisition function. 
 
+Figure \ref{fig::BO} shows three iterative steps of the BO technique. On the x-axis, the optimized feature is plotted, and on the y-axis, its performance is plotted. The black dotted line is the objective function, and the black line is the posterior mean. Around the posterior mean, the light purple region shows the upper and lower bounds of the posterior uncertainty. At each step, the next sampling point is chosen based on the maximum of the acquisition function. This information is then used to update the posterior, as can be clearly observed from the changes in its uncertainty. The following sections discuss Gaussian Processes and the applied acquisition function in more detail.
+ 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.6\linewidth]{Thesis report/figures_thesis/BayesianOptmization.png}
-    \caption{An example of Bayesian Optimization. A Gaussian Process approximating the objective function of a 1D problem after four iterations using sampled values of the objective function. In this example, the sought extreme is the maximum \cite{bo_tutorial}.}
+    \caption{An example of Bayesian Optimization. A Gaussian Process approximating 
+    the objective function of a 1D problem after four iterations using sampled 
+    values of the objective function. In this example, the sought extreme is the 
+    maximum \cite{bo_tutorial}.}
     \label{fig::BO}
 \end{figure}
 
-The next sample location $x_{t+1}$ is determined using an acquisition function. These functions are defined in a way that they yield high values for potentially high (or low, depending on the extreme of interest) values of the objective functions. This can be due to a high predicted objective function value, large uncertainty of this value, or a combination of both. Maximizing the acquisition function results in the next sample location. A proper trade-off between exploration and exploitation within this process is essential to BO, as it allows the method to efficiently scan the search space for potential extrema \cite{bo_tutorial}. 
-Močkus et al. \cite{Mockus1978} proposed to maximize the expected improvement with respect to the best value known thus far. Lizotte \cite{Lizotte2008} introduces an extra parameter to improve the trade-off. Cox and John \cite{CoxJohn1997} present an algorithm that selects evaluation points based on the lower confidence bound of the prediction site. 
+\subsection{Gaussian Processes}\label{sec::GP}
+A Gaussian Process is a distribution over functions, completely specified by its 
+mean function $\mu(x)$ and covariance function $k(x,x')$ for any pair of input 
+points $x, x' \in \mathbb{R}^{d}$:
 
-Figure \ref{fig::BO} shows three iterative steps of the BO technique. On the x-axis, the optimized feature is plotted, and on the y-axis, its performance is plotted. The black dotted line is the objective function, and the black line is the posterior mean. Around the posterior mean, the light purple region shows the upper and lower bounds of the posterior uncertainty. At each step, the next sampling point is chosen based on the maximum of the acquisition function. This information is then used to update the posterior, as can be clearly observed from the changes in its uncertainty
+\begin{align}
+    f(x) &\sim \mathcal{GP}(\mu(x),\, k(x,x')), \\
+    \mu(x)  &= \mathrm{E}[f(x)], \\
+    k(x,x') &= \mathrm{E}\!\left[(f(x)-\mu(x))(f(x')-\mu(x'))\right].
+\end{align}
 
-\todo[inline]{add part about constrained Bayesian Optimization}
+\noindent Assuming we already have the observations $\boldsymbol{X},f(\boldsymbol{X})$ and a new sampling point $x_{n+1}$ has been determined applying Bayesian Optimization, then following the properties of Gaussian processes the joint distribution over their function evaluations 
+$f(\mathbf{X})$ and $f(x_{n+1})$ is:
 
-\subsection{Discontinuities within objective function}
-Mockus states in \cite{Mockus1994} a number of conditions in order to use the Gaussian process prior. One of those conditions requires the objective function to be continuous. Within the simulation two discontinuous piece-wise non-linear functions can be found, formally breaking this condition. 
-The first one concerns the temperature at the outlet of an edge at timestep k, $T_e[k]$. The Node Method (NM) is not specified for a mass flow rate of zero, in such case I only make use of the exponential relation between the water mass temperature and the ambient temperature, which is the last step of the Node Method.   
-
-\begin{equation}
-T_e[k] =
-\begin{cases}
-\text{only exp}, & \dot{m}_e[k] = 0 \\
-\text{NM}, & \dot{m}_e[k] > 0 
-\end{cases}
+\begin{equation}\label{eq::GP_joint}
+\begin{bmatrix}
+f(\mathbf{X}) \\[4pt]
+f(x_{n+1})
+\end{bmatrix}
+\sim \mathcal{N}\!\left(
+\begin{bmatrix}
+\mu(\mathbf{X}) \\[4pt]
+\mu(x_{n+1})
+\end{bmatrix},
+\begin{bmatrix}
+k(\mathbf{X}, \mathbf{X}) & k(\mathbf{X}, x_{n+1}) \\[4pt]
+k(x_{n+1}, \mathbf{X}) & k(x_{n+1}, x_{n+1})
+\end{bmatrix}
+\right).
 \end{equation}
 
-The other piece-wise term models the relation between the mass flow rate and the displacement of a valve. For very small valve openings (lower than $h^{\star}$, 5\% of a completely opened valve) its hydraulic conductivity ($K_v(h)$) is not well defined and it should lead to extremely high pressure differences as eventually when the valve is completely closed it theoretically requires infinite pressure to flow water through it. This causes the pressure relation over the valve: $\Delta p = \frac{|\dot{m}_e|\dot{m}_e}{K_v(h)^2}$ to spike for these small values of $h$ and become highly sensitive for small changes in the valve displacement. Including 23 valves with this behavior in the simulation model caused convergences problems for the hydraulics. To handle this problem I defined the following piece-wise function: 
-\begin{equation}
-\dot{m}_e[k] =
-\begin{cases}
-0, & h[k] \leq h^{\star} \\
-\text{Kirchhoff laws}, &  h[k] > h^{\star} 
-\end{cases}
+\noindent The posterior distribution of $f$ at the query point, denoted 
+$\tilde{f}(x_{n+1}) \sim p(f(x_{n+1})\mid\boldsymbol{X},f(\boldsymbol{X}))$, 
+follows from standard Gaussian conditioning rules:
+
+\begin{equation}\label{eq::GP_posterior}
+\begin{aligned}
+\tilde{f}(x_{n+1}) &\sim 
+    \mathcal{N}\!\left(\tilde{\mu}_{f}(x_{n+1}),\, 
+    \tilde{\Sigma}_{f}^2(x_{n+1})\right), \quad \text{where:} \\[6pt]
+\tilde{\mu}_{f}(x_{n+1}) &= \mu(x_{n+1}) 
+    + k(x_{n+1}, \mathbf{X})\,k(\mathbf{X}, \mathbf{X})^{-1}
+    \bigl(f(\mathbf{X}) - \mu(\mathbf{X})\bigr), \\[4pt]
+\tilde{\Sigma}_{f}^2(x_{n+1}) &= k(x_{n+1}, x_{n+1}) 
+    - k(x_{n+1}, \mathbf{X})\,k(\mathbf{X}, \mathbf{X})^{-1}\,
+    k(\mathbf{X}, x_{n+1}).
+\end{aligned}
 \end{equation}
 
-Considering the first piece-wise function, the smallest mass flows within the simulation are in the order of 0.03-0.05 kg/s, therefore they do not strictly operate around the discontinuity. This leaves the Bayesian Optimization algorithm room to approximate it with a continuous function, while not hurting its representation of the objective function. The same holds for the valves within the heat exchangers as they always operate far away from $h^{\star}$ or are completely closed, therefore they do not operate around this discontinuity within the simulation model. However, for the bypass valve it operates within this region and tends to oscillate a lot around it. In periods of no heat demand the valve plays a big role in whether there is a mass flow or not as it is the only valve actuating. One option to handle this could be to improve the thermostatic bypass valve model. However, I expect it to still oscillate within this region as it will still react to over- and undershoot of the temperature in the valve compared to the setpoint temperature of (55 $^{\circ}$C). Otherwise, I could leave out the $h^{\star}$ implementation and make use of a $K_v(h)$ implementation that produces those high pressure differences over the valve. I used this method before but it resulted in unrealistically small valve openings, so that would require me to set a minimum valve displacement step. The third option would be to argue that it is just a component of a larger model which makes the discontinuity less prominent in the resulting objective function and that a better implementation of the bypass valve is left for the recommendations of future work. 
+\subsection{Acquisition function}\label{sec::acqfunc}
+Acquisition functions are used to guide the search for the desired optimum of the objective function. These functions are defined such that they yield high values for potentially high (or low, depending on the extreme of interest) values of the objective function. This can be due to a high predicted objective function value, large uncertainty of this value, or a combination of both. The next sample location is obtained by maximizing the acquisition function. A proper balance between exploration and exploitation in this step is essential for BO, as it enables the method to efficiently scan the search space for potential extrema \cite{bo_tutorial}.
+
+A popular choice, and the one adopted in this project, is the Expected Improvement (EI) of a candidate point, introduced by Mo\v{c}kus et al. \cite{Mockus1978}. Any further investigation into alternative acquisition functions was considered beyond the scope of this project. 
+
+A popular choice is the Expected Improvement of a candidate point by Močkus et al. \cite{Mockus1978}, which was also chosen as acquisition function of this project. Any further differentiation of the acquisition function was seen outside of the projects scope. Močkus et al. proposed to maximize the expected improvement with respect to the best value known thus far. The idea behind EI is to maximize the expected improvement relative to the best value observed so far. Since a minimization is performed, the improvement of a candidate point $x_{n+1}$ is defined as the decrease of the cost function value at $x_{n+1}$ relative to $f(x^{+})$, with $x^+ = \text{argmin}_{x_i \in \boldsymbol{X}} f(x_i)$. Because the objective is modeled by a Gaussian Process, this improvement is itself a random quantity:
+
+The improvement of a candidate point $I(x_{n+1})$ is defined by the decrease (as we are performing a minimization) of the cost function in $f(x_{n+1})$ against $f(x^{+})$ with $x^+ = \text{argmin}_{x_i \in \boldsymbol{X}} f(x_i)$. The improvement is in itself a random quantity due to the Gaussian process model: 
+\begin{equation}\label{eq::improvement}
+    \tilde{I}(x_{n+1}) = \max\{0,\; f(x^+) - \tilde{f}(x_{n+1}) \},
+\end{equation}
+and the expected improvement follows as its expectation:
+\begin{equation}
+    EI(x_{n+1}) = \mathrm{E}\left[\tilde{I}(x_{n+1}) \,\middle|\, x_{n+1} \right].
+\end{equation}
+
+To calculate the expected improvement Močkus et al. provided this closed form:
+\begin{equation}\label{eq::EI}
+\begin{array}{ll}
+E I(\hat{\mathbf{x}}) & =\tilde{\Sigma}_{\ell}(\hat{\mathbf{x}})(Z \Phi(Z)+\phi(Z)) \\
+& \text { with: } Z=\frac{\tilde{\mu}_{\ell}(\hat{\mathbf{x}})-\ell\left(\mathbf{x}^{+}\right)}{\tilde{\Sigma}_{\ell}(\hat{\mathbf{x}})},
+\end{array}
+\end{equation}
+in which $\Phi$ and $\phi$ denote the cumulative distribution function and probability density function of the standard normal distribution, respectively \cite{gardner2014bayesian}.
+
+\subsubsection{Constrained Acquisition Function}
+Up to now we only looked at unconstrained Bayesian Optimization, in order to extend the Bayesian Optimization approach incorporating inequality constraints the problem becomes:
+\begin{mini!}|s|
+  {x}
+  {f(x)}
+  {}
+  {}
+  \addConstraint{c(x) \leq \lambda}{}
+\end{mini!}
+where $f(x)$ and $c(x)$ are both expensive functions to evaluate. In many cases, both function values can be computed using the same experiment outcome.  In this research, the constrained BO formulation of Gardner et al. \cite{gardner2014bayesian} is applied, as it was the only constrained approach that could be implemented with the software package selected for this project. This choice of software is discussed further in Section \ref{sec::BOimplementation}.
+
+In this formulation, the constraint enters the BO loop through a modification of the EI acquisition function, which requires two adjustments. First, $x^+$ is redefined as the feasible sampling point with the lowest observed objective value in $f(\boldsymbol{X})$. Second, infeasible candidates are assigned zero improvement. Together, this yields the constrained improvement function for a candidate point $x_{n+1}$:
+
+\begin{equation}
+    I_c(x_{n+1}) = \Delta(x_{n+1})\, \max\{0,\; f(x^+) - f(x_{n+1})\} = \Delta(x_{n+1})\, I(x_{n+1}),
+\end{equation}
+
+where $\Delta(x_{n+1}) \in \{0,1\}$ indicates feasibility: it equals $1$ when $c(x_{n+1}) \leq \lambda$ and $0$ when the constraint is violated.
+
+The constraint function $c(x)$ is modeled analogously to the objective, namely with a Gaussian Process that is assumed to be conditionally independent of the GP of $f(x)$, given $x$. After a new sampling point $x_{n+1}$ has been selected and evaluated, the observed values of $f$ and $c$ are used to update their respective posteriors. Under this probabilistic model, the constrained improvement becomes a random quantity:
+\begin{equation}
+    \tilde{I}_c(x_{n+1}) = \tilde{\Delta}(x_{n+1})\, \max\{0,\; f(x^+) - \tilde{f}(x_{n+1})\} = \tilde{\Delta}(x_{n+1})\, \tilde{I}(x_{n+1}),
+\end{equation}
+
+with $\tilde{\Delta}(x)$ as a Bernoulli random variable with parameter:
+\begin{equation}\label{eq::bernoulli}
+\operatorname{PF}(\hat{\mathbf{x}}):=\operatorname{Pr}[\tilde{c}(\mathbf{x}) \leq \lambda]=\int_{-\infty}^\lambda p\left(c(x_{n+1}) \mid x_{n+1}, \mathcal{T}_c\right) d c(x_{n+1})
+\end{equation}
+Since the posterior $\tilde{c}(x_{n+1})$ is marginally Gaussian, $\mathrm{PF}(x_{n+1})$ can be computed by evaluating a single univariate Gaussian cumulative distribution function. Taking the expectation of the constrained improvement then yields the expected constrained improvement acquisition function:
+\begin{equation}\label{eq::addingconstraint2EI}
+\begin{aligned}
+EI_c(x_{n+1}) &= \mathrm{E}\left[\tilde{I}_c(x_{n+1}) \mid x_{n+1}\right] \\
+&= \mathrm{E}\left[\tilde{\Delta}(x_{n+1})\, \tilde{I}(x_{n+1}) \mid x_{n+1}\right] \\
+&= \mathrm{E}\left[\tilde{\Delta}(x_{n+1}) \mid x_{n+1}\right]\, \mathrm{E}\left[\tilde{I}(x_{n+1}) \mid x_{n+1}\right] \\
+&= \mathrm{PF}(x_{n+1})\, EI(x_{n+1}),
+\end{aligned}
+\end{equation}
+where the factorization of the expectation in the third step is justified by the assumed conditional independence of $c(x)$ and $f(x)$ given the input. The resulting acquisition function therefore has an intuitive interpretation: it is the standard expected improvement with respect to the best feasible sample found so far, weighted by the probability that the candidate point satisfies the constraint.
+
+Up to now, only a single inequality constraint has been considered. The approach of Gardner et al. can also handle multiple inequality constraints of the form $\boldsymbol{c}(x) \leq \boldsymbol{\Lambda}$, with $\boldsymbol{c}(x) = [c_1(x), \dots, c_k(x)]$ and $\boldsymbol{\Lambda} = [\lambda_1, \dots, \lambda_k]$. The constraints are added to the acquisition function by redefining the Bernoulli parameter of $\tilde{\Delta}(x_{n+1})$ as the probability that all constraints are satisfied at once:
+\begin{equation}
+    \mathrm{PF}(x_{n+1}) = \Pr\left[\tilde{c}_1(x_{n+1}) \leq \lambda_1, \dots, \tilde{c}_k(x_{n+1}) \leq \lambda_k\right],
+\end{equation}
+while the rest of the expected constrained improvement in Equation \ref{eq::addingconstraint2EI} stays the same. This joint probability is now a multivariate Gaussian probability, which can be computed with available numerical methods \cite{gardner2014bayesian}. When the constraints are assumed to be conditionally independent given the sampling point, the probability simplifies into a product of univariate Gaussian CDFs, $\prod_{i=1}^{k} \Pr[\tilde{c}_i(x_{n+1}) \leq \lambda_i]$, making the evaluation just as cheap as with a single constraint.
 
 \subsection{Application}
 Because the simulation spans a full day, optimizing the supply temperature and bypass flow at every individual timestep would produce thousands of decision variables, a scale for which Bayesian optimization is poorly suited. Instead, a lumped optimization approach is adopted, reducing the problem to a handful of parameters. The thermostatic bypass valve is modeled following the P-band relation present in the FJVR. The supply temperature controller is modeled in a similar fashion using the total heat demand within the DCS as its input variable. This reduces the optimization variables to $\theta_{1:6}$, which are stated below in combination with their graphical representation.
@@ -103,14 +201,7 @@ Because the simulation spans a full day, optimizing the supply temperature and b
     \label{fig:lumped control.}
 \end{figure}
 \todo[inline]{discuss sigmoid possibility for lumped control, conserving continuous gradient}
-\subsection{Kernel choice}
-The python package \texttt{bayesian-optimization} \cite{BOpackage} will be used to implement the Bayesian Optimization. It comes by default with the Matérn 2.5 kernel, the Matérn kernel is a common kernel within BO \cite{bo_tutorial}. It assumes that the objective function is twice differentiable. However, as established in Section \ref{sec:BOconditions}, the objective function contains some discontinuities. Although these discontinuities were argued to have limited impact on the overall objective, they cannot be fully excluded. The Matérn 1.5 kernel was therefore selected as a more conservative choice as it assumes that the objective function is once differentiable. 
 
-Another option would have been to apply the Matérn 0.5 kernel, which assumes that the objective is nowhere differentiable. That would suggest a very rough objective function with an exponential decay of the correlation function. As the discontinuities have a limited impact on the overall objective and that aside from these discontinuities the function is differentiable, this kernel was determined infeasible. A more sophisticated kernel choice beyond the Matérn family could potentially improve the optimization performance. However, a systematic kernel selection procedure was deemed outside the scope of this thesis due to time constraints.
-
-\todo[inline]{hier verder over alpha/white kernel en lengthscales. Dit moet blijken uit experimenten welke je hebt gekozen.}
-
-The package also provides the option to specify the level of noise the Gaussian Process can handle via the parameter $\alpha$ Although I haven't investigated it in detail, I expect it to be beneficial for handling discontinuities in the objective function. Where also the implementation of different length-scales within the kernel for the input parameters could improve the kernel.
 
 
 \section{Problem definition}
@@ -149,14 +240,14 @@ T_{N_n}(k) \\
 \right]
 % \quad \boldsymbol{x}(k) \in \mathcal{X}
 \]
- The optimization variable is used to parameterize the control inputs $T_s$ and $h$ via piece-wise affine functions $f_1: \mathbb{R}^5 \rightarrow \mathbb{R} \in [\theta_1,\theta_2]$ and $f_{3}: \mathbb{R}^2 \rightarrow \mathbb{R} \in [0,1]$ . The maximum memory depth of the state vector required by the Node method is $\gamma(k)$, and defined as:
+ The optimization variable is used to parameterize the control inputs $T_s$ and $h$ via piece-wise affine functions $f_1: \mathbb{R}^5 \rightarrow \mathbb{R} \in [\theta_1,\theta_2]$ and $f_{3}: \mathbb{R}^2 \rightarrow \mathbb{R} \in [0,1]$ . The maximum memory depth of the state vector required by the Node method is $\gamma(k)$, and is defined as:
 %
 \begin{equation}
     \begin{gathered}
         \gamma_{e}(k) = \min_{n} \left\{ n \geq 0,\; n \in \mathbb{Z} : \sum_{i=k-n}^{k} \dot{m}_e(i)\,\Delta t > \rho A_e L_e + \dot{m}_e(k)\,\Delta t \right\} \\[6pt]
         \gamma(k) = \max_{e \in \mathcal{E}} \; \gamma_e(k)
     \end{gathered}
-    \label{eq:delay}
+    \label{eq::gammadelay_min}
 \end{equation}
 with $\rho$ the water density, $\dot{m}_e(i)$ the mass flow rate at edge $e$, $A_e$ the edge cross-section and $L_e$ its length. 
 
@@ -168,11 +259,48 @@ with $\rho$ the water density, $\dot{m}_e(i)$ the mass flow rate at edge $e$, $A
 % Cross validation or hierachical bayesian optimization require a representative data set upfront, but with the kernl you choose the data set so this is not a good option. One could also use warm starting of the kernel by implementing priors of previous models. Or to iterate through the several kernels like bandit where after each iteration you decide how well the fit was and update its weigths of the different kernels eventually converging to one. 
 
 
-% - hoe krijg je convergence bij BO, bepaal je dat het goed genoeg is en voorkom je overfitting?
+\subsection{Discontinuities within objective function}
+Mockus states in \cite{Mockus1994} a number of conditions in order to use the Gaussian process prior. One of those conditions requires the objective function to be continuous. Within the simulation two discontinuous piece-wise non-linear functions can be found, formally breaking this condition. 
+The first one concerns the temperature at the outlet of an edge at timestep k, $T_e[k]$. The Node Method (NM) is not specified for a mass flow rate of zero, in such case I only make use of the exponential relation between the water mass temperature and the ambient temperature, which is the last step of the Node Method.   
+
+\begin{equation}
+T_e[k] =
+\begin{cases}
+\text{only exp}, & \dot{m}_e[k] = 0 \\
+\text{NM}, & \dot{m}_e[k] > 0 
+\end{cases}
+\end{equation}
+
+The other piece-wise term models the relation between the mass flow rate and the displacement of a valve. For very small valve openings (lower than $h^{\star}$, 5\% of a completely opened valve) its hydraulic conductivity ($K_v(h)$) is not well defined and it should lead to extremely high pressure differences as eventually when the valve is completely closed it theoretically requires infinite pressure to flow water through it. This causes the pressure relation over the valve: $\Delta p = \frac{|\dot{m}_e|\dot{m}_e}{K_v(h)^2}$ to spike for these small values of $h$ and become highly sensitive for small changes in the valve displacement. Including 23 valves with this behavior in the simulation model caused convergences problems for the hydraulics. To handle this problem I defined the following piece-wise function: 
+\begin{equation}
+\dot{m}_e[k] =
+\begin{cases}
+0, & h[k] \leq h^{\star} \\
+\text{Kirchhoff laws}, &  h[k] > h^{\star} 
+\end{cases}
+\end{equation}
+
+Considering the first piece-wise function, the smallest mass flows within the simulation are in the order of 0.03-0.05 kg/s, therefore they do not strictly operate around the discontinuity. This leaves the Bayesian Optimization algorithm room to approximate it with a continuous function, while not hurting its representation of the objective function. The same holds for the valves within the heat exchangers as they always operate far away from $h^{\star}$ or are completely closed, therefore they do not operate around this discontinuity within the simulation model. However, for the bypass valve it operates within this region and tends to oscillate a lot around it. In periods of no heat demand the valve plays a big role in whether there is a mass flow or not as it is the only valve actuating. One option to handle this could be to improve the thermostatic bypass valve model. However, I expect it to still oscillate within this region as it will still react to over- and undershoot of the temperature in the valve compared to the setpoint temperature of (55 $^{\circ}$C). Otherwise, I could leave out the $h^{\star}$ implementation and make use of a $K_v(h)$ implementation that produces those high pressure differences over the valve. I used this method before but it resulted in unrealistically small valve openings, so that would require me to set a minimum valve displacement step. The third option would be to argue that it is just a component of a larger model which makes the discontinuity less prominent in the resulting objective function and that a better implementation of the bypass valve is left for the recommendations of future work. 
+
+\subsection{Bayesian Optimization implementation}\label{sec::BOimplementation}
+
+\subsection{Kernel choice}
+The python package \texttt{bayesian-optimization} \cite{BOpackage} will be used to implement the Bayesian Optimization. It comes by default with the Matérn 2.5 kernel, the Matérn kernel is a common kernel within BO \cite{bo_tutorial}. It assumes that the objective function is twice differentiable. However, as established in Section \ref{sec:BOconditions}, the objective function contains some discontinuities. Although these discontinuities were argued to have limited impact on the overall objective, they cannot be fully excluded. The Matérn 1.5 kernel was therefore selected as a more conservative choice as it assumes that the objective function is once differentiable. 
+
+Another option would have been to apply the Matérn 0.5 kernel, which assumes that the objective is nowhere differentiable. That would suggest a very rough objective function with an exponential decay of the correlation function. As the discontinuities have a limited impact on the overall objective and that aside from these discontinuities the function is differentiable, this kernel was determined infeasible. A more sophisticated kernel choice beyond the Matérn family could potentially improve the optimization performance. However, a systematic kernel selection procedure was deemed outside the scope of this thesis due to time constraints.
+
+\todo[inline]{hier verder over alpha/white kernel en lengthscales. Dit moet blijken uit experimenten welke je hebt gekozen.}
+
+The package also provides the option to specify the level of noise the Gaussian Process can handle via the parameter $\alpha$ Although I haven't investigated it in detail, I expect it to be beneficial for handling discontinuities in the objective function. Where also the implementation of different length-scales within the kernel for the input parameters could improve the kernel.
 
 
-% -nog kijken naar andere artikelen die de node method oplossen of meer algemene optimalisatie algoritms vinden. 
+Lizotte \cite{Lizotte2008} introduces an extra parameter to improve the trade-off. Cox and John \cite{CoxJohn1997} present an algorithm that selects evaluation points based on the lower confidence bound of the prediction site. 
 
-% - other techniques used to solve MINLP
-% - why BO, when to stop and how to prevent overfitting
-% - hoe maak je de optimalisatie robust?
+
+% For convenience, the prior mean is assumed to be zero; applications in which this is not the case are, for example, \cite{MartinezCantin, Brochu2010}. The choice of covariance function is more crucial for the prior, as it determines the smoothness properties of samples drawn from the GP. Depending on the type of system you want to optimize, the kernel might vary. A common example of a kernel is the squared exponential kernel (\ref{eq::isotropic}). With $\theta$ as a hyperparameter affecting the width of the kernel. In the case of anisotropic models, this hyperparameter becomes a diagonal matrix \cite{rasmussen2006gaussian}. The entries of $diag(\theta)$ control how much influence the features have over the covariance.
+% \begin{equation}\label{eq::isotropic}
+% k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2 \theta^2}\left\|\mathrm{x}_i-\mathrm{x}_j\right\|^2\right),
+% \end{equation}
+% \begin{equation}\label{eq::anistropic}
+% k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2}\left(\mathrm{x}_i-\mathrm{x}_j\right)^T \operatorname{diag}(\theta)^{-2}\left(\mathrm{x}-\mathrm{x}^{\prime}\right)\right).
+% \end{equation}
