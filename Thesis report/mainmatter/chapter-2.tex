@@ -195,9 +195,6 @@ To prevent fluctuations of the valve displacement, a first-order model with time
 
 In practice, these valves exhibit hysteresis or deadband-like behavior. However, within Eneco, no further detailed information was available, and experience suggests that these valves often exhibit varying behavior even when of the same type. For this reason, this behavior is excluded from the model.
 
-For the benchmark simulation used to compare the optimization results, the model for realistic bypass operation presented in \cite{BRAND2014256} is adopted. In this model, the thermostat maintains the water temperature around the setpoint by applying a deadband of width $T_{\text{db}}$ $^{\circ}\text{C}$, opening the valve at $T_{\text{set}} - \frac{T_{\text{db}}}{2}$ and closing it at $T_{\text{set}} + \frac{T_{\text{db}}}{2}$. The authors of \cite{theoreticalbenchmark} also employ this formulation in their theoretical benchmark for bypass controllers. In line with these studies, a deadband width of 3 $^{\circ}\text{C}$ is used.
-
-
 % However, no values for the P-band region or $X$ for this specific thermostatic valve were found. The authors of \cite{gasTRV} implemented this relation for a thermostatic valve, which is another type of thermostatic valve that measures the ambient air temperature, giving an indication of the size of the parameters. But in Eneco's experience the thermostatic bypass valves tend to show quite some defects in operation and also contain some unspecified hysteresis or deadband behavior. In combination with the fact that there is also no proper data present to analyze the behavior of the valve in relation with the water temperature it was decided to make use of the model for realistic bypass operation presented in \cite{BRAND2014256}. Here the thermostat keeps the water temperature around the setpoint by implementing a deadband of $T_{\text{db}}$ $^{\circ}\text{C}$ width, opening the valve at $T_{\text{set}}-\frac{T_{\text{db}}}{2}$ and closing it at $T_{\text{set}}+\frac{T_{\text{db}}}{2}$. The authors of \cite{theoreticalbenchmark} use this implementation for their theoretical benchmark for bypass controllers. In correspondence with these two articles, the deadband width of 3 $^{\circ}\text{C}$ will be copied. This model will be used within the benchmark simulation model to compare with the optimization results. 
 
 % In addition to its current function, this thesis seeks to decrease the flow rate using the bypass control valve to lower the eventual return temperature. This way the water stays longer in the distribution network and loses more heat to its surroundings. However, the original working of the valve mainly increases the flow rate. With the optimization of the valve displacement, we try to find the optimal trade-off between the opposing actions, achieving both functions. This will be further discussed in Section \ref{chap::optimization}.
@@ -516,7 +513,7 @@ Four heat demand profiles are defined, differing in the degree of simultaneity o
 \dot{m}_{\text{sec}}[k] = \frac{Q_{d,i}[k]}{c_p (T_{\text{c,out}} -T_{\text{c,in}})}
 \end{equation}
 \noindent 
-with $Q_{d,i}[k]$ [kW] denoting the heat demand from consumer $i$ at timestep $k$. 
+
 \begin{table}[h]
 \centering
 \caption{Overview of the consumer distribution across the demand profiles}
