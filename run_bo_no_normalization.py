@@ -23,7 +23,7 @@ from datetime import datetime
 # ─── Configuration ────────────────────────────────────────────────────────────
 
 WORKERS = 4          # number of parallel BO runs at any one time
-SCRIPT  = "BO_no_normalization.py"
+SCRIPT  = "BO_no_normalization_conslengtscales_opt.py"
 
 # All 8 jobs: all split=True first, then all split=False
 JOBS = [

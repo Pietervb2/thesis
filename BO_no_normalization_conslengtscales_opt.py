@@ -1,5 +1,6 @@
 from datetime import datetime
 from bayes_opt import BayesianOptimization
+from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern
 from scipy.optimize import NonlinearConstraint
 from bayes_opt.acquisition import ExpectedImprovement
@@ -248,6 +249,34 @@ def smooth_max(x, alpha=100):
     m = np.max(x)
     return m + np.log(np.sum(np.exp(alpha * (x - m)))) / alpha
 
+def make_constraint_gp(ls_init, ls_bounds, n_restarts=15, alpha=1e-6):
+    """
+    Factory for a constraint GP with a Matern(nu=2.5) kernel and per-parameter
+    length-scale bounds scaled to the physical parameter ranges (same approach
+    as the objective GP).
+
+    Notes:
+    - By default bayes_opt gives each constraint GP a scalar length_scale=1
+      without bounds, so it cannot learn the correct spatial scale per
+      parameter in physical (non-normalized) space.
+    - normalize_y=True must be set explicitly here: bayes_opt's own GP has it
+      by default, but we are constructing these GPs ourselves. Without it,
+      the zero-mean prior would predict "constraint value ~ 0" (i.e. exactly
+      on the feasibility boundary) in unexplored regions.
+    - bayes_opt refits ALL constraint GPs automatically every iteration via
+      AcquisitionFunction._fit_gp(), so replacing the models once before
+      maximize() is sufficient; the length-scales are then re-fitted to the
+      data at every iteration by maximizing the marginal likelihood.
+    """
+    return GaussianProcessRegressor(
+        kernel=Matern(nu=2.5,
+                      length_scale=ls_init.copy(),
+                      length_scale_bounds=ls_bounds.copy()),
+        alpha=alpha,
+        normalize_y=True,
+        n_restarts_optimizer=n_restarts,
+    )
+
 def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_bounds = True):
     start = time.time()
     print(f'Initiation of code profile {i} at {datetime.now()}')
@@ -279,6 +308,7 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_boun
     optimizer = BayesianOptimization(
         f=cost_fn.objective,
         constraint = constraint,
+        acquisition_function = ExpectedImprovement(xi = 15),
         pbounds=pbounds,
         verbose=2,
         random_state=random_state)
@@ -299,7 +329,21 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_boun
                             n_restarts_optimizer = n_restarts,
                             alpha = alpha)
 
+    # ------------------------------------------------------------------
+    # Constraint GP kernels: same length-scale scaling as the objective GP.
+    # Replace the default constraint models (scalar length_scale=1, no
+    # bounds) with properly configured GPs so that the length-scales of
+    # each constraint are fitted per parameter within (0.05, 3) * range.
+    # ------------------------------------------------------------------
+    for idx in range(len(optimizer.constraint._model)):
+        optimizer.constraint._model[idx] = make_constraint_gp(
+            ls_init, ls_bounds,
+            n_restarts=n_restarts,
+            alpha=alpha,
+        )
+
     gp_kernel_before = optimizer._gp.kernel
+    constraint_kernels_before = [m.kernel for m in optimizer.constraint.model]
 
     # Initial probe point in physical space (equivalent to normalized [1, 1, 0, -, 0.80])
     bounds = cost_fn.dict_physical_bounds[profile]
@@ -316,6 +360,7 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_boun
         n_iter = n_iter)
 
     gp_kernel_after = optimizer._gp.kernel_
+    constraint_kernels_after = [m.kernel_ for m in optimizer.constraint.model]
 
     # Optimal parameters are already in physical space
     theta_1 = optimizer.max['params']['theta_1']
@@ -326,6 +371,8 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_boun
 
     print(f'GP kernel before optimization: {gp_kernel_before}'
         f'\nGP kernel after optimization: {gp_kernel_after}')
+    print(f'Constraint GP kernels before optimization: {constraint_kernels_before}'
+        f'\nConstraint GP kernels after optimization: {constraint_kernels_after}')
 
     results = {}
     for iter in range(len(optimizer.res)):
@@ -340,6 +387,7 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_boun
         'max' : optimizer.max['params'],
         'theta_4_fixed': cost_fn.theta_4_fixed,
         'kernel': str(optimizer._gp.kernel_),
+        'constraint_kernels': [str(m.kernel_) for m in optimizer.constraint.model],
         'bo_settings': {
             'init_points': init_points,
             'n_iter': n_iter,

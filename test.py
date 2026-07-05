@@ -1311,25 +1311,26 @@ if __name__ == "__main__":
     # from BO import CostFunction
 
 
-    # start = datetime.datetime.now()
+    start = datetime.datetime.now()
 
-    # i = 1
-    # profile = f'Profile {i}'
-    # dt = 1
-    # pump_pressure = 55
-    # curve = True
-    # test_name = f"Profile {i}_{pump_pressure}kPa_{curve}_Tsin=63"
+    i = 1
+    profile = f'Profile {i}'
+    dt = 1
+    pump_pressure = 60
+    curve = True
+    test_name = f"Profile {i}_{pump_pressure}kPa_{curve}_Tsin=65_check_withKvleakboolhex"
 
-    # print(f'start test: {start}, test_name: {test_name}')
+    print(f'start test: {start}, test_name: {test_name}')
 
-    # normal_run(profile, 'test', dt, pump_pressure, curve, 63, 'constant', test_name = test_name)
+    normal_run(profile, 'test', dt, pump_pressure, curve, 65, 'constant', test_name = test_name)
 
 
     # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
 
 
-    # print(f'duration test: {datetime.datetime.now() - start}')
+    print(f'duration test: {datetime.datetime.now() - start}')
 
 
-    Kv_array = fit_Kv_values(50, False)
-    check_Kvs_range(Kv_array, 0.001, 0.007, 100)
+    # Kv_array = fit_Kv_values(50, False)
+    # check_Kvs_range(Kv_array, 0.001, 0.007, 100)
+
