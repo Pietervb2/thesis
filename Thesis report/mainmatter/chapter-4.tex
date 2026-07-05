@@ -122,9 +122,9 @@ E I(\hat{\mathbf{x}}) & =\tilde{\Sigma}_{\ell}(\hat{\mathbf{x}})(Z \Phi(Z)+\phi(
 & \text { with: } Z=\frac{\tilde{\mu}_{\ell}(\hat{\mathbf{x}})-\ell\left(\mathbf{x}^{+}\right) - \xi}{\tilde{\Sigma}_{\ell}(\hat{\mathbf{x}})},
 \end{array}
 \end{equation}
-in which $\Phi$ and $\phi$ denote the cumulative distribution function and probability density function of the standard normal distribution, respectively \cite{gardner2014bayesian}. Where $\xi$ is introduced by Lizotte \cite{Lizotte2008} as an extra parameter to improve the trade-off towards more exploration.
+in which $\Phi$ and $\phi$ denote the cumulative distribution function and probability density function of the standard normal distribution, respectively \cite{gardner2014bayesian}. Where $\xi$ is introduced by Lizotte \cite{Lizotte2008} as an extra parameter to improve the trade-off towards more exploration in stead of exploitation. 
 
-\subsubsection{Constrained Acquisition Function}
+\subsubsection{Constrained Acquisition Function}\label{sec::constacq}
 Up to now, we have only looked at unconstrained Bayesian Optimization. In order to extend the Bayesian Optimization approach incorporating inequality constraints, the problem becomes:
 \begin{mini!}|s|
   {x}
@@ -322,35 +322,43 @@ This reduces the optimization variables to $\boldsymbol{\theta} = \left[\theta_1
 \section{Implementation of Bayesian optimization} \label{sec::BOimplementation}
 This section discusses parameter settings of the Bayesian Optimization implementation. It is implemented using the Python package 'bayesian-optimization' because it provides a user-friendly interface and is well-documented. 
 
-\todo[inline]{adjust the tone of the article and possibly make it less precies. As it is written with AI}
-
 \subsection{Kernel}
-The package uses the Mat\'ern family of covariance kernels, which is a common choice within BO \cite{bo_tutorial}. The Mat\'ern kernel is defined as \cite{rasmussen2006gaussian}:
-\begin{equation}\label{eq::matern}
-    k(x, x') = \sigma_f^2 \, \frac{2^{1-\nu}}{\Gamma(\nu)} \left( \sqrt{2\nu}\, r \right)^{\!\nu} K_\nu\!\left( \sqrt{2\nu}\, r \right), \qquad r = \sqrt{\sum_{d=1}^{D} \frac{(x_d - x_d')^2}{l_d^2}},
-\end{equation}
-where $\sigma_f^2$ is the signal variance, $\Gamma$ the gamma function, and $K_\nu$ the modified Bessel function of the second kind. An anisotropic formulation is used, in which each of the $D$ input dimensions has its own lengthscale $l_d$, such that the model can adapt its sensitivity per input parameter. The smoothness parameter $\nu$ controls the differentiability of the functions drawn from the GP prior: sample paths are $\lceil \nu \rceil - 1$ times differentiable. In this work, $\nu = 5/2$ is used, for which the kernel reduces to the simple closed form:
-\begin{equation}\label{eq::matern52}
-    k(x, x') = \sigma_f^2 \left( 1 + \sqrt{5}\, r + \tfrac{5}{3} r^2 \right) \exp\!\left( -\sqrt{5}\, r \right),
-\end{equation}
-corresponding to a prior over twice-differentiable functions. Strictly speaking, the objective is not this smooth everywhere: the simulation contains a discontinuity around zero mass flow in the Node method, and the lumped control functions introduce non-differentiable points. It was assumed that the Mat\'ern 5/2 kernel could still be applied, as the Gaussian Process will approximate these regions with a smooth interpolation, which was not considered problematic for the purpose of finding promising parameter settings. A more sophisticated determination of the kernel might lead to better optimization results; however, due to the time restrictions of the thesis, this is classified as outside its scope.
+The package uses a Mat\'ern  covariance kernel, which is a common choice within BO \cite{bo_tutorial}. The Mat\'ern kernel is defined as \cite{rasmussen2006gaussian}:
 
-For the objective function, the lengthscales are fitted at every iteration by maximizing the log marginal likelihood:
+\begin{equation}
+k\left(x_i, x_j\right)=\frac{1}{\Gamma(\nu) 2^{\nu-1}}\left(\frac{\sqrt{2 \nu}}{l} d\left(x_i, x_j\right)\right)^\nu K_\nu\left(\frac{\sqrt{2 \nu}}{l} d\left(x_i, x_j\right)\right),
+\end{equation}
+
+with $d(\cdot,\cdot)$ as the Euclidean distance,  $Kv(\cdot)$ the modified Bessel function and $\Gamma (\cdot)$ the gamma function. To handle the different parameter ranges of $\boldsymbol{\theta}$ and the model sensitivity per input parameter, an anisotropic formulation is used. Resulting in separate length scales per input dimension. The input parameter $v$ controls the smoothness of the resulting Gaussian Process. The smaller $\nu$, the smoother the GP definition. In this work, $\nu = 5/2$ is used, which implies that the objective function will be recreated using a twice differentiable Gaussian Process. Even though the objective is not smooth everywhere, the simulation exhibits a discontinuity at zero mass flow in the Node method described in \eqref{eq::disNM}, and the lumped control functions introduce non-differentiable points. It was assumed that the Mat\'ern 5/2 kernel could still be applied, as the Gaussian Process will approximate these regions with a smooth interpolation. A more sophisticated determination of the kernel might yield better optimization results; however, due to the thesis's time constraints, it is outside its scope.
+
+% \begin{equation}\label{eq::matern}
+%     k(x, x') = \sigma_f^2 \, \frac{2^{1-\nu}}{\Gamma(\nu)} \left( \sqrt{2\nu}\, r \right)^{\!\nu} K_\nu\!\left( \sqrt{2\nu}\, r \right), \qquad r = \sqrt{\sum_{d=1}^{D} \frac{(x_d - x_d')^2}{l_d^2}},
+% \end{equation}
+% where $\sigma_f^2$ is the signal variance, $\Gamma$ the gamma function, and $K_\nu$ the modified Bessel function of the second kind. An anisotropic formulation is used, in which each of the $D$ input dimensions has its own lengthscale $l_d$, such that the model can adapt its sensitivity per input parameter. The smoothness parameter $\nu$ controls the differentiability of the functions drawn from the GP prior: sample paths are $\lceil \nu \rceil - 1$ times differentiable. In this work, $\nu = 5/2$ is used, for which the kernel reduces to the simple closed form:
+% \begin{equation}\label{eq::matern52}
+%     k(x, x') = \sigma_f^2 \left( 1 + \sqrt{5}\, r + \tfrac{5}{3} r^2 \right) \exp\!\left( -\sqrt{5}\, r \right),
+% \end{equation}
+% corresponding to a prior over twice-differentiable functions. 
+
+The length scales $l$ used for the objective function are fitted at every iteration by maximizing the log marginal likelihood \cite{rasmussen2006gaussian}:
 \begin{equation}\label{eq::lml}
     \log p\!\left(f(\boldsymbol{X}) \mid \boldsymbol{X}, \boldsymbol{l}\right) = -\tfrac{1}{2}\, f(\boldsymbol{X})^{\top} \left( K + \alpha I \right)^{-1} f(\boldsymbol{X}) - \tfrac{1}{2} \log \left| K + \alpha I \right| - \tfrac{n}{2} \log 2\pi,
 \end{equation}
-with $K$ the covariance matrix built from Equation \eqref{eq::matern52} over the $n$ sampled points and $\boldsymbol{y}$ the corresponding function values. The length scales of the constraint GPs are not optimized, as each additional constraint would further increase the number of hyperparameters to be fitted, which, given the small number of samples, could lead to overfitting. Instead, the lengthscale of each constraint GP is fixed per dimension to the range of the corresponding input parameter.
+with $K$ as the covariance matrix $k(\boldsymbol{X},\boldsymbol{X})$. The length scales of the constraint GPs are not optimized, as each additional constraint would further increase the number of hyperparameters to be fitted, which, given the small number of samples, could lead to overfitting. Instead, the lengthscale of each constraint GP is fixed per dimension to the range of the corresponding input parameter.
 
-The term $\alpha I$ in Equation \eqref{eq::lml} represents the level of observation noise the Gaussian Process can handle, which the package exposes via the parameter $\alpha$. It enters the model as additive Gaussian noise on the diagonal of the covariance matrix:
+The term $\alpha I$ in Equation \eqref{eq::lml} represents the level of observation noise the Gaussian Process can handle, which the package defines via the parameter $\alpha$. It enters the model as additive Gaussian noise on the diagonal of the covariance matrix:
 \begin{equation}\label{eq::nugget}
     \tilde{K} = K + \alpha I.
 \end{equation}
-This term is generally used to account for noise in the function evaluations. As the simulation is deterministic and noise is not modeled, correcting for noise would not be meaningful here. However, the term, also known as the nugget, serves a second purpose: it improves the conditioning of the covariance matrix, preventing it from becoming numerically singular when sampled points lie close together. For this reason, the default value of $\alpha = 10^{-6}$ is retained.
+This term, known as the nugget, is generally used to account for noise in the function evaluations. A second purpose it serves is to improve the conditioning of the covariance matrix, preventing it from becoming numerically singular when sampled points lie close together. For this reason, the default value of $\alpha = 10^{-6}$ is retained even though no noise is modeled and the model is deterministic. 
 
 \subsection{Acquisition Function}
-Following the constrained Bayesian Optimization implementation of Gardner et al. \cite{gardner2014bayesian} discussed in Section \ref{sec::...}, the Expected Improvement acquisition function is applied, weighted by the probability of feasibility of the candidate point. Expected Improvement was chosen because it is the acquisition function for which this constrained formulation is derived.
+Following the constrained Bayesian Optimization implementation of Gardner et al. \cite{gardner2014bayesian} discussed in Section \ref{sec::constacq}, the Expected Improvement acquisition function is applied, weighted by the probability of feasibility of the candidate point. Expected Improvement was chosen because it is the acquisition function for which this constrained formulation is derived.
 
 \section{Summary}
+To handle the non-convexity within the developed simulation model, caused by, for instance, Kirchhoff's second law, it was decided to make use of Bayesian Optimization. Bayesian Optimization is used to find the extreme of functions that are expensive to evaluate and is considered highly efficient considering the number of samples needed to find the optimum. It incorporates a prior belief about the objective function function which helps sampling the data points by the acquisition function. This prior is combined with the likelihood function created after every sampling, which results in a posterior of the objective. To incorporate the constraints in the optimization the approach from Gardner et al. \cite{gardner2014bayesian} applying the expected constrained improvement acquisition function. 
+
+The cost function is formulated as a simplified representation of the amount of energy used by the heat pumps within the DCS. The control inputs are six parameters defining lumped relations of the supply temperature and the thermostatic bypass valve. The optimization is constraint by a maximum allowed return temperature and two constraints comparing the heat demand response and total heat demand of the optimized simulation with a benchmark. 
 % For convenience, the prior mean is assumed to be zero; applications in which this is not the case are, for example, \cite{MartinezCantin, Brochu2010}. The choice of covariance function is more crucial for the prior, as it determines the smoothness properties of samples drawn from the GP. Depending on the type of system you want to optimize, the kernel might vary. A common example of a kernel is the squared exponential kernel (\ref{eq::isotropic}). With $\theta$ as a hyperparameter affecting the width of the kernel. In the case of anisotropic models, this hyperparameter becomes a diagonal matrix \cite{rasmussen2006gaussian}. The entries of $diag(\theta)$ control how much influence the features have over the covariance.
 % \begin{equation}\label{eq::isotropic}
 % k\left(\mathrm{x}_i, \mathrm{x}_j\right)=\exp \left(-\frac{1}{2 \theta^2}\left\|\mathrm{x}_i-\mathrm{x}_j\right\|^2\right),
