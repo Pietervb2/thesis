@@ -1,19 +1,43 @@
 \chapter{Model Implementation}
 \label{chapter:Model Implementation}
 
+ An artificial 23-floor DCS heat distribution network was selected for implementation, as recreating a complete DCS was deemed beyond the scope of this work. Additionally, simulation data from Eneco was available for this configuration
+
 i Structuur van simulatie (dus ook toelichten van actieve graaf) en mogelijk ook hoe de files in elkaar zitten (dit kan anders ook wel in de appendix).
-ii.	Stappen plan, ligt het per stap toe met grafieken en mogelijke metric dat het goed is. 
+ii. verificatie
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{figures_thesis/experimentA.pdf}
+        \caption{Experiment A}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{figures_thesis/experimentB.pdf}
+        \caption{Experiment B}
+    \end{subfigure}
+
+    \vspace{0.4cm}
+
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{figures_thesis/experimentC.pdf}
+        \caption{Experiment C}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{figures_thesis/experimentD.pdf}
+        \caption{Experiment D}
+    \end{subfigure}
+    \caption{Measured outlet temperature compared against the Modelica model 
+    and the Node Method for the four validation experiments of van der Heijde 
+    et al. The RMSE of each model with respect to the measurements is given 
+    in the legend.}
+    \label{fig::pipe_validation}
+\end{figure}
 
 
-The first one concerns the temperature at the outlet of an edge at timestep k, $T_e[k]$. The Node Method (NM) is not specified for a mass flow rate of zero, in such case I only make use of the exponential relation between the water mass temperature and the ambient temperature, which is the last step of the Node Method.   
 
-\begin{equation}
-T_e[k] =
-\begin{cases}
-\text{only exp}, & \dot{m}_e[k] = 0 \\
-\text{NM}, & \dot{m}_e[k] > 0 
-\end{cases}
-\end{equation}
 
 
 \todo[inline]{bij de kleppen licht je de waardes van Kv0 en kvleak uit, of dat kan je ook bij de contantes doen. Vervoglens leg je uit waarom je welke type klep hebt gekozen}
