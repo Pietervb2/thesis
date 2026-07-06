@@ -285,44 +285,6 @@ With the thermal conductivities of the pipe and the insulation $k_{ab}, k_{bc}$ 
 
 The PDE (\ref{eq::simpipePDE}) will be solved using the Node Method, as it is the most widely used approach in dynamic district heating network settings. Although alternative methods show promise for improved accuracy or efficiency, they suffer from various limitations, including computational constraints, implementation complexity, and restrictive operating conditions, and lack the extensive real-world validation that supports the Node Method \cite{KUNTUAROVA}. 
 
-% \subsubsection{Node Method}
-% The Node Method (NM) introduces a discretized solution to the thermodynamic PDE, in which temperatures are calculated only at the pipeline outlet, using the input temperatures from previous steps. This discretized form follows from transforming \eqref{eq::simpipePDE} into a new reduced set of coordinates that describe the solution, using the Method of Characteristics. The final formula for the outlet temperature of the pipeline $T_{\text{out,2}}$ at time step $k$ is presented below:
-% \begin{equation}\label{eq::NMfinaleq}
-% T_{\mathrm{out}, 2}(k)=T_a(k)+\left(T_{\mathrm{out}, 1, \mathrm{st}}(k)-T_a(k)\right) \exp \left(-\frac{t_{\mathrm{stay}}(k)}{R' \rho_w c_{p,w} A}\right)
-% \end{equation}
-% with $T_a$ [$^{\circ}C$] the ambient temperature, $T_{\mathrm{out}, 1}$ [$^{\circ}C$] the lossless output temperature defined in \eqref{eq::NMTout} and $t_{\text{stay}}$ [s] the average length of stay of the water masses leaving the pipeline described in \eqref{eq::averagestay}.
-
-% \begin{equation}\label{eq::NMTout}
-% \begin{aligned}
-% T_{\mathrm{out}, 1}(k)= & \frac{1}{\dot{m}(k) \Delta k}\left[\left(R(k)-\rho_w A L\right) T_i(k-\gamma(k))\right. \\
-% & \left.+\sum_{\kappa=k-\varepsilon(k)+1}^{k-\gamma(k)-1}\left(\dot{m}(\kappa) \Delta k T_i(\kappa)\right)+\left(\dot{m}(k) \Delta k+\rho_w A L-S(k)\right) T_i(k-\varepsilon(k))\right]
-% \end{aligned}
-% \end{equation}
-% Equation \ref{eq::NMTout} provides the calculation of the lossless outlet temperature of the pipeline by performing a weighted average of the temperature of the respective water masses passing the outlet of the pipeline, where no thermal losses are yet taken into account. The auxiliary variables $\gamma$ and $\epsilon$ denote the time steps at which the water mass entered and left the pipeline, respectively. Using these variables, the auxiliary water masses $R$ and $S$ can be calculated, as illustrated by Figure \ref{fig::NodeMethod}.  
-% \begin{figure}[h!]
-%     \centering
-%     \includegraphics[width=0.7\linewidth]{Thesis report/figures_thesis/nodeMethodoverview.jpg}
-%     \caption{Schematic overview of a pipeline containing relevant variables for the Node Method \cite{MAURER2021244}.}
-%     \label{fig::NodeMethod}
-% \end{figure}
-% Following the same structure of the weighted water masses from \eqref{eq::NMTout}, the variable $t_{\text{stay}}$ is derived. 
-% \begin{equation}\label{eq::averagestay}
-% \begin{aligned}
-% t_{\text {stay }}(k)= & \frac{1}{\dot{m}(k) \Delta k}\left[\gamma(k)\left(R(k)-\rho_w A L\right)\right. \\
-% & \left.+\sum_{\kappa=k-\varepsilon(k)+1}^{k-\gamma(k)-1}((k-\kappa) \dot{m}(\kappa) \Delta k)+\varepsilon(k)\left(\dot{m}(k) \Delta k+\rho_w A L-S(k)\right)\right] \Delta k
-% \end{aligned}
-% \end{equation}
-% In order to take into account the effect of the heat capacity of the steel pipe on the water temperature relation \eqref{eq::Theatcapacity} is defined. It is assumed that during a single time step, a thermal balance is achieved between the steel and the water. Rewriting this balance gives: 
-% \begin{equation}\label{eq::Theatcapacity}
-% T_{\mathrm{out}, 1, s t}(k)=\frac{T_{\mathrm{out}, 1}(k) \dot{m}(k) c_{p,w} \Delta k+C_{s t} T_{s t}(k-1)}{C_{s t}+\dot{m}(k) c_{p,w} \Delta k},
-% \end{equation}
-% with $T_{\text{st}}(k-1)$ as the steel core temperature at the previous timestep, which is updated following $T_{st}(k-1)=T_{\mathrm{out},1,\mathrm{st}}(k-1)$. Where $C_{\text{st}}$ is the heat capacity of the entire steel core of the pipe, defined by:
-% \begin{equation}
-% C_{s t}=\frac{\pi}{4}\left(d_2^2-d_1^2\right) \rho_{\mathrm{st}} c_{\mathrm{p,st}} L,
-% \end{equation}
-% \end{align}
-% with $d_1$ and $d_2$ [m] as the pipeline's inner and outer diameters, $c_{\mathrm{p,st}}$ [kJ/(kg K)] and $\rho_{\mathrm{st}}$ as the heat capacity and density of the steel \cite{MAURER2021244}.
-
 \subsubsection{Node Method}\label{sec::NodeMethod}
 The Node Method (NM) introduces a discretized solution to the thermodynamic PDE, in which temperatures are calculated only at the pipeline outlet, using the inlet temperatures from previous time steps. This discretized form follows from transforming \eqref{eq::simpipePDE} into a new reduced set of coordinates that describe the solution, using the Method of Characteristics. The final formula for the outlet temperature of the pipeline $T_{\text{out,2}}$ at time step $k$ is presented below:
 \begin{equation}\label{eq::NMfinaleq}
@@ -357,7 +319,6 @@ Equation~\eqref{eq::NMTout} gives the lossless outlet temperature of the pipelin
     \caption{Schematic overview of a pipeline containing relevant variables for the Node Method \cite{MAURER2021244}.}
     \label{fig::NodeMethod}
 \end{figure}
-\todo[inline]{add figure without subscripts}
 
 Following the same structure of the weighted water masses from \eqref{eq::NMTout}, the variable $t_{\text{stay}}$ is derived:
 \begin{equation}\label{eq::averagestay}
@@ -383,10 +344,18 @@ $C_{\mathrm{st}}$ is the heat capacity of the entire steel core of the pipe, def
     C_{\mathrm{st}} = \frac{\pi}{4}\!\left(d_2^2 - d_1^2\right)
     \rho_{\mathrm{st}}\,c_{p,\mathrm{st}}\,L,
 \end{equation}
-with $d_1$ and $d_2$ [m] the pipeline's inner and outer diameters,
-$c_{p,\mathrm{st}}$ [kJ/(kg\,K)] the specific heat capacity and
-$\rho_{\mathrm{st}}$ [kg/m$^3$] the density of the steel
+with $d_1$ and $d_2$ [m] the pipeline's inner and outer diameters, $c_{p,\mathrm{st}}$ [kJ/(kg\,K)] the specific heat capacity and $\rho_{\mathrm{st}}$ [kg/m$^3$] the density of the steel
 \cite{MAURER2021244}.
+
+However, the Node Method is not specified for a mass flow rate of zero, as it would result in a division by zero. In such a case, \eqref{eq::Theatcapacity} cannot be applied. Therefore, to still perform \eqref{eq::NMfinaleq} the following is assumed: $T_{\text{out,1,st}}(k) = T_{\text{out,1,st}}(k-1)$ and $t_{\text{stay}}(k) = t_{\text{stay}}(k-1) + \Delta k$. 
+
+% \begin{equation}
+% T_e[k] =
+% \begin{cases}
+% \text{only exp}, & \dot{m}(k) = 0 \\
+% \text{NM}, & \dot{m}(k) > 0 
+% \end{cases}
+% \end{equation}
 
 % \todo[inline]{fast convergence of node method compared to fvm]}
 
@@ -399,6 +368,7 @@ Heat exchangers exchange thermal energy between the district heating network and
 \end{align}
 
 With the mass flow rates of the hot and cold fluids denoted by \( \dot{m}_h \) and \( \dot{m}_c \) [kg/s], and the specific heat capacities by \( c_h \) and \( c_c \) [J/(kg K)], the inlet and outlet temperatures of the hot fluid are given as \( T_{h,\text{in}} \) and \( T_{h,\text{out}} \) [\( ^\circ \)C], and those of the cold fluid as \( T_{c,\text{in}} \) and \( T_{c,\text{out}} \) [\( ^\circ \)C], respectively. The corresponding heat capacity rates are \( C_h \) and \( C_c \) [J/(K s)] for the hot and cold fluids. 
+In addition to the hot and cold definitions of the mass flow rate, district heating networks distinguish between the mass flow rate on the heat distribution side of the heat exchanger and that on the consumer side. These are referred to as the primary and secondary mass flow rates, respectively.
 
 \subsubsection{Effectiveness-NTU method}
 The Effectiveness-NTU ($\epsilon$-NTU) is based on a steady-state formulation. Consequently, it is assumed that the mass flow rates and inlet temperatures remain constant during each time step, and that the fluid entering the heat exchanger passes through it completely within that time step. In addition, the heat transfer coefficient is assumed to be uniform along the entire heat exchanger. To maintain compatibility with the CFD model, a time step of 1 s is used. Such a small time step challenges the steady-state assumptions, as temperatures and mass flow rates may vary rapidly over these short intervals. However, the objective of this study is to simulate the operation of multiple heat exchangers over an entire day, over which the effects of short-term fluctuations are expected to be partially averaged out. Therefore, given both the scope of the study and the lack of detailed information regarding the internal configuration of the heat exchangers, the steady-state approach is considered acceptable for the present work. Nevertheless, the validity of this assumption should be assessed in future research.
@@ -640,10 +610,11 @@ The second Kirchhoff law states that the net pressure difference over a closed l
 The solution of the PDE \eqref{eq::thermopde} is calculated using the Node Method, resulting in the following equation; its derivation can be found in Section \ref{sec::NodeMethod}. 
 
 \begin{equation}
-    T(L,k) = T_a(k) + \left(T_{\mathrm{out},1,\mathrm{st}}(k)
-    - T_a(k)\right)\exp\!\left(-\frac{t_{\mathrm{stay}}(k)}{R'\rho_w c_{p,w} A}\right)
+    T_e(L,k) = T_a(k) + \left(T_{\mathrm{out},1,\mathrm{st}}(k)
+    - T_a(k)\right)\exp\!\left(-\frac{t_{\mathrm{stay,e}}(k)}{R_e'\rho_{w,e} c_{p,w,e} A_e}\right)
 \end{equation}
 
+\todo[inline]{de definitie van T(L,k) komt niet helemaal overeen met de edge definitie met name met betrekking tot discretizatie, ook iets over de definitie van het $e$ subscript. Maar deze tod opas aan het einde doen. }
 \subsection{Nodes}
 The first Kirchhoff law states that the sum of flows entering a node equals the sum of flows exiting the node. This results in the conservation of mass over every node due to the assumed incompressibility of the water. For any node $n \in \mathcal{N}$, the edge sets $\mathcal{E}_{\rightarrow n} = \left\{ e \in \mathcal{E} : e \  \text{enters} \ n\right\}$ and $\mathcal{E}_{n\rightarrow } = \left\{ e \in \mathcal{E} : e \  \text{exits} \ n\right\}$ are respectively the entering and exiting sets of edges. The mass conservation is given by
 
@@ -667,7 +638,7 @@ with the temperature at the nodal temperature being the temperature of all the e
 % \todo[inline]{ingaan op hoe het netwerk van non-linear equations eruit ziet dus met matrix en shit}
 The use of the Kirchhoff laws yields a system of nonlinear equations, which are set equal to zero to obtain the mass flow rates throughout the system at timestep $k$.
 
-\begin{equation}
+\begin{equation}\label{eq::KirchoffNR}
 F(\dot{\mathbf{m}}(k)) = 
 \begin{bmatrix}
     A_{\text{red}}\, \dot{\mathbf{m}}(k) \\[6pt]
@@ -675,23 +646,17 @@ F(\dot{\mathbf{m}}(k)) =
 \end{bmatrix}
 = \mathbf{0},
 \end{equation}
-where $F(\dot{\mathbf{m}}(k)) \in \mathbb{R}^{(|\mathcal{L}|+|\mathcal{N}|-1)}$ is composed of two blocks: the nodal mass balance residuals $A_{\text{red}}\,\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{N}|-1}$, one equation per node excluding the reference node, and the pressure drop residuals $L \, \mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{L}|}$, one equation per fundamental loop, with the vector $\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{E}|}$ containing all the mass flow rates of the edges at timestep $k$,
+where $F(\dot{\mathbf{m}}(k)) \in \mathbb{R}^{(|\mathcal{L}|+|\mathcal{N}|-1)}$ is composed of two blocks: the nodal mass balance residuals $A_{\text{red}}\,\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{N}|-1}$, one equation per node excluding the reference node, and the pressure drop residuals $L \, \mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{L}|}$, one equation per fundamental loop, with the vector $\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{E}|}$ containing all the mass flow rates of the edges at timestep $k$ and $\mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{N}|}$ as the vector containing the pressure drop over all the edges. 
 
 The Hardy-Cross \cite{HardyCross} and Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods start with an initial guess of the flow and adjust it iteratively until it converges. While the Hardy-Cross method iterates through each loop independently, the Newton–Raphson method iterates through all loops simultaneously \cite{NewtonenHard}. As a result, Newton-Raphson generally converges more quickly than Hardy-Cross. While there are several articles claiming a faster convergence or more accurate determination of the mass flows in cases with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Raphson was selected for this work, given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
 
+% The developed simulation model uses the root function of scipy to \eqref{eq::KirchoffNR}, using the default method apply the modified Powell method. 
 
+% - resolution of the hydraulic dynamics is set to 4 number after the komma
+% - Over the course of a whole simulation the solver sometimes tends to not solve. In the rare moment this happesn it stays below 20 occurances, on a full day simulation with a timestep of 1 second. Then $\min F(x)$ is performed where the mass flow rates of the previous timesteps are used to warm start the minimization.  
 
-
-% \begin{equation}
-% Q_d(k) = 
-% \left[\begin{array}{c}
-% Q_{d,1}(k-\tau_1) \\
-% Q_{d,2}(k-\tau_2) \\
-% \vdots \\
-% Q_{d,N_c}(k - \tau_{N_c})
-% \end{array}\right].
-% \end{equation}
-
+The developed simulation model solves \eqref{eq::KirchoffNR} using the \texttt{root} function of the \texttt{SciPy} \cite{scipy} package, with its default method, the modified Powell method. The hydraulic dynamics are resolved 
+to a precision of four decimal places. Over the course of a full simulation, the solver occasionally fails to converge. These occurrences are rare: fewer than 20 instances over a full-day simulation with a time step of one second, while in most of the simulations it doesn't occur at all. When this happens, the problem is instead solved by minimizing $\min F(x)$ using the L-BFGS-B algorithm, where the mass flow rates from the previous time step are used to warm-start the minimization.
 
 \section{Summary}
-\todo[inline]{TODO}
+One of the key modeling assumptions is that the hydraulic and thermodynamic systems are decoupled because of their different timescales. Therefore, the hydraulics are in a steady state, and the calculated mass flows are used in the thermodynamics. The overall structure of the district heating network was decided to be a strongly connected directed graph. The hydraulic behavior of the components is modeled using a square-mass-flow relation. For the valves, this relation is further extended to account for their displacement. Following the Kirchhoff laws a system of non-linear equations is created which is solved applying a Newton-Raphson like approach. The Node Method is used to model the thermodynamic behavior of the water within a pipeline. The $\epsilon$-NTU method is applied for the heat exchangers, for a more detailed thermodynamic model of the heat exchanger, more information is required. Consumer heat demand is modeled using four heat profiles that differ in the degree of simultaneity of consumer demand. The dynamics behind heat production were deemed outside the scope of the project.  
