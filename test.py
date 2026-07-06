@@ -910,7 +910,8 @@ def compare_with_benchmark(profile,
     else:
         raise ValueError (f"No optimization performed for {opt_folder_name}")
 
-    output_folder = os.path.join(thesis_dir, 'figures', 'comparison_BO_benchmark_set', opt_folder_name)
+    day = datetime.datetime.now().date()
+    output_folder = os.path.join(thesis_dir, 'figures', 'comparison_BO_benchmark_set', f'{str(day)}',opt_folder_name)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 

@@ -330,10 +330,7 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_boun
                             alpha = alpha)
 
     # ------------------------------------------------------------------
-    # Constraint GP kernels: same length-scale scaling as the objective GP.
-    # Replace the default constraint models (scalar length_scale=1, no
-    # bounds) with properly configured GPs so that the length-scales of
-    # each constraint are fitted per parameter within (0.05, 3) * range.
+    # Initialize constraint GPs
     # ------------------------------------------------------------------
     for idx in range(len(optimizer.constraint._model)):
         optimizer.constraint._model[idx] = make_constraint_gp(
@@ -345,7 +342,6 @@ def run_bo(i, dt, pump_pressure, curve, new_benchmark_run = False, split_Ts_boun
     gp_kernel_before = optimizer._gp.kernel
     constraint_kernels_before = [m.kernel for m in optimizer.constraint.model]
 
-    # Initial probe point in physical space (equivalent to normalized [1, 1, 0, -, 0.80])
     bounds = cost_fn.dict_physical_bounds[profile]
     initial_point = {
         'theta_1': bounds['theta_1'][1],
