@@ -4,7 +4,7 @@
         {
             "label": "BO Profile 1",
             "type": "shell",
-            "command": "python BO_no_normalization_COP.py 1",
+            "command": "python BO_no_normalization_conslengtscales_opt.py 1 false",
             "presentation": {
                 "panel": "new",
                 "reveal": "always"
@@ -13,7 +13,7 @@
         {
             "label": "BO Profile 2",
             "type": "shell",
-            "command": "python BO_no_normalization_COP.py 2",
+            "command": "python BO_no_normalization_conslengtscales_opt.py 2 false",
             "presentation": {
                 "panel": "new",
                 "reveal": "always"
@@ -22,7 +22,7 @@
         {
             "label": "BO Profile 3",
             "type": "shell",
-            "command": "python BO_no_normalization_COP.py 3",
+            "command": "python BO_no_normalization_conslengtscales_opt.py 3 false",
             "presentation": {
                 "panel": "new",
                 "reveal": "always"
@@ -31,7 +31,7 @@
         {
             "label": "BO Profile 4",
             "type": "shell",
-            "command": "python BO_no_normalization_COP.py 4",
+            "command": "python BO_no_normalization_conslengtscales_opt.py 4 false",
             "presentation": {
                 "panel": "new",
                 "reveal": "always"

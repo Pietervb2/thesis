@@ -84,8 +84,8 @@ class CostFunction:
         print(f'Q_respond_benchmark = {self.Q_respond_benchmark_max}, deltaQ_benchmark = {self.deltaQ_benchmark_tot}')
 
         # Tolerances
-        self.tol_Qrespond = 0.25
-        self.tol_deltaQ = 0.25
+        self.tol_Qrespond = 0.15
+        self.tol_deltaQ = 0.15
 
         # Return temperature constraints
         self.T_r_max = 43
@@ -411,7 +411,8 @@ if __name__ == '__main__':
         profile_num = int(sys.argv[1])
         # Optional second arg: 1/true/yes = split bounds (default), 0/false/no = unified bounds
         split = sys.argv[2].lower() not in ('0', 'false', 'no') if len(sys.argv) > 2 else True
+        # print(f'split: {split}')
         dt = 1
         pump_pressure = 60
         curve = True
-        run_bo(profile_num, dt, pump_pressure, curve, new_benchmark_run=True, split_Ts_bounds=split)
+        run_bo(profile_num, dt, pump_pressure, curve, new_benchmark_run=False, split_Ts_bounds=split)

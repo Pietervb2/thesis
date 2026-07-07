@@ -427,15 +427,15 @@ class Network:
     def set_mflow_network(self, N : int):
 
         """
-        Impelement root finding function to solve for mass flows in the network.
+        Implement root finding function to solve for mass flows in the network.
 
         Steps:
         1. Set up initial guess for mass flows in all pipes
         2. Reduce the incidence matrix by removing the first row (reference node)
-        3. Set up the residual vector F(Q) containing continuity equations and loop head-loss equations
+        3. Set up the residual vector F(mflow) containing continuity equations and loop head-loss equations
         4. Set up the Jacobian matrix J
-        5. Solve for update in mass flows dQ: J dQ = -F(Q)
-        6. Update mass flows: Q = Q + dQ
+        5. Solve for update in mass flows dmflow: J dmflow = -F(mflow)
+        6. Update mass flows: mflow = mflow + dmflow
 
         """
         pipe_ids = np.array(list(self.pipes.keys()))
