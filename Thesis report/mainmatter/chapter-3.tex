@@ -29,12 +29,26 @@ ii. verificatie
         \includegraphics[width=\textwidth]{figures_thesis/experimentD.pdf}
         \caption{Experiment D}
     \end{subfigure}
-    \caption{Measured outlet temperature compared against the Modelica model 
-    and the Node Method for the four validation experiments of van der Heijde 
-    et al. The RMSE of each model with respect to the measurements is given 
-    in the legend.}
+    \caption{Measured outlet temperature compared against the Finite Volume method within the Modelica model and the Node Method for the four validation experiments of van der Heijde et al. Note that the timestep for experiment D is 30 seconds, while for the other experiments it is 1 second.}
     \label{fig::pipe_validation}
 \end{figure}
+
+\begin{table}[h!]
+\centering
+\caption{RMSE values of the outlet temperature predicted by the Finite Volume Method within the Modelica model and the Node Method with respect to the experimental measurements of van der Heijde et al. \cite{VANDERHEIJDE2017158}, for the four validation experiments.}
+\label{tab::pipe_validation_rmse}
+\begin{tabular}{lccc}
+\hline
+\textbf{Experiment} & \textbf{RMSE Modelica [°C]} & \textbf{RMSE Node Method [°C]} \\
+\hline
+A & 5.66 & 2.84 \\
+B & 2.28 & 1.28 \\
+C & 3.55 & 1.68 \\
+D & 0.38 & 0.30 \\
+\hline
+\end{tabular}
+\end{table}
+
 
 
 
