@@ -189,6 +189,8 @@ The optimization problem is defined as follows:
 
 where $T_s(k)$ and $T_r(k)$ are respectively the supply and return water temperature of the network, $\dot{m}_s(k)$ and $\dot{m}_r(k)$ the supply and return mass flow rates, $w_1$ and $w_2$ are weighting factors and $\Delta k$ is the discretization timestep. The summation starts at $k_w$ once the initialization warm-up is complete. The state vector $\boldsymbol{x}(k) \in \mathbb{R}^{|\mathcal{N}| + |\mathcal{E}|} $ contains the temperatures of all the nodes and the inlet mass flow rates of all edges for timestep $k$.
 
+\todo[inline]{mogelijk definieren wat de lengte van de warmup is. }
+
 \[
 \boldsymbol{x}(k) =
 \left[
