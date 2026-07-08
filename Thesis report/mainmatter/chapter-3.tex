@@ -1,119 +1,108 @@
 \chapter{Model Implementation}
 \label{chapter:Model Implementation}
-First, the model setup is presented, covering the file structure and workflow within the system and validating Eneco's modeling requirements. After that, an assessment of the model's physical correctness is conducted. 
+First, the model setup is presented, covering the system's file structure and workflow and validating Eneco's modeling requirements. After that, an assessment of the model's physical correctness is conducted. 
 
 \section{Model setup}
 \label{sec::modelsetup}
 
-\todo[inline]{dit nalezen en aanpassen met eigen aantekeningen}
-The simulation model is implemented in Python and organized into three folders. 
-The \texttt{baseclasses} folder contains the classes representing the physical 
-components and the numerical solvers. The \texttt{constants} folder holds JSON 
-files with the physical parameters of each component (pipe dimensions, heat 
-exchanger constants, pump curve coefficients, and overflow valve settings), such 
-that parameters can be changed without touching the code. The \texttt{figures} 
-folder collects the simulation output, consisting of the generated plots and the 
-corresponding data in \texttt{.csv} format. Next to these folders, two scripts 
-form the entry points of the model: \texttt{test.py}, which builds and runs 
-simulations, and \texttt{BayesianOptimization.py}, which wraps the simulation in 
-the constrained Bayesian Optimization routine of Chapter~\ref{ch::optimization}.
+% \todo[inline]{dit nalezen en aanpassen met eigen aantekeningen}
+The simulation model is implemented in Python and organized into three folders. The \texttt{baseclasses} folder contains the classes representing the network, the simulation object, and the physical components. The \texttt{constants} folder contains JSON files that define the physical parameters of each component (pipe dimensions, heat exchanger constants, pump curve coefficients, and thermostatic bypass valve settings), allowing parameters to be easily changed. The \texttt{figures} folder contains the simulation output, consisting of generated plots and corresponding data in \texttt{.csv} format. Next to these folders, two scripts are the entry points of the model: \texttt{test.py}, which builds and runs simulations, and \texttt{BayesianOptimization.py}, which wraps the simulation in the constrained Bayesian Optimization approach of Chapter~\ref{chapter:ControlPolicy}.
 
 \begin{sidewaysfigure}[p]
     \centering
     \includegraphics[width=\textheight]{Thesis report/figures_thesis/code_overview_goed.pdf}
-    \caption{Schematic overview of the code structure. Solid arrows indicate 
-    usage or composition, dashed arrows indicate inheritance. The 
-    \texttt{baseclasses} package contains the component classes, while 
-    \texttt{test.py} constructs the network from the JSON parameter files and 
-    \texttt{BayesianOptimization.py} drives the optimization.}
+    \caption{Schematic overview of the code structure. Solid arrows indicate workflows and reliance, dashed arrows indicate inheritance. Class names are shown without the \texttt{.py} extension. The most important functions per Python file/class are listed underneath.}
     \label{fig::code_structure}
 \end{sidewaysfigure}
+The physical components listed in Eneco's model are implemented as class objects, with a general valve class that combines the valves in the heat exchangers and the thermostatic bypass valve. For the consumer, network, and simulation, class objects are also introduced. Where the simulation object is specifically created for plotting and data storage. 
 
-\subsection{Base classes}
-Each physical component of Chapter~\ref{ch::model} corresponds to a class. The \texttt{Node} class implements the volumeless junctions, providing the mixing 
-rule of Eq.~\eqref{eq::Tmix} through \texttt{set\_T()}. The \texttt{Pipe} class 
-implements the Node Method (\texttt{bnode\_method()}) together with the friction 
-factor computation and the pressure loss terms of Section~\ref{sec::hydraulics}. 
-The \texttt{Pump} class inherits from \texttt{Pipe} and adds the second-order 
-pump curve, while the \texttt{HeatExchanger} class inherits from \texttt{Node} 
-and replaces the mixing rule by the $\epsilon$-NTU method 
-(Eq.~\eqref{eq::Thex}), including the flow-dependent thermal conductance of 
-Eq.~\eqref{eq::UA_offdesign}. The \texttt{Valve} class provides the linear and 
-equal percentage characteristics of Section~\ref{sec::valves} and is mounted on 
-a pipe, and the \texttt{Consumer} class generates the heat demand profiles of 
-Section~\ref{sec::demand}. The \texttt{Network} class ties the components 
-together in the graph of Section~\ref{sec::graph}: it constructs the incidence 
-and loop matrices and solves the hydraulics and thermodynamics each timestep. 
-Finally, the \texttt{Simulation} class runs the time loop and handles plotting 
-and data storage.
+The function \texttt{normal\_run()} in \texttt{test.py} can be used to run standalone simulations and to perform the benchmark simulation. This function allows a user-defined supply temperature $T_{s}$, either constant or time-varying. In contrast with the function \texttt{optimization\_run()}, which instead internally constructs the supply temperature following the lumped function definition of the supply temperature used for the Bayesian Optimization approach presented in Section ~\ref{sec::controlInputs}. The constants of the lumped function can be separately defined to run the simulation, but the function is also used in \texttt{BayesianOptimization.py}. This file creates a cost function object class and calls the \texttt{optimization\_run()} to obtain function evaluations for the Bayesian Optimization approach. The control policy is executed by running \texttt{run\_bo.py}. 
 
-\subsection{Entry points}
-The function \texttt{normal\_run()} in \texttt{test.py} performs a standalone 
-simulation with a user-defined supply temperature $T_{in}$, either constant or 
-time-varying, and is used for the benchmark simulations and the validation 
-studies. The function \texttt{optimization\_run()} instead receives the 
-parameter vector $\theta$ from the Bayesian Optimization and internally 
-constructs the supply temperature from the setpoints $\theta_1$--$\theta_4$, 
-returning the simulated network to the cost function.
+Both \texttt{\_run} functions first create a network by running on \texttt{network\_builder()}. It creates a \texttt{Network} object, builds the graph structure, and fills it with the relevant components via the \texttt{add\_*} functions. The relevant physical parameter values of the components are loaded through \texttt{read\_*\_data()}. 
 
-Both entry points rely on \texttt{network\_builder()}, which assembles the 23-floor network programmatically. It first places the supply pump and the heat exchanger of the first floor, then iterates over the remaining consumers, adding per floor the four junction nodes, the supply and return pipes, and the heat exchanger with its consumer. Finally, the thermostatic bypass valve is 
-connected between the supply and return side at the top floor. Because the 
-network is generated in a loop, the number of floors, the pipe types per 
-segment, and the consumer profiles can be changed freely, which keeps the model 
-scalable to other DCS configurations.
+By implementing the theory of Chapter~\ref{chapter:sysmodel} in combination with extensive logging of the system data, the inlet and outlet temperatures of the pipes, the mass flow rates, and the relevant internal variables of the heat exchangers and valves, the model provides insight into the dynamics of the Decentralized Solution, satisfying the first modeling requirement. The modular 
+structure of the simulation model leaves room to extend the network with new components or alternative component designs. Together with the use of the Python programming language, this makes the model directly applicable for Eneco's engineers and provides a framework for further development. Hereby confirming to model requirements two and four. The model supports the Bayesian Optimization control strategy in Chapter~\ref{chapter:ControlPolicy} and implements P-control for the thermostatic bypass valve and PI-control for the valves within the heat exchanger. The extensive data logging additionally provides the foundation for testing alternative control strategies, although these would still need to be implemented within the model, satisfying model requirement three. 
 
-\subsection{Simulation step}
-Algorithms~\ref{alg::hydraulicstep} and~\ref{alg::thermostep} summarize one timestep of the simulation. Following the decoupling assumption of Section~\ref{sec::assumptions}, the hydraulic step is solved first, after which the resulting mass flows are used as input for the thermodynamic step.
+% which assembles the 23-floor network programmatically. It first places the supply pump and the heat exchanger of the first floor, then iterates over the remaining consumers, adding per floor the four junction nodes, the supply and return pipes, and the heat exchanger with its consumer. Finally, the thermostatic bypass valve is connected between the supply and return side at the top floor. Because the network is generated in a loop, the number of floors, the pipe types per segment, and the consumer profiles can be changed freely, which keeps the model scalable to other DCS configurations.
 
-\begin{algorithm}[h!]
-\caption{Hydraulic step at timestep $N$ (\texttt{set\_mflow\_network})}
-\label{alg::hydraulicstep}
-\begin{algorithmic}[1]
-\State Update all valve positions $h(N)$ and remove fully closed edges from 
-       the graph
-\State Rebuild the loop matrix $\mathbf{L}$ for the active graph
-\If{no active loops remain}
-    \State $\dot{\mathbf{m}}(N) \gets \mathbf{0}$ \Comment{all valves closed}
-\Else
-    \State Assemble residual $\mathbf{F}(\dot{\mathbf{m}})$ from the continuity 
-           equations (KCL) and loop head-loss equations (KVL)
-    \While{$\lVert \mathbf{F} \rVert > \delta$}
-        \State Solve $\mathbf{J}\,\Delta\dot{\mathbf{m}} = -\mathbf{F}$ 
-               \Comment{Newton--Raphson}
-        \State $\dot{\mathbf{m}} \gets \dot{\mathbf{m}} + \Delta\dot{\mathbf{m}}$
-    \EndWhile
-\EndIf
-\end{algorithmic}
-\end{algorithm}
+% \subsection{Base classes}
 
-\begin{algorithm}[h!]
-\caption{Thermodynamic step at timestep $N$ (\texttt{set\_T\_network})}
-\label{alg::thermostep}
-\begin{algorithmic}[1]
-\State Set the supply temperature $T_{in}(N)$ at the pump
-\State Apply the Node Method to the pump pipe
-\For{each node reached by a finished pipe (recursive traversal)}
-    \If{all incoming pipes of the node are finished}
-        \If{node is a heat exchanger}
-            \State $T_n(N) \gets f_{\epsilon\text{-NTU}}$ 
-                   \Comment{Eq.~\eqref{eq::Thex}}
-        \Else
-            \State $T_n(N) \gets$ flow-weighted mixing rule 
-                   \Comment{Eq.~\eqref{eq::Tmix}}
-        \EndIf
-        \State Apply the Node Method to all outgoing pipes and recurse
-    \EndIf
-\EndFor
-\end{algorithmic}
-\end{algorithm}
+
+% Each physical component of Chapter~\ref{ch::model} corresponds to a class. The \texttt{Node} class implements the volumeless junctions, providing the mixing rule of Eq.~\eqref{eq::Tmix} through \texttt{set\_T()}. The \texttt{Pipe} class implements the Node Method (\texttt{bnode\_method()}) together with the friction 
+% factor computation and the pressure loss terms of Section~\ref{sec::hydraulics}. The \texttt{Pump} class inherits from \texttt{Pipe} and adds the second-order pump curve, while the \texttt{HeatExchanger} class inherits from \texttt{Node} and replaces the mixing rule by the $\epsilon$-NTU method 
+% (Eq.~\eqref{eq::Thex}), including the flow-dependent thermal conductance of Eq.~\eqref{eq::UA_offdesign}. The \texttt{Valve} class provides the linear and equal percentage characteristics of Section~\ref{sec::valves} and is mounted on a pipe, and the \texttt{Consumer} class generates the heat demand profiles of 
+% Section~\ref{sec::demand}. The \texttt{Network} class ties the components together in the graph of Section~\ref{sec::graph}: it constructs the incidence and loop matrices and solves the hydraulics and thermodynamics each timestep. Finally, the \texttt{Simulation} class runs the time loop and handles plotting and data storage.
+
+% \subsection{Simulation step}
+
+% Algorithms~\ref{alg::hydraulicstep} and~\ref{alg::thermostep} summarize one timestep of the simulation. Following the decoupling assumption of Section~\ref{sec::assumptions}, the hydraulic step is solved first, after which the resulting mass flows are used as input for the thermodynamic step.
+
+% \begin{algorithm}[h!]
+% \caption{Hydraulic step at timestep $N$ (\texttt{set\_mflow\_network})}
+% \label{alg::hydraulicstep}
+% \begin{algorithmic}[1]
+% \State Update all valve positions $h(N)$ and remove fully closed edges from 
+%        the graph
+% \State Rebuild the loop matrix $\mathbf{L}$ for the active graph
+% \If{no active loops remain}
+%     \State $\dot{\mathbf{m}}(N) \gets \mathbf{0}$ \Comment{all valves closed}
+% \Else
+%     \State Assemble residual $\mathbf{F}(\dot{\mathbf{m}})$ from the continuity 
+%            equations (KCL) and loop head-loss equations (KVL)
+%     \While{$\lVert \mathbf{F} \rVert > \delta$}
+%         \State Solve $\mathbf{J}\,\Delta\dot{\mathbf{m}} = -\mathbf{F}$ 
+%                \Comment{Newton--Raphson}
+%         \State $\dot{\mathbf{m}} \gets \dot{\mathbf{m}} + \Delta\dot{\mathbf{m}}$
+%     \EndWhile
+% \EndIf
+% \end{algorithmic}
+% \end{algorithm}
+
+% \begin{algorithm}[h!]
+% \caption{Thermodynamic step at timestep $N$ (\texttt{set\_T\_network})}
+% \label{alg::thermostep}
+% \begin{algorithmic}[1]
+% \State Set the supply temperature $T_{in}(N)$ at the pump
+% \State Apply the Node Method to the pump pipe
+% \For{each node reached by a finished pipe (recursive traversal)}
+%     \If{all incoming pipes of the node are finished}
+%         \If{node is a heat exchanger}
+%             \State $T_n(N) \gets f_{\epsilon\text{-NTU}}$ 
+%                    \Comment{Eq.~\eqref{eq::Thex}}
+%         \Else
+%             \State $T_n(N) \gets$ flow-weighted mixing rule 
+%                    \Comment{Eq.~\eqref{eq::Tmix}}
+%         \EndIf
+%         \State Apply the Node Method to all outgoing pipes and recurse
+%     \EndIf
+% \EndFor
+% \end{algorithmic}
+% \end{algorithm}
 
 
 \section{Model assessment}
+The model assessment will be performed by addressing the five criteria points stated in Section ~\eqref{sec::researhqes}. An artificial 23-floor DCS network (with the same number of consumers) was selected for the assessment, as recreating a complete DCS was deemed beyond the scope of this work. Additionally, Eneco has some synthetic data on mass flows for this specific network configuration available. This data is used to determine the hydraulic conductivity of the heat exchanger valves. 
 
- An artificial 23-floor DCS heat distribution network was selected for implementation, as recreating a complete DCS was deemed beyond the scope of this work. Additionally, simulation data from Eneco was available for this configuration
 
-i Structuur van simulatie (dus ook toelichten van actieve graaf) en mogelijk ook hoe de files in elkaar zitten (dit kan anders ook wel in de appendix).
-ii. verificatie
+\subsection{Satisfaction of Kirchhoff's hydraulic laws}
+
+% Assessment goes here.
+
+\subsection{Energy conservation at every node}
+
+% Assessment goes here.
+
+\subsection{Validation of the thermodynamic pipeline PDE}
+
+% Assessment goes here.
+
+\subsection{Physical constants}
+
+% Assessment goes here.
+
+\subsection{CFL condition is satisfied throughout the simulation}
+
+% Assessment goes here.
 
 \begin{figure}[h!]
     \centering
@@ -161,5 +150,5 @@ D & 0.38 & 0.30 \\
 
 
 \section{Summary}
-\todo[inline]{bij de kleppen licht je de waardes van Kv0 en kvleak uit, of dat kan je ook bij de contantes doen. Vervoglens leg je uit waarom je welke type klep hebt gekozen}
+\todo[inline]{bij de kleppen licht je de waardes van Kv0 en kvleak uit, of dat kan je ook bij de contantes doen. Vervolgens leg je uit waarom je welk type klep hebt gekozen. Dat had ik geloof ik al gedaan.}
 
