@@ -311,7 +311,7 @@ T_{\mathrm{out}}(k) &= \frac{1}{\dot{m}(k)\Delta k}
 \end{align}
 \end{subequations}
 
-Equation~\eqref{eq::NMTout} gives the lossless outlet temperature of the pipeline $T_{\mathrm{out,1}}$ by performing a weighted average of the temperature of the respective water masses passing the outlet, where no thermal losses are yet taken into account. The auxiliary variables $\gamma$  and $\varepsilon$ denote the time steps at which the water mass entered the pipeline (edge), which are now the last ($\gamma$) and respectively first ($\varepsilon$) to leave the pipeline during timestep $k$. Using these variables, the auxiliary water masses $R$ and $S$ can be calculated, as illustrated by Figure~\ref{fig::NodeMethod}.
+Equation~\eqref{eq::NMTout} gives the lossless outlet temperature of the pipeline $T_{\mathrm{out,1}}$ by performing a weighted average of the temperature of the respective water masses passing the outlet, where no thermal losses are yet taken into account. Where $\Delta k$ denotes the timestep length, the auxiliary variables $\gamma$  and $\varepsilon$ denote the time steps at which the water mass entered the pipeline (edge), which are now the last ($\gamma$) and respectively first ($\varepsilon$) to leave the pipeline during timestep $k$. Using these variables, the auxiliary water masses $R$ and $S$ can be calculated, as illustrated by Figure~\ref{fig::NodeMethod}.
 
 \begin{figure}[h!]
     \centering
@@ -331,7 +331,7 @@ t_{\mathrm{stay}}(k) = {} & \frac{1}{\dot{m}(k)\Delta k}
     \Bigr]\Delta k
 \end{aligned}
 \end{equation}
-In order to take into account the effect of the heat capacity of the steel pipe on the water temperature, relation~\eqref{eq::Theatcapacity} is defined. It is assumed that, during a single time step, thermal equilibrium is achieved between the steel and the water. Rewriting this balance gives:
+To account for the effect of the steel pipe's heat capacity on the water temperature, relation~\eqref{eq::Theatcapacity} is defined. It is assumed that, during a single time step, thermal equilibrium is achieved between the steel and the water. Rewriting this balance gives:
 \begin{equation}\label{eq::Theatcapacity}
     T_{\mathrm{out},1,\mathrm{st}}(k)
     = \frac{T_{\mathrm{out},1}(k)\,\dot{m}(k)\,c_{p,w}\,\Delta k
@@ -362,10 +362,12 @@ However, the Node Method is not specified for a mass flow rate of zero, as it wo
 \subsection{Heat Exchanger}
 Heat exchangers exchange thermal energy between the district heating network and the domestic heating system. It was chosen to model the Arctic WKW-S 4P \cite{fortes_wkw_s_4p}, a plate heat exchanger used in several Eneco DCS projects. It consists of a series of corrugated plates mounted in a frame. Separated by the plates, the hot and cold fluids flow counter-currently, exchanging heat through the thin plate material. Although a dynamic heat exchanger model can be developed in great detail using the Finite Volume Method (FVM), insufficient information is available about the system's internal layout. Therefore, this thesis does not model the heat exchanger's internal temperature profile and focuses solely on heat transfer between the hot and cold fluids. It is assumed that the rate of heat transfer from the hot fluid ($\dot{Q_{h}}$ [J / s]) is equal to the rate of heat transfer from the cold fluid ($\dot{Q_{c}}$). That means that we do not lose thermal energy. 
 
-\begin{align}
+\begin{equation}\label{eq::hotandcolheatratetransfer}
+\begin{split}
     \dot{Q_h} &= \dot{m}_hc_h(T_{h,out} - T_{h,in}) = C_h (T_{h,out} - T_{h,in}) \\  
     \dot{Q_c} &= \dot{m}_cc_c(T_{c,out} - T_{c,in}) = C_c (T_{c,out} - T_{c,in})
-\end{align}
+\end{split}
+\end{equation}
 
 With the mass flow rates of the hot and cold fluids denoted by \( \dot{m}_h \) and \( \dot{m}_c \) [kg/s], and the specific heat capacities by \( c_h \) and \( c_c \) [J/(kg K)], the inlet and outlet temperatures of the hot fluid are given as \( T_{h,\text{in}} \) and \( T_{h,\text{out}} \) [\( ^\circ \)C], and those of the cold fluid as \( T_{c,\text{in}} \) and \( T_{c,\text{out}} \) [\( ^\circ \)C], respectively. The corresponding heat capacity rates are \( C_h \) and \( C_c \) [J/(K s)] for the hot and cold fluids. 
 In addition to the hot and cold definitions of the mass flow rate, district heating networks distinguish between the mass flow rate on the heat distribution side of the heat exchanger and that on the consumer side. These are referred to as the primary and secondary mass flow rates, respectively.
@@ -634,28 +636,5 @@ with the temperature at the nodal temperature being the temperature of all the e
     T_n(t) = T_e(t), \quad \forall \ n \in \mathcal{N}, e \in \mathcal{E}_{n \rightarrow} 
 \end{equation}
 
-\subsection{Solving Kirchhoff's laws}
-% \todo[inline]{ingaan op hoe het netwerk van non-linear equations eruit ziet dus met matrix en shit}
-The use of the Kirchhoff laws yields a system of nonlinear equations, which are set equal to zero to obtain the mass flow rates throughout the system at timestep $k$.
-
-\begin{equation}\label{eq::KirchoffNR}
-F(\dot{\mathbf{m}}(k)) = 
-\begin{bmatrix}
-    A_{\text{red}}\, \dot{\mathbf{m}}(k) \\[6pt]
-    L \, \mathbf{\Delta p_e} (\dot{\mathbf{m}}(k))
-\end{bmatrix}
-= \mathbf{0},
-\end{equation}
-where $F(\dot{\mathbf{m}}(k)) \in \mathbb{R}^{(|\mathcal{L}|+|\mathcal{N}|-1)}$ is composed of two blocks: the nodal mass balance residuals $A_{\text{red}}\,\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{N}|-1}$, one equation per node excluding the reference node, and the pressure drop residuals $L \, \mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{L}|}$, one equation per fundamental loop, with the vector $\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{E}|}$ containing all the mass flow rates of the edges at timestep $k$ and $\mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{N}|}$ as the vector containing the pressure drop over all the edges. 
-
-The Hardy-Cross \cite{HardyCross} and Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods start with an initial guess of the flow and adjust it iteratively until it converges. While the Hardy-Cross method iterates through each loop independently, the Newton–Raphson method iterates through all loops simultaneously \cite{NewtonenHard}. As a result, Newton-Raphson generally converges more quickly than Hardy-Cross. While there are several articles claiming a faster convergence or more accurate determination of the mass flows in cases with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Raphson was selected for this work, given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
-
-% The developed simulation model uses the root function of scipy to \eqref{eq::KirchoffNR}, using the default method apply the modified Powell method. 
-
-% - resolution of the hydraulic dynamics is set to 4 number after the komma
-% - Over the course of a whole simulation the solver sometimes tends to not solve. In the rare moment this happesn it stays below 20 occurances, on a full day simulation with a timestep of 1 second. Then $\min F(x)$ is performed where the mass flow rates of the previous timesteps are used to warm start the minimization.  
-
-The developed simulation model solves \eqref{eq::KirchoffNR} using the \texttt{root} function of the \texttt{SciPy} \cite{scipy} package, with its default method, the modified Powell method. The Jacobian is derived analytically to aid the solver. The hydraulic dynamics are resolved to four decimal places. Over the course of a full simulation, the solver occasionally fails to converge. These occurrences are rare: fewer than 20 instances over a full-day simulation with a time step of one second, while in most of the simulations it doesn't occur at all. When this happens, the problem is instead solved by minimizing $\min F(x)$ using the L-BFGS-B algorithm, where the mass flow rates from the previous time step are used to warm-start the minimization.
-
 \section{Summary}
-One of the key modeling assumptions is that the hydraulic and thermodynamic systems are decoupled because of their different timescales. Therefore, the hydraulics are in a steady state, and the calculated mass flows are used in the thermodynamics. The overall structure of the district heating network was decided to be a strongly connected directed graph. The hydraulic behavior of the components is modeled using a square-mass-flow relation. For the valves, this relation is further extended to account for their displacement. Following the Kirchhoff laws a system of non-linear equations is created which is solved applying a Newton-Raphson like approach. The Node Method is used to model the thermodynamic behavior of the water within a pipeline. The $\epsilon$-NTU method is applied for the heat exchangers, for a more detailed thermodynamic model of the heat exchanger, more information is required. Consumer heat demand is modeled using four heat profiles that differ in the degree of simultaneity of consumer demand. The dynamics behind heat production were deemed outside the scope of the project.  
+One of the key modeling assumptions is that the hydraulic and thermodynamic systems are decoupled because of their different timescales. Therefore, the hydraulics are in a steady state, and the calculated mass flows are used in the thermodynamics. The overall structure of the district heating network was decided to be a strongly connected directed graph. The hydraulic behavior of the components is modeled using a square-mass-flow relation. For the valves, this relation is further extended to account for their displacement. Following the Kirchhoff laws a system of non-linear equations is created which is solved applying a Newton-Raphson like approach. The Node Method is used to model the thermodynamic behavior of the water within a pipeline. The $\epsilon$-NTU method is applied for the heat exchangers, for a more detailed thermodynamic model of the heat exchanger, more information is required. Consumer heat demand is modeled using four heat profiles that differ in the degree of simultaneity of consumer demand. A detailed model of the heat production dynamics was deemed outside the scope of the project.  
