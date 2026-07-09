@@ -74,7 +74,7 @@ Supply temperature control maintains the network temperature at the required lev
 \subsubsection{Choice of optimization method}
 The previous sections discussed the current literature on lowering the return temperature using the two selected actuators. This section presents an argument for using Bayesian Optimization as a suitable control policy for the simulation model to be developed. 
 
-The developed simulation model becomes a non-convex nonlinear system (see Chapter \ref{chap::sysmodel}). The causes of the non-convexity are listed below:
+The developed simulation model becomes a non-convex nonlinear system (see Chapter \ref{chapter:sysmodel}). The causes of the non-convexity are listed below:
 
 \begin{enumerate}
     \item  The quadratic equality constraints imposed by Kirchhoff's second law \eqref{eq::secondKirchhoff}.
@@ -90,7 +90,7 @@ A popular application of Bayesian Optimization has been the tuning of machine le
 
 This leaves a gap in the research on the application of Bayesian Optimization as a control method in the district heating network field.  
 
-\section{Problem statement and research questions}
+\section{Problem statement and research questions}\label{sec::researhqes}
 This thesis develops a dynamic simulation model of Eneco's Decentralized Solution models and provides a control policy using Bayesian Optimization to lower the network's return temperature by actuating the thermostatic bypass valve and adjusting the supply temperature. This problem statement gives rise to the following two research questions:
 
 \begin{itemize}
@@ -115,7 +115,7 @@ To further specify the first requirement, the developed simulation model should 
 \item Centrifugal pumps
 \end{itemize}
 
-Since real measurement data is unavailable for direct model validation, the model is assessed using the following physical criteria:
+Since real measurement data is unavailable for direct model validation, the model is assessed using the following criteria:
                                
 \begin{enumerate}
     \item Kirchhoff's hydraulic laws are satisfied.
