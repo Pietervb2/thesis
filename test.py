@@ -275,7 +275,7 @@ def model_step_7():
     pump_data = read_pump_data('20kPa Pump constant')
     
     # Create network
-    net = Network("2 consumers without overflow normal, 20kPa, no Kvleak")
+    net = Network("2 consumers without bypass normal, 20kPa, no Kvleak")
 
     number_consumers = 2
     pipe_data_list = [pipe_data_DN40] * number_consumers
@@ -296,7 +296,7 @@ def model_step_7():
                     hex_data,
                     pump_data, 
                     consumer_list, 
-                    use_overflow = False)
+                    use_bypass = False)
 
     # Simulation parameters
     dt = 60 # s
@@ -388,10 +388,10 @@ def test_NR():
     pipe_data_DN20 = read_pipe_data('DN20')
     hex_data = read_hex_data('Standard hex constants')
     pump_data = read_pump_data('20kPa Pump constant')
-    overflow_data = read_overflow_data('Overflow')
+    bypass_data = read_bypass_data('Bypass')
     
     # Create network
-    net = Network("Test closing valves with overflow")
+    net = Network("Test closing valves with bypass")
 
     number_consumers = 20
     pipe_data_list = [pipe_data_DN40] * number_consumers
@@ -415,7 +415,7 @@ def test_NR():
     temp_type = 'constant'   
     T_in = generate_input_network(temp_type, total_time, dt)
 
-    h_overflow = np.zeros_like(T_in)
+    h_bypass = np.zeros_like(T_in)
 
     # Build network
     network_builder(net, 
@@ -424,8 +424,8 @@ def test_NR():
                     hex_data,
                     pump_data,
                     consumer_list, 
-                    h_overflow,
-                    overflow_data = overflow_data,
+                    h_bypass,
+                    bypass_data = bypass_data,
                     )
     
     # Run simulation
@@ -467,7 +467,7 @@ def test_network_builder():
 def fit_Kv_values(pump_pressure, curve):
     """
     Try to find valve positions to replicate Rutgers data
-    No overflow valve is used! And simply assume that all valves are open because there goes some mass flow through them.
+    No bypass valve is used! And simply assume that all valves are open because there goes some mass flow through them.
     """
 
     pipe_data_DN20 = read_pipe_data('DN20')
@@ -503,7 +503,7 @@ def fit_Kv_values(pump_pressure, curve):
                     hex_data,
                     pump_data, 
                     consumer_list,
-                    use_overflow = False)
+                    use_bypass = False)
     
     # Initialize with dummy variables
     net.initialize_network(1,1,np.array([65]),np.array([20]),np.array([20]))
@@ -666,7 +666,7 @@ def check_Kvs_range(Kv_array, Kvs_min=0.1, Kvs_max=3.0, n_steps=100):
 
     return valid_Kvs, valid_h
 
-def overflow_test():
+def bypass_test():
     """
     Replicate network of which Rutger send data from
     """
@@ -680,16 +680,16 @@ def overflow_test():
 
     hex_data = read_hex_data('Standard hex constants')
     pump_data = read_pump_data('60kPa Pump curve')
-    overflow_data = read_overflow_data('Overflow')
+    bypass_data = read_bypass_data('Bypass')
 
     # Create network
     tau = 60
-    overflow_data[3] = tau
-    steps = overflow_data[5]
+    bypass_data[3] = tau
+    steps = bypass_data[5]
     temperature = 65
 
     net = Network(f'Oftest_temp{temperature}_tau_{tau}')
-    overflow_data.append(True) # Indicating that it should use the benchmark
+    bypass_data.append(True) # Indicating that it should use the benchmark
 
     consumer_list = consumer_start_times(profile, [1])
     pipe_data_list = [pipe_data_DN40] * 6 +[pipe_data_DN32] * 14 + [pipe_data_DN25] * 3
@@ -710,7 +710,7 @@ def overflow_test():
                 hex_data,
                 pump_data, 
                 consumer_list,
-                overflow_data = overflow_data,
+                bypass_data = bypass_data,
                 )
     # Run simulation
     sim = Simulation(profile, run_type, dt, total_time, T_ambt, net_id = net.net_id)
@@ -730,7 +730,7 @@ def normal_run(profile, run_type, dt, pump_pressure, curve, T_in_base,
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    overflow_data = read_overflow_data('Overflow')
+    bypass_data = read_bypass_data('Bypass')
 
     pump_type = f"{pump_pressure}kPa Pump {'curve' if curve else 'constant'}"
     pump_data = read_pump_data(pump_type)
@@ -759,7 +759,7 @@ def normal_run(profile, run_type, dt, pump_pressure, curve, T_in_base,
         T_in = generate_input_network(temp_type, total_time, dt, T_in_base)
 
     # True = P-band optimization, False = benchmark with deadband
-    overflow_data.append(of_type) 
+    bypass_data.append(of_type) 
 
     # Create Network
     network_builder(net, 
@@ -768,7 +768,7 @@ def normal_run(profile, run_type, dt, pump_pressure, curve, T_in_base,
                 hex_data,
                 pump_data, 
                 consumer_list,
-                overflow_data = overflow_data,
+                bypass_data = bypass_data,
                 )
     
     # Run simulation
@@ -795,8 +795,8 @@ def optimization_run(theta,
     theta_2 : Maximum supply temperature [°C]
     theta_3 : Heat demand threshold [W] (Q_set)
     theta_4 : Heat demand P-band [W]
-    theta_5 : Overflow valve additional temperature setpoint [°C]
-    theta_6 : Overflow valve P-band [°C]
+    theta_5 : Bypass valve additional temperature setpoint [°C]
+    theta_6 : Bypass valve P-band [°C]
     """
 
     pipe_data_DN20 = read_pipe_data('DN20')
@@ -805,7 +805,7 @@ def optimization_run(theta,
     pipe_data_DN40 = read_pipe_data('DN40')
 
     hex_data = read_hex_data('Standard hex constants')
-    overflow_data = read_overflow_data('Overflow')
+    bypass_data = read_bypass_data('Bypass')
 
     pump_type = f"{pump_pressure}kPa Pump {'curve' if curve else 'constant'}"
     pump_data = read_pump_data(pump_type)
@@ -821,9 +821,9 @@ def optimization_run(theta,
     T_ambt = 20
 
     # Apply input parameters for BO
-    overflow_data[1] = theta[4] # Temperature setpoint
-    overflow_data[2] = theta[5] # P-band width
-    overflow_data.append(True) #  True = P-band optimization, False = benchmark with deadband
+    bypass_data[1] = theta[4] # Temperature setpoint
+    bypass_data[2] = theta[5] # P-band width
+    bypass_data.append(True) #  True = P-band optimization, False = benchmark with deadband
 
     # Create Network
     network_builder(net, 
@@ -832,7 +832,7 @@ def optimization_run(theta,
                 hex_data,
                 pump_data, 
                 consumer_list,
-                overflow_data = overflow_data,
+                bypass_data = bypass_data,
                 )
     
     # Run simulation
@@ -851,9 +851,9 @@ def optimization_run(theta,
             with open(os.path.join(sim.folder, 'debug_dict_BO.json'), 'w') as f:
                 json.dump(debug_dict_BO, f, indent=2)
         
-        # Save the overflow settings
-        src = Path(__file__).parent / 'constants' / 'constants_overflow.json'
-        shutil.copy(src, Path(sim.folder) / 'overflow_settings.json')
+        # Save the bypass settings
+        src = Path(__file__).parent / 'constants' / 'constants_bypass.json'
+        shutil.copy(src, Path(sim.folder) / 'bypass_settings.json')
 
         # Close all matplotlib figures to prevent state leakage before comparison plotting
         plt.close('all')
@@ -938,38 +938,38 @@ def compare_with_benchmark(profile,
     plt.savefig(os.path.join(output_folder, 'supply_return_temperature.png'))
     plt.close()
 
-    # Overflow valve displacement
-    opt_overflow_path = os.path.join(opt_folder, 'hex_consumer_data','overflow.csv')
-    opt_overflow_df = pd.read_csv(opt_overflow_path)
+    # Bypass valve displacement
+    opt_bypass_path = os.path.join(opt_folder, 'hex_consumer_data','bypass.csv')
+    opt_bypass_df = pd.read_csv(opt_bypass_path)
 
-    bench_overflow_path = os.path.join(bench_folder, 'hex_consumer_data','overflow.csv')
-    bench_overflow_df = pd.read_csv(bench_overflow_path)    
+    bench_bypass_path = os.path.join(bench_folder, 'hex_consumer_data','bypass.csv')
+    bench_bypass_df = pd.read_csv(bench_bypass_path)    
 
-    fig_overflow_h = plt.figure(figsize=(10, 6)) 
-    plt.plot(time, opt_overflow_df['h'], label = "BO")
-    plt.plot(time, bench_overflow_df['h'], label = "Benchmark")
-    plt.title("Overflow Valve Displacement") 
+    fig_bypass_h = plt.figure(figsize=(10, 6)) 
+    plt.plot(time, opt_bypass_df['h'], label = "BO")
+    plt.plot(time, bench_bypass_df['h'], label = "Benchmark")
+    plt.title("Bypass Valve Displacement") 
     plt.xlabel(f'Time (h), dt = {dt}')
     plt.ylabel('Valve displacement (-)')
     plt.legend()
     plt.grid(True)
     format_plot_time_axis()
     
-    plt.savefig(os.path.join(output_folder, 'overflow_displacement.png'))
+    plt.savefig(os.path.join(output_folder, 'bypass_displacement.png'))
     plt.close()
 
-    # Overflow valve temperature
-    fig_overflow_T = plt.figure(figsize=(10, 6))
-    plt.plot(time, opt_overflow_df['T node'], label = "BO")
-    plt.plot(time, bench_overflow_df['T node'], label = "Benchmark")
-    plt.title("Overflow Valve Temperature")
+    # Bypass valve temperature
+    fig_bypass_T = plt.figure(figsize=(10, 6))
+    plt.plot(time, opt_bypass_df['T node'], label = "BO")
+    plt.plot(time, bench_bypass_df['T node'], label = "Benchmark")
+    plt.title("Bypass Valve Temperature")
     plt.xlabel(f'Time (h), dt = {dt}')
     plt.ylabel('Temperature (°C)')
     plt.legend()
     plt.grid(True)
     format_plot_time_axis()
     
-    plt.savefig(os.path.join(output_folder, 'overflow_temperature.png'))
+    plt.savefig(os.path.join(output_folder, 'bypass_temperature.png'))
     plt.close()
 
     # Total heat demand and supply
@@ -1096,25 +1096,25 @@ def read_pump_data(pump_data_set):
 
     return pump_data
 
-def read_overflow_data(overflow_data_set):
+def read_bypass_data(bypass_data_set):
 
     thesis_dir = os.path.dirname(os.path.abspath(__file__))
-    constants_file = os.path.join(thesis_dir,'constants', 'constants_overflow.json')
+    constants_file = os.path.join(thesis_dir,'constants', 'constants_bypass.json')
 
     with open(constants_file) as f:
         constants = json.load(f)
 
-    K_vs = constants[overflow_data_set]['K_vs'] # 
-    T_set = constants[overflow_data_set]['T_set'] # 
-    P_band = constants[overflow_data_set]['P_band'] #
-    tau = constants[overflow_data_set]['tau'] #
-    max_rate = constants[overflow_data_set]['max_rate'] #
-    steps = constants[overflow_data_set]['steps'] #
-    Kvleak_bool = constants[overflow_data_set]['Kvleak_bool'] #
+    K_vs = constants[bypass_data_set]['K_vs'] # 
+    T_set = constants[bypass_data_set]['T_set'] # 
+    P_band = constants[bypass_data_set]['P_band'] #
+    tau = constants[bypass_data_set]['tau'] #
+    max_rate = constants[bypass_data_set]['max_rate'] #
+    steps = constants[bypass_data_set]['steps'] #
+    Kvleak_bool = constants[bypass_data_set]['Kvleak_bool'] #
 
-    overflow_data = [K_vs, T_set, P_band, tau, max_rate, steps, Kvleak_bool]
+    bypass_data = [K_vs, T_set, P_band, tau, max_rate, steps, Kvleak_bool]
 
-    return overflow_data
+    return bypass_data
 
 def consumer_start_times(profile, peaks):
     """
@@ -1226,17 +1226,17 @@ def network_builder(net : Network,
                     hex_data,
                     pump_data,
                     consumer_list,
-                    h_overflow = None,
-                    overflow_data = None,
-                    use_overflow = True,
+                    h_bypass = None,
+                    bypass_data = None,
+                    use_bypass = True,
                 ):
         
         # Add heat exchangers and connecting pipes based on number of consumers
 
         number_of_consumers = len(consumer_list)
 
-        net.add_node('Node 1.1', 0, 0, 0)
-        net.add_node('Node 1.2', 0, 0, 3)
+        net.add_node('Node 1.1', -0.5, 0, 0)
+        net.add_node('Node 1.2', -0.5, 0, 3)
         net.add_node('Node 1.3', 2, 0, 3)
         net.add_node('Node 1.4', 2, 0, 2)
         net.add_node('Node 1.5', 1, 0, 2)
@@ -1271,7 +1271,7 @@ def network_builder(net : Network,
 
             pipe_data = pipe_data_list[i-1]
 
-            net.add_node(supply_node, 0, 0, 3*i)
+            net.add_node(supply_node, -0.5, 0, 3*i)
             net.add_node(above_hex_node, 2, 0, 3*i)     
             net.add_node(under_hex_node, 2, 0, 3*i-1) 
             net.add_node(return_node, 1, 0, 3*i-1)
@@ -1289,17 +1289,17 @@ def network_builder(net : Network,
             net.add_pipe(f'Pipe {i}.5',under_hex_node,return_node,pipe_data)
             net.add_pipe(f'Pipe {i}.6',return_node,previous_return_node,pipe_data) # needs to be connected to node from previous consumer
 
-        # add overflow
-        if use_overflow:
-            overflow_node_supply = f'Node {i}.7'
-            overflow_node_return = f'Node {i}.8'
+        # add bypass
+        if use_bypass:
+            bypass_node_supply = f'Node {i}.7'
+            bypass_node_return = f'Node {i}.8'
 
-            net.add_node(overflow_node_supply, 0, 0, 3*i+1.5)
-            net.add_node(overflow_node_return, 1, 0, 3*i+1.5)
+            net.add_node(bypass_node_supply, -0.5, 0, 3*i+1.5)
+            net.add_node(bypass_node_return, 1, 0, 3*i+1.5)
 
-            net.add_pipe('Overflow 1' , supply_node, overflow_node_supply, pipe_data)
-            net.add_overflow('Overflow 2' , overflow_node_supply, overflow_node_return, pipe_data, overflow_data, net.nodes[overflow_node_supply], h_overflow)
-            net.add_pipe('Overflow 3', overflow_node_return, return_node, pipe_data)
+            net.add_pipe('Bypass 1' , supply_node, bypass_node_supply, pipe_data)
+            net.add_bypass('Bypass 2' , bypass_node_supply, bypass_node_return, pipe_data, bypass_data, net.nodes[bypass_node_supply], h_bypass)
+            net.add_pipe('Bypass 3', bypass_node_return, return_node, pipe_data)
 
         return net
 
@@ -1311,27 +1311,35 @@ if __name__ == "__main__":
 
     # from BO import CostFunction
 
-
     start = datetime.datetime.now()
+
+    # for i in range (1,5):
+    #     profile = f'Profile {i}'
+    #     dt = 1
+    #     pump_pressure = 60
+    #     curve = True
+    #     test_name = f"Profile {i}_{pump_pressure}kPa_{curve}_nodalenergycheck"
+
+    #     print(f'start test: {start}, test_name: {test_name}')
+
+    #     normal_run(profile, 'test', dt, pump_pressure, curve, 65, 'constant', test_name = test_name)
 
     i = 1
     profile = f'Profile {i}'
     dt = 1
-    pump_pressure = 60
+    pump_pressure = 50
     curve = True
-    test_name = f"Profile {i}_{pump_pressure}kPa_{curve}_Tsin=65_check_withKvleakboolhex"
-
+    Tin = 63
+    test_name = f"Profile {i}_{pump_pressure}kPa_{curve}_Tsin={Tin}_assertcheck"
     print(f'start test: {start}, test_name: {test_name}')
 
-    normal_run(profile, 'test', dt, pump_pressure, curve, 65, 'constant', test_name = test_name)
+
+    normal_run(profile, 'test', dt, pump_pressure, curve, Tin, 'constant', test_name = test_name)
 
 
     # cost_function = CostFunction(profile, dt, pump_pressure, curve, run_type = 'test', test_name = test_name)
-
-
     print(f'duration test: {datetime.datetime.now() - start}')
 
 
-    # Kv_array = fit_Kv_values(50, False)
-    # check_Kvs_range(Kv_array, 0.001, 0.007, 100)
+# "Profile 1_50kPa_True_Tsin=63_nodalenergycheck_dt=1_Tambt=20"
 

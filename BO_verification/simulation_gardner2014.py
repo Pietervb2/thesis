@@ -2,7 +2,7 @@
 Replication of Simulation 1 from Gardner et al. (2014)
 "Bayesian Optimization with Inequality Constraints"
 
-Objective  (minimise):  l(x,y) = cos(2x)*cos(y) + sin(x)
+Objective  (minimise):  f(x,y) = cos(2x)*cos(y) + sin(x)
 Constraint (must be <=0.5): c(x,y) = cos(x)*cos(y) - sin(x)*sin(y)
 
 Domain: x,y in [0, 6]
@@ -70,7 +70,7 @@ class CostFunction:
         return self._cache[key]
 
     def objective(self, x, y):
-        """bayes_opt maximises — negate to minimise l(x,y)."""
+        """bayes_opt maximises — negate to minimise f(x,y)."""
         cost, _ = self.run(x, y)
         return -cost
 
@@ -144,7 +144,7 @@ def run_bo():
     stop = time.time()
     print(f'\n{"="*55}')
     print(f'Optimum found:  x={x_opt:.4f}, y={y_opt:.4f}')
-    print(f'Objective l(x,y) = {l_opt:.4f}  (minimised)')
+    print(f'Objective f(x,y) = {l_opt:.4f}  (minimised)')
     print(f'Constraint c(x,y) = {c_opt:.4f}  (limit = {CONSTRAINT_LIMIT})')
     print(f'Feasible: {c_opt <= CONSTRAINT_LIMIT}')
     print(f'GP kernel before: {gp_kernel_before}')
@@ -173,7 +173,7 @@ def plot_results(optimizer, cost_fn, save_path='simulation1_results.png'):
 
     # Objective contour
     cf = ax.contourf(XX, YY, LL, levels=20, cmap='RdYlBu_r', alpha=0.85)
-    plt.colorbar(cf, ax=ax, label='l(x,y)')
+    plt.colorbar(cf, ax=ax, label='f(x,y)')
     ax.contour(XX, YY, LL, levels=20, colors='k', linewidths=0.3, alpha=0.3)
 
     # Infeasible overlay (white semi-opaque) — matches paper Figure 2 style
@@ -201,33 +201,37 @@ def plot_results(optimizer, cost_fn, save_path='simulation1_results.png'):
     if infeasible_pts:
         ix, iy = zip(*infeasible_pts)
         ax.scatter(ix, iy, marker='x', color='black', s=60, zorder=5,
-                   linewidths=1.5, label=f'Infeasible ({len(infeasible_pts)})')
+                   linewidths=1.5)
 
     if feasible_pts:
         fx, fy = zip(*feasible_pts)
         ax.scatter(fx, fy, marker='o', facecolors='white', edgecolors='black',
-                   s=60, zorder=6, linewidths=1.5, label=f'Feasible ({len(feasible_pts)})')
+                   s=60, zorder=6, linewidths=1.5)
 
-    # Mark optimum
-    x_opt = optimizer.max['params']['x']
-    y_opt = optimizer.max['params']['y']
-    ax.scatter([x_opt], [y_opt], marker='*', color='lime', s=280, zorder=7,
-               edgecolors='black', linewidths=0.8, label='cBO optimum')
+    # # Mark optimum
+    # x_opt = optimizer.max['params']['x']
+    # y_opt = optimizer.max['params']['y']
+    # ax.scatter([x_opt], [y_opt], marker='*', color='lime', s=280, zorder=7,
+    #            edgecolors='black', linewidths=0.8, label='cBO optimum')
 
-    ax.text(1.8, 3.2, 'INFEASIBLE', fontsize=13, color='gray',
-            ha='center', va='center', fontweight='bold', alpha=0.7)
+    # ax.text(1.8, 3.2, 'INFEASIBLE', fontsize=13, color='gray',
+    #         ha='center', va='center', fontweight='bold', alpha=0.7)
+
+    # ax.text(3, 3, 'INFEASIBLE', fontsize=13, color='gray',
+    #     ha='center', va='center', fontweight='bold', alpha=0.7,
+    #     rotation=-45)
 
     ax.set_xlim(0, 6)
     ax.set_ylim(0, 6)
     ax.set_xlabel('x', fontsize=12)
     ax.set_ylabel('y', fontsize=12)
-    ax.set_title(
-        'Constrained BO — Gardner (2014) Simulation 1\n'
-        r'$\ell(x,y)=\cos(2x)\cos(y)+\sin(x)$,  '
-        r'$c(x,y)\leq 0.5$',
-        fontsize=11
-    )
-    ax.legend(loc='upper left', fontsize=9)
+    # ax.set_title(
+    #     'Constrained BO — Gardner (2014) Simulation 1\n'
+    #     r'$\elf(x,y)=\cos(2x)\cos(y)+\sin(x)$,  '
+    #     r'$c(x,y)\leq 0.5$',
+    #     fontsize=11
+    # )
+    # ax.legend(loc='upper left', fontsize=9)
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches='tight')

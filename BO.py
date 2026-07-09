@@ -97,8 +97,8 @@ class CostFunction:
         theta_2 : Maximum supply temperature [°C]
         theta_3 : Heat demand threshold [W] (Q_set)
         theta_4 : Heat demand P-band [W]
-        theta_5 : Temperature setpoint for overflow control [°C]
-        theta_6 : Overflow valve P-band [°C]
+        theta_5 : Temperature setpoint for bypass control [°C]
+        theta_6 : Bypass valve P-band [°C]
         
         """
         key = (round(theta_1,4), round(theta_2,4), round(theta_3,4),

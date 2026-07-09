@@ -84,8 +84,8 @@ class CostFunction:
         print(f'Q_respond_benchmark = {self.Q_respond_benchmark_max}, deltaQ_benchmark = {self.deltaQ_benchmark_tot}')
 
         # Tolerances
-        self.tol_Qrespond = 0.15
-        self.tol_deltaQ = 0.15
+        self.tol_Qrespond = 0.10
+        self.tol_deltaQ = 0.10
 
         # Return temperature constraints
         self.T_r_max = 43
@@ -110,7 +110,7 @@ class CostFunction:
         theta_1 : Minimum supply temperature [°C]
         theta_2 : Maximum supply temperature [°C]
         theta_3 : Heat demand threshold [W] (Q_set)
-        theta_5 : Temperature setpoint for overflow control [°C]
+        theta_5 : Temperature setpoint for bypass control [°C]
         """
         key = (round(theta_1, 4), round(theta_2, 4), round(theta_3, 4), round(theta_5, 4))
 

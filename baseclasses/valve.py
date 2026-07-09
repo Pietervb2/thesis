@@ -8,7 +8,7 @@ class Valve:
                  valve_data : list,
                  hex = None,
                  node = None,
-                 h_overflow = None):
+                 h_bypass = None):
         """"
         Args:
             - Kvs: hydraulic conductivity of fully open valve [kg/s/Pa^0.5]
@@ -26,7 +26,7 @@ class Valve:
             self.max_rate = valve_data[3]
  
         elif node is not None:
-            self.T_set_overflow = valve_data[1]
+            self.T_set_bypass = valve_data[1]
             self.P_band = valve_data[2]
             self.tau = valve_data[3]
             self.max_rate = valve_data[4]
@@ -35,24 +35,24 @@ class Valve:
             self.opt = valve_data[7]
 
 
-        self.h_overflow = h_overflow  
+        self.h_bypass = h_bypass  
   
         self.hex = hex  # Heat exchanger controlling the valve
-        self.node = node  # Node located at incoming side of pipe incase of overflow valve.
+        self.node = node  # Node located at incoming side of pipe incase of bypass valve.
    
     def initialize_valve(self, num_steps, dt):
         """
         Initialize the valve parameters.
         """ 
 
-        if self.h_overflow is None:
+        if self.h_bypass is None:
             self.h = np.zeros(num_steps)
             self.T_sensor = np.zeros(num_steps) # temperature of sensor
             self.h_band = np.zeros(num_steps) # debug, get insight in behavior
             self.tau_array = np.zeros(num_steps) # debug, get insight in behavior
             self.Kv = np.ones(num_steps)*1e-5 # a dummy variable in which way 1/Kv is not inf if we take 0 at the beginning of the simulation. 
         else:
-            self.h = self.h_overflow # set the valve displacement at a constant opening
+            self.h = self.h_bypass # set the valve displacement at a constant opening
             self.Kv = self.linear_valve(self.h)
               
         self.dt = dt # For PI controller
@@ -98,24 +98,24 @@ class Valve:
             Kv = Kv0 + h * (self.Kvs - Kv0)
         return Kv
     
-    def BO_overflow_valve(self, Kvleak_bool, N):
+    def BO_bypass_valve(self, Kvleak_bool, N):
         """"
-        Returns the valve position and Kv value of the overflow valve based on the lumped BO model. 
+        Returns the valve position and Kv value of the bypass valve based on the lumped BO model. 
         """
 
         minimal_opening = 0
 
         # P-band logic
-        if self.T_sensor[N] <= self.T_set_overflow -  self.P_band:  
+        if self.T_sensor[N] <= self.T_set_bypass -  self.P_band:  
             h_band = 1
-        elif self.T_sensor[N] > self.T_set_overflow:
+        elif self.T_sensor[N] > self.T_set_bypass:
             h_band = minimal_opening 
         else:
             # Choice between continuous and discrete valve displacement 
             if self.steps == "con":
-                h_band = (self.T_set_overflow - self.T_sensor[N])/self.P_band + minimal_opening
+                h_band = (self.T_set_bypass - self.T_sensor[N])/self.P_band + minimal_opening
             else:
-                h_band = np.floor((self.T_set_overflow - self.T_sensor[N]) / self.P_band * self.steps) / self.steps + minimal_opening
+                h_band = np.floor((self.T_set_bypass - self.T_sensor[N]) / self.P_band * self.steps) / self.steps + minimal_opening
         
         self.h_band[N] = h_band
         h_previous = self.h[N-1] if N > 0 else 1 # Assume fully open at the start
@@ -142,8 +142,8 @@ class Valve:
         if N == 0:
             h = 1
         else:
-            upper = self.T_set_overflow + self.P_band/2
-            lower = self.T_set_overflow - self.P_band/2
+            upper = self.T_set_bypass + self.P_band/2
+            lower = self.T_set_bypass - self.P_band/2
             
             if self.h[N-1] == 1:
                 if self.T_sensor[N] <= upper:
@@ -211,11 +211,11 @@ class Valve:
                 self.h[N] = h
                 self.Kv[N] = self.equal_percentage_valve(h, Kvleak_bool)
         
-        # Overflow valve
+        # Bypass valve
         if self.node is not None:
 
             # Stating whether you already give it a predefined position
-            if self.h_overflow is None:
+            if self.h_bypass is None:
                 
                 # Sensor temperature model
                 if N == 0:
@@ -249,7 +249,7 @@ class Valve:
                     self.tau_array[N] = tau
 
                 if self.opt:
-                    h, Kv = self.BO_overflow_valve(self.Kvleak_bool, N)
+                    h, Kv = self.BO_bypass_valve(self.Kvleak_bool, N)
                 else:
                     h, Kv = self.benchmark_valve(N)
 
@@ -257,7 +257,7 @@ class Valve:
                 self.Kv[N] = Kv
             
             else:
-                # In case you only want to set the overflow to a certain opening.
-                self.h[N] = self.h_overflow
-                self.Kv[N] = self.linear_valve(self.h_overflow, self.Kvleak_bool)
+                # In case you only want to set the bypass to a certain opening.
+                self.h[N] = self.h_bypass
+                self.Kv[N] = self.linear_valve(self.h_bypass, self.Kvleak_bool)
                 

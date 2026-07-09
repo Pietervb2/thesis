@@ -197,19 +197,19 @@ class Network:
         in_node = self.nodes[to_node]
         in_node.connect_pipe_to_node(pump_id, pump, 'incoming') 
 
-    def add_overflow(self, overflow_id : str, from_node: str, to_node: str, pipe_data: list, valve_data : list, node, h_overflow = None) -> None:
+    def add_bypass(self, bypass_id : str, from_node: str, to_node: str, pipe_data: list, valve_data : list, node, h_bypass = None) -> None:
         """
-        Add overflow valve at the top of the network.
+        Add bypass valve at the top of the network.
         """
 
-        if overflow_id in self.pipes.keys():
-            raise ValueError(f"Overflow valve with id {overflow_id} already exists in the network")
+        if bypass_id in self.pipes.keys():
+            raise ValueError(f"Bypass valve with id {bypass_id} already exists in the network")
 
-        valve_id = 'Overflow valve'
-        overflow_valve = Valve(valve_id, overflow_id, valve_data, node = node, h_overflow = h_overflow)
-        self.valves[valve_id] = overflow_valve
+        valve_id = 'Bypass valve'
+        bypass_valve = Valve(valve_id, bypass_id, valve_data, node = node, h_bypass = h_bypass)
+        self.valves[valve_id] = bypass_valve
 
-        self.add_pipe(overflow_id, from_node, to_node, pipe_data)
+        self.add_pipe(bypass_id, from_node, to_node, pipe_data)
 
     def build_incidence_matrix_and_graph(self):
 
@@ -352,7 +352,7 @@ class Network:
                 j = self.pipe_map[valve.pipe_id]
                 self.inv_Kv_array[j] = 1/valve.Kv[N]
             else:
-                if 'Overflow' in valve.valve_id:
+                if 'Bypass' in valve.valve_id:
                     pipe_id = valve.pipe_id
                 else:
                     pipe_id = valve.pipe_id
@@ -461,6 +461,9 @@ class Network:
         self.pump_coeff_active = self.pump_coeff[active_mask, :]
         mflow0_active = mflow0[active_mask]
 
+        prev = self.mflow_all[active_mask, N-1] if N > 0 else mflow0_active
+        initial_guess = np.where(prev > 1e-6, prev, mflow0_active)
+
         self.update_friction_vector(N)
 
         friction_vector = self.pressure_friction_vector + \
@@ -469,40 +472,40 @@ class Network:
         self.friction_vector_active = friction_vector[active_mask]
         
         # Solves system of non linear equations using scipy root function
-        result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr', tol = 1e-6)
+        result = root(self.res, initial_guess, jac = self.jac, method = 'hybr', tol = 1e-7)
 
-        # Retry with progressively rounded friction vectors if initial solve failed        
         if result.success == False or not (result.x > 0).all():
             solved = False
-            for precision in range(5,0,-1):
-
-                self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
-                
+            for precision in range(5,6):
+             
                 # Solves system of non linear equations using scipy root function
-                result = root(self.res, mflow0_active, jac = self.jac, method = 'hybr', tol = 1e-6)
+                self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
+                result = root(self.res, initial_guess, jac = self.jac, method = 'hybr', tol = 1e-7)
 
-                # Try other root solver
-                lm = False
-                if result.success == False or (result.x < 0).all():
-                    result = root(self.res, mflow0_active, jac = self.jac, method = 'lm', tol = 1e-6)
-                    lm = True
+                # # Try other root solver
+                # lm = False
+                # if result.success == False or (result.x < 0).all():
+                #     result = root(self.res, mflow0_active, jac = self.jac, method = 'lm', tol = 1e-6)
+                #     lm = True
 
-                if result.success == True and (result.x > 0).all():
-                    solved = True
-                    if lm:
-                        print(f'Used Levenbergh Marquardt at N = {N} and with precision {precision}')
-                    else:
-                        if precision < 5:
-                            print(f'Used Hybr method at N = {N} and with precision {precision}')
-                    break
+                # if result.success == True and (result.x > 0).all():
+                #     solved = True
+                #     if lm:
+                #         print(f'Used Levenbergh Marquardt at N = {N} and with precision {precision}')
+                #     else:
+                #         if precision < 5:
+                #             print(f'Used Hybr method at N = {N} and with precision {precision}')
+                #     break
             
+
+
             # In case root solving didn't work.
             if not solved: 
-                for precision in range(5,0,-1): 
+                for precision in range(5,6): 
 
                     self.friction_vector_active = np.round(friction_vector,precision)[active_mask] 
 
-                    initial_guess = self.mflow_all[active_mask, N-1] if N > 0 else mflow0_active
+                    # initial_guess = self.mflow_all[active_mask, N-1] if N > 0 else mflow0_active
                     result = minimize(
                         fun=lambda x: np.sum(self.res(x)**2),
                         x0=initial_guess,
@@ -515,22 +518,7 @@ class Network:
                         print(f'timestep {N} used minimization with precision {precision}')
                         solved = True
                         break
-
-            if not solved:
-                # Last resort, try minimization without warm start as it can sometimes escape local minima.
-                initial_guess = mflow0_active
-                result = minimize(
-                    fun=lambda x: np.sum(self.res(x)**2),
-                    x0=initial_guess,
-                    jac=lambda x: 2 * self.jac(x).T @ self.res(x),  # chain rule: 2 * J^T * F
-                    method='L-BFGS-B',
-                    tol=1e-10
-                )
-                
-                print(f'timestep {N} used minimization without warm start')
-
-            
-
+        
         # Extract results
         mflow_active = result.x
 
@@ -538,8 +526,8 @@ class Network:
         if not result.success or not (mflow_active > 0).all():
                 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
        
-                dis_steps = self.valves['Overflow valve'].steps
-                Kvleak_bool = self.valves['Overflow valve'].Kvleak_bool
+                dis_steps = self.valves['Bypass valve'].steps
+                Kvleak_bool = self.valves['Bypass valve'].Kvleak_bool
 
                 c = int((self.pumps['Pump 1'].c)/1000)
                 b = self.pumps['Pump 1'].b
@@ -560,14 +548,19 @@ class Network:
             raise RuntimeError(f"The root finder did not converge at timestep = {N}, message: {result.message}")
         
         elif not (mflow_active > 0).all():
-            raise RuntimeError(f'Newton-Raphson converges to a mass flow with negative values at timestep {N}')       
+            raise RuntimeError(f'Newton-Raphson converges to a mass flow with negative values at timestep {N}')     
+
 
         self.mflow_all[active_mask,N] = mflow_active
         # Assign flows to the pipes for timestep N
         for j, pipe_id in enumerate(pipe_ids[active_mask]):
             pipe = self.pipes[pipe_id]['pipe_instance']
             pipe.set_mflow(mflow_active[j],N)
-            
+
+            # if pipe_id != 'Pump 1':
+            assert mflow_active[j] * pipe.dt <= pipe.rho_water * pipe.inner_cs * pipe.L, \
+                f"CFL violated in {pipe_id}, at timestep{N}, mflow*dt = {mflow_active[j] * pipe.dt}, rho*A*L = {pipe.rho_water * pipe.inner_cs * pipe.L}"
+
             # Save friction term
             map_idx = self.pipe_map[pipe_id]
             pipe.save_dp_friction(self.mflow_all[map_idx, N-1], N)

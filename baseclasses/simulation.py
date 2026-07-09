@@ -73,7 +73,7 @@ class Simulation:
                          plot_network = False,
                          plot_sup_ret = False,
                          plot_pipes_T = False,
-                         plot_overflow = False,
+                         plot_bypass = False,
                          plot_consumer_demand = False,
                          plot_h_valves = False,
                          no_cap = False,
@@ -112,7 +112,7 @@ class Simulation:
             self.plot_network(network, plot = plot_network)
             self.plot_return_pipe_temperature_network(network, T_in, plot = plot_pipes_T)
             self.plot_supply_return_temperature_flow(network, plot = plot_sup_ret)
-            self.plot_overflow(network, plot = plot_overflow)
+            self.plot_bypass(network, plot = plot_bypass)
             self.plot_consumer_demand(network, plot = plot_consumer_demand)
             self.plot_h_valves(network, plot = plot_h_valves)
             self.save_data(network, T_in) 
@@ -274,12 +274,12 @@ class Simulation:
         if not plot:
             plt.close(fig_pipe)
         
-    def plot_overflow(self, network: Network, plot = False): 
+    def plot_bypass(self, network: Network, plot = False): 
 
-        fig_overflow_T = plt.figure(figsize=(10, 6)) 
-        plt.title("Overflow Temperature") 
+        fig_bypass_T = plt.figure(figsize=(10, 6)) 
+        plt.title("Bypass Temperature") 
         for valve in network.valves.values(): 
-            if 'Overflow' in valve.valve_id: 
+            if 'Bypass' in valve.valve_id: 
                 temp = valve.node.T
                 valve_h = valve.h
 
@@ -298,39 +298,39 @@ class Simulation:
         ax = plt.gca()
         ax.axhline(55, linestyle='dotted', color = 'grey', linewidth=1, label=r'$T_{set}$')
         
-        plt.savefig(self.folder + '/overflow_temperature.png')
+        plt.savefig(self.folder + '/bypass_temperature.png')
 
-        fig_overflow_mflow = plt.figure()
+        fig_bypass_mflow = plt.figure()
 
-        plt.plot(self.time, network.pipes['Overflow 1']['pipe_instance'].mflow)
+        plt.plot(self.time, network.pipes['Bypass 1']['pipe_instance'].mflow)
         format_plot_time_axis(num_hours=24)
 
-        plt.title("Overflow Mass Flow Rate")
+        plt.title("Bypass Mass Flow Rate")
         plt.xlabel(f'Time (h), dt = {self.dt}') 
         plt.ylabel('Mass Flow Rate (kg/s)') 
         plt.grid(True)
-        plt.savefig(self.folder + '/overflow_mflow.png')
+        plt.savefig(self.folder + '/bypass_mflow.png')
 
-        fig_overflow_h = plt.figure()
+        fig_bypass_h = plt.figure()
 
-        # Plot overflow valve displacement for each valve
+        # Plot bypass valve displacement for each valve
         for valve in network.valves.values(): 
-            if 'Overflow' in valve.valve_id: 
-                plt.plot(self.time, valve.h, label='Overflow')
+            if 'Bypass' in valve.valve_id: 
+                plt.plot(self.time, valve.h, label='Bypass')
 
         format_plot_time_axis(num_hours=24)
 
-        plt.title("Overflow valve displacement")
+        plt.title("Bypass valve displacement")
         plt.xlabel(f'Time (h), dt = {self.dt}') 
         plt.ylabel('Valve displacement (-)') 
         plt.grid(True)
-        plt.savefig(self.folder + '/overflow_h.png')
+        plt.savefig(self.folder + '/bypass_h.png')
 
 
         if not plot: 
-            plt.close(fig_overflow_T)
-            plt.close(fig_overflow_mflow)
-            plt.close(fig_overflow_h)
+            plt.close(fig_bypass_T)
+            plt.close(fig_bypass_mflow)
+            plt.close(fig_bypass_h)
 
     def plot_pipe_mflow_network(self, network: Network, plot = False):
         """
@@ -489,7 +489,7 @@ class Simulation:
                 elif self.dt == 1:
                     scaling_factor = 300
                 
-                Q_response_relu = softrelu(Q_response/scaling_factor)*scaling_factor # to prevent overflow error
+                Q_response_relu = softrelu(Q_response/scaling_factor)*scaling_factor # to prevent bypass error
                 Q_response_1min_relu = softrelu(Q_response_1min/scaling_factor)*scaling_factor
                 Q_response_35sec_relu = softrelu(Q_response_35sec/scaling_factor)*scaling_factor
 
@@ -559,7 +559,7 @@ class Simulation:
         plt.title("Valve displacement")
         for valve in network.valves.values():
 
-            if 'Overflow' in valve.valve_id:
+            if 'Bypass' in valve.valve_id:
                 label = 'Ov'
             else:
                 label = valve.valve_id.split(" ")[1] 
@@ -699,8 +699,8 @@ class Simulation:
         HEX_data = {}
         hex_dp_data = {}
         hex_valve_data = {}
-        overflow_data_normal = {}
-        overflow_data_debug = {}
+        bypass_data_normal = {}
+        bypass_data_debug = {}
 
         total_heat = {}
         total_Q_demand = np.zeros_like(T_in)
@@ -755,33 +755,33 @@ class Simulation:
                 df_hex.to_csv(os.path.join(self.folder,'hex_consumer_data',f'{hex_key}.csv'), index = False)
                    
             else:
-                overflow_pipe = network.pipes['Overflow 1']['pipe_instance']
+                bypass_pipe = network.pipes['Bypass 1']['pipe_instance']
 
-                overflow_data_normal['Kv'] = valve.Kv
-                overflow_data_normal['h'] = valve.h # actual h, with hstar taken into account
-                overflow_data_normal['T_sensor'] = valve.T_sensor
-                overflow_data_normal['T node'] = valve.node.T
-                overflow_data_normal['mflow'] = overflow_pipe.mflow
-                overflow_data_normal['dp'] = (overflow_pipe.mflow/valve.Kv)**2
+                bypass_data_normal['Kv'] = valve.Kv
+                bypass_data_normal['h'] = valve.h # actual h, with hstar taken into account
+                bypass_data_normal['T_sensor'] = valve.T_sensor
+                bypass_data_normal['T node'] = valve.node.T
+                bypass_data_normal['mflow'] = bypass_pipe.mflow
+                bypass_data_normal['dp'] = (bypass_pipe.mflow/valve.Kv)**2
 
-                overflow_data_debug['Kv'] = valve.Kv
-                overflow_data_debug['h'] = valve.h # actual h, with hstar taken into account
-                overflow_data_debug['h_band'] = valve.h_band # change wanted by P-band
-                overflow_data_debug['tau'] = valve.tau_array   # change slowed down by tau                
-                overflow_data_debug['T_sensor'] = valve.T_sensor
-                overflow_data_debug['T node'] = valve.node.T
-                overflow_data_debug['T_pipe'] = overflow_pipe.T_pipe
-                overflow_data_debug['T_pipe_lossless'] = overflow_pipe.T_lossless
-                overflow_data_debug['T_pipe_in'] = overflow_pipe.T_in_extended[overflow_pipe.hist_len:]
+                bypass_data_debug['Kv'] = valve.Kv
+                bypass_data_debug['h'] = valve.h # actual h, with hstar taken into account
+                bypass_data_debug['h_band'] = valve.h_band # change wanted by P-band
+                bypass_data_debug['tau'] = valve.tau_array   # change slowed down by tau                
+                bypass_data_debug['T_sensor'] = valve.T_sensor
+                bypass_data_debug['T node'] = valve.node.T
+                bypass_data_debug['T_pipe'] = bypass_pipe.T_pipe
+                bypass_data_debug['T_pipe_lossless'] = bypass_pipe.T_lossless
+                bypass_data_debug['T_pipe_in'] = bypass_pipe.T_in_extended[bypass_pipe.hist_len:]
 
-                overflow_data_debug['mflow'] = overflow_pipe.mflow
-                overflow_data_debug['t_stay'] = overflow_pipe.t_stay_array
+                bypass_data_debug['mflow'] = bypass_pipe.mflow
+                bypass_data_debug['t_stay'] = bypass_pipe.t_stay_array
                 
-                df_overflow = pd.DataFrame(overflow_data_normal)
-                df_overflow.to_csv(os.path.join(self.folder,'hex_consumer_data','overflow.csv'), index = False)
+                df_bypass = pd.DataFrame(bypass_data_normal)
+                df_bypass.to_csv(os.path.join(self.folder,'hex_consumer_data','bypass.csv'), index = False)
 
-                df_overflow_debug = pd.DataFrame(overflow_data_debug)
-                df_overflow_debug.to_csv(os.path.join(self.folder,'hex_consumer_data','overflow_debug.csv'), index = False)
+                df_bypass_debug = pd.DataFrame(bypass_data_debug)
+                df_bypass_debug.to_csv(os.path.join(self.folder,'hex_consumer_data','bypass_debug.csv'), index = False)
                 
             df_hex_dp = pd.DataFrame(hex_dp_data)
             df_hex_dp.to_csv(os.path.join(self.folder,'hex_consumer_data','Hex_dp.csv'), index = False)
@@ -820,8 +820,8 @@ class Simulation:
                 'Max supply temperature [°C]': network.theta[1],
                 'Heat demand threshold [W]': network.theta[2],
                 'Heat demand P-band [W]': network.theta[3],
-                'Overflow add T setpoint [°C]': network.theta[4],
-                'Overflow P-band [°C]': network.theta[5]
+                'Bypass add T setpoint [°C]': network.theta[4],
+                'Bypass P-band [°C]': network.theta[5]
             }
             df_theta = pd.DataFrame(theta_data, index = [0])
             df_theta.to_csv(os.path.join(self.folder,'hex_consumer_data','theta.csv'), index = False)

@@ -1,5 +1,5 @@
 {
-    "Overflow": {
+    "Bypass": {
         "comment_K_vs": "Hydrualic conductivity fully open valve not 0.000597 [kg/s/Pa^0.5]",
         "K_vs" : 0.000597,
         "comment_T_set": "Temperature setpoint [°C]",
