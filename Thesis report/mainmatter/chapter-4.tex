@@ -2,33 +2,9 @@
 \label{chapter:ControlPolicy}
 This chapter begins by presenting the mathematical framework for Bayesian Optimization. It concludes with the problem definition and the applied settings for Bayesian Optimization. 
 
-% \section{Argument for using Bayesian Optimization}
-% The developed simulation model is a non-convex nonlinear system. The causes of the non-convexity are listed below:
-
-% \begin{enumerate}
-%     \item  The quadratic equality constraints imposed by Kirchhoff's second law \eqref{eq::secondKirchhoff}.
-%     \item The use of the varying time delay of the water masses in the pipes, \eqref{eq::gammadelay} and \eqref{eq::epsilondelay}, as time indexes.
-%     \item The bilinear terms introduced in the Node Method, \eqref{eq::averagestay}, \eqref{eq::NMTout}, \eqref{eq::Theatcapacity}, the temperature mixing of the nodes, \eqref{eq::TempMix}, and the $\epsilon-NTU$ implementation of the heat exchangers, \eqref{eq::epsilon}.
-% \end{enumerate}
-
-% The authors of \cite{ArtikelMax} handle the Kirchhoff constraints by introducing a convex relaxation. The model proposed in  \cite{nodeMethodbin} also performs convex relaxation on these constraints and their bilinear terms. Relaxing the problem from MINLP to eventually MILP. The mixed-integer relation arises from handling the non-convexity of the Node method by introducing an auxiliary binary variable for each possible time delay and for its bilinear terms. As the test network in this thesis project contains only 23 consumers, it already comprises at least 100 nodes. This would introduce the use of a couple of thousand binary variables, which is significantly more than the authors' use case of an integrated six-bus electricity and three-node district heating network. By introducing a constant time delay and adopting a linear representation of the DHN, the problem can be reformulated as an MILP. This simplification, however, is unrealistic, as the time delay is not constant in practice \cite{linearDHN}. In \cite{Heuristicmethod}, they handle the complexity imposed by the integer time delay by proposing a Bender decomposition algorithm. In this way, they reduce the Node method to a nonconvex NLP problem, but they encounter convergence issues in edge cases. 
-
-% Another option would be to not perform convex relaxations but to directly optimize the non-convex nonlinear system. The gradient and Hessian cannot be determined analytically because the Node method's use of the minimum time delay introduces discontinuities in the derivatives. Although methods exist to circumvent these discontinuities when computing numerical gradients, evaluating the objective function is computationally expensive. Consequently, approaches that rely on gradient and Hessian information are not considered. Other options would be, for example, Simulated Annealing or the Powell and Nelder-Mead methods. However, these methods also require many function evaluations. Here, Bayesian Optimization (BO) is particularly interesting, as it is one of the most efficient approaches in terms of the number of function evaluations required to find an optimum \cite{bo_tutorial}. Therefore, this thesis proceeds with applying the (constraint) Bayesian Optimization technique. 
-% % While the authors already have problems with always reaching convergence, the use of a heuristic approach does not guarantee the convergence to a global optimum due to problem non-convex nature. 
-% \section{Related work}
-% A popular application of Bayesian Optimization has been for the tuning of hyperparameters of machine learning algorithms \cite{gardner2014bayesian}. But it can be found in a wide range of applications. For example, Pelz et al. \cite{Pelz} use Bayesian Optimization to address the non-convexity inherent in electron ptychography, enabling phase-sensitive imaging at atomic or near-atomic resolution. Neumann-Brosig et al. \cite{thermalNetworkBO} found that Bayesian Optimization significantly outperformed particle swarm optimization and genetic algorithm in terms of the computation time required for the thermal design optimization of an electronic circuit board layout. Nevertheless, the literature on Bayesian Optimization used in the context of district heating networks is scarce. The few articles that apply the technique use it to find the hyperparameters of an artificial neural network (ANN). Li et al. \cite{LIbayesian} use it to optimize their LSTM for short-term heating load forecasting, and Abokersh et al. \cite{ABOKERSH2020403} develop an ANN model based on BO to find an alternative for the computationally expensive heuristic optimization models used for solar district heating systems. The master's thesis by de Koning \cite{deKoning2020} uses BO to determine the hyperparameters of an LSTM model that accurately simulates large district heating networks, which are computationally expensive to simulate. The developed LSTM was not able to achieve a lower cost. Aslan et al. \cite{Aslan06062025} use BO to optimize the hyperparameters of boiler-efficiency degradation models in district heating and cooling substations, thereby increasing the efficiency and reliability of energy systems.
-
 \section{Bayesian Optimization overview}
-Bayesian Optimization (BO) is used to find the extrema of objective functions 
-that are expensive or time-consuming to evaluate. It can be applied in situations 
-where there is no closed-form expression of the objective function, but it is 
-possible to gather some data points of the function. BO techniques are highly 
-efficient considering the number of samples needed to find an extreme. This is 
-largely due to incorporating a prior belief about the problem, helping data 
-sampling, and maintaining a balance while sampling the search space between 
-exploration (sampling $x$ at high uncertainty of the objective function) and 
-exploitation (sampling $x$ where the objective function is likely to be high). 
-The technique revolves around Bayes' Theorem, stated below, hence its name.
+Bayesian Optimization (BO) is used to find the extrema of objective functions that are expensive or time-consuming to evaluate. It can be applied in situations where there is no closed-form expression of the objective function, but it is possible to gather some data points of the function. BO techniques are highly efficient considering the number of samples needed to find an extreme. This is 
+largely due to incorporating a prior belief about the problem, helping data sampling, and maintaining a balance while sampling the search space between exploration (sampling $x$ at high uncertainty of the objective function) and exploitation (sampling $x$ where the objective function is likely to be high). The technique revolves around Bayes' Theorem, stated below, hence its name.
 
 \begin{equation}
     P(f \mid \boldsymbol{X},f(\boldsymbol{X})) \propto P(\boldsymbol{X},f(\boldsymbol{X})\mid f)\, P(f).
@@ -181,15 +157,13 @@ The optimization problem is defined as follows:
   \addConstraint{T_s(k)}{= f_1\!\left(Q_{\text{d,tot}}(k),\, \theta_1, \ldots, \theta_4\right)}{}
   \addConstraint{h(k+1)}{= f_2\!\left(T_{\text{of}}(k),\, \theta_5, \theta_6\right)}{}
   \addConstraint{\operatorname{softmax}_k T_r(k)}{\leq T_{r,\max}}{}\label{eq::Trcons}
-  \addConstraint{\Delta Q_{\text{tot}}}{\leq (1+\epsilon)\, \Delta Q_{\text{tot,b}}}{}\label{eq::deltaQcons}
-  \addConstraint{\Delta Q_{\text{resp,max}}}{\leq (1+\gamma)\, \Delta Q_{\text{resp,max,b}}}{}\label{eq::Qrespcons}
+  \addConstraint{\Delta Q_{\text{tot}}}{\leq (1+\alpha)\, \Delta Q_{\text{tot,b}}}{}\label{eq::deltaQcons}
+  \addConstraint{\Delta Q_{\text{resp,max}}}{\leq (1+\beta)\, \Delta Q_{\text{resp,max,b}}}{}\label{eq::Qrespcons}
   \addConstraint{\boldsymbol{x}(0)}{= \left[T_{\text{amb}}\mathbf{1}_{N_n}^{\top},\; \dot{m}_0\mathbf{1}_{N_e}^{\top}\right]^{\top}}{}
   % \addConstraint{(\boldsymbol{x}(k),\, \boldsymbol{\theta})}{\in \mathcal{X} \times \Theta}{}
 \end{mini!}
 
 where $T_s(k)$ and $T_r(k)$ are respectively the supply and return water temperature of the network, $\dot{m}_s(k)$ and $\dot{m}_r(k)$ the supply and return mass flow rates, $w_1$ and $w_2$ are weighting factors and $\Delta k$ is the discretization timestep. The summation starts at $k_w$ once the initialization warm-up is complete. The state vector $\boldsymbol{x}(k) \in \mathbb{R}^{|\mathcal{N}| + |\mathcal{E}|} $ contains the temperatures of all the nodes and the inlet mass flow rates of all edges for timestep $k$.
-
-\todo[inline]{mogelijk definieren wat de lengte van de warmup is. }
 
 \[
 \boldsymbol{x}(k) =
@@ -285,7 +259,10 @@ Besides the response to changes in demand, it also matters how well the heat dem
       \Delta Q_{\text{tot}} = \sum_{n = n_w}^{N-1} \big(Q_{\text{d,tot}}(n)-Q_{\text{s,tot}}(n)\big)^2.
 \end{equation}
 
-There is no strict rule regarding how well heat demand requirements must be met relative to the benchmark performance. Therefore, $\epsilon$ and $\gamma$ are introduced in \eqref{eq::deltaQcons} and \eqref{eq::Qrespcons} to define how much the optimized simulation may deviate from the benchmark values. Their specific values will be determined using 5\% steps, beginning at 25\%, with each subsequent step decreasing by 5\%.
+There is no strict rule regarding how well heat demand requirements must be met relative to the benchmark performance. Therefore, $\alpha$ and $\beta$ are introduced in \eqref{eq::deltaQcons} and \eqref{eq::Qrespcons} to define how much the optimized simulation may deviate from the benchmark values. Both tolerances are assigned the same value, which is varied over 0.25, 0.15, and 0.05.
+
+% This coarse selection is a consequence of the constrained optimization only becoming functional near the project deadline and the fact that the simulation needs to run overnight due to the simulation time it requires. 
+
 
 
 \subsubsection{Control inputs}\label{sec::controlInputs}
@@ -357,6 +334,26 @@ This term, known as the nugget, is generally used to account for noise in the fu
 
 \subsection{Acquisition Function}
 Following the constrained Bayesian Optimization implementation of Gardner et al. \cite{gardner2014bayesian} discussed in Section \ref{sec::constacq}, the Expected Improvement acquisition function is applied, weighted by the probability of feasibility of the candidate point. Expected Improvement was chosen because it is the acquisition function for which this constrained formulation is derived.
+
+\subsection{Setup validation}
+To validate the constraint Bayesian Optimization setup, the optimization of the first simulation used by Gardner et al. to validate their own approach has been replicated. It revolves around the problem stated below. It was successfully solved, and Figure 2 from the article was recreated, as shown below.
+
+\begin{mini!}|s|
+  {x,y}
+  {\text{cos}(2x) \ \text{cos}(y)+\text{sin}(x)}
+  {}
+  {}
+  \addConstraint{\text{cos}(x) \ \text{cos}(y) - \text{sin}(x) \ \text{sin}(y) \leq 0.5}{}
+\end{mini!}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{Thesis report/figures_thesis/validation_simulation.png}
+    \caption{Result of constrained Bayesian Optimization performed on \ref{eq::simulation1}. White points indicate feasible points and the black crosses indicate infeasible points.}
+    \label{fig:placeholder}
+\end{figure}
+
+\newpage
 
 \section{Summary}
 To handle the non-convexity within the developed simulation model, caused by, for instance, Kirchhoff's second law, it was decided to make use of Bayesian Optimization. Bayesian Optimization is used to find the extreme of functions that are expensive to evaluate and is considered highly efficient considering the number of samples needed to find the optimum. It incorporates a prior belief about the objective function, which helps in sampling the data points by the acquisition function. This prior is combined with the likelihood function obtained after each sample, yielding a posterior over the objective. To incorporate constraints into the optimization, the approach of Gardner et al. \cite{gardner2014bayesian} uses the expected constrained improvement acquisition function. 

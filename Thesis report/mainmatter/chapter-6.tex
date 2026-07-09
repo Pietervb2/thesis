@@ -37,7 +37,7 @@
 
     \item The heat capacity in the Node method is overweighted because the pipe temperature $T_\text{pipe}$ 
     is not assumed to decrease, which may cause the model to cool down more slowly than reality, 
-    particularly when convection and conduction interact differently at low or zero flow.
+    particularly when convection and conduction interact differently at low or zero flow. And it doens't include the heat capacity of the insulation layer. 
 
     \item The Node method is not well-suited for zero mass flow conditions, as pipe temperatures do 
     not decrease when water is stationary. This introduces a discrepancy between convective and 

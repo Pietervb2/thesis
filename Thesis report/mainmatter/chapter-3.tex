@@ -84,25 +84,155 @@ structure of the simulation model leaves room to extend the network with new com
 The model assessment will be performed by addressing the five criteria points stated in Section ~\eqref{sec::researhqes}. An artificial 23-floor DCS network (with the same number of consumers) was selected for the assessment, as recreating a complete DCS was deemed beyond the scope of this work. Additionally, Eneco has some synthetic data on mass flows for this specific network configuration available. This data is used to determine the hydraulic conductivity of the heat exchanger valves. 
 
 
-\subsection{Satisfaction of Kirchhoff's hydraulic laws}
+\subsection{Kirchhoff's hydraulic laws}
+% \todo[inline]{ingaan op hoe het netwerk van non-linear equations eruit ziet dus met matrix en shit}
+The Kirchhoff laws yield a system of nonlinear equations, which are set equal to zero to obtain the mass flow rates throughout the system at timestep $k$.
+
+\begin{equation}\label{eq::KirchoffNR}
+F(\dot{\mathbf{m}}(k)) = 
+\begin{bmatrix}
+    A_{\text{red}}\, \dot{\mathbf{m}}(k) \\[6pt]
+    L \, \mathbf{\Delta p_e} (\dot{\mathbf{m}}(k))
+\end{bmatrix}
+= \mathbf{0},
+\end{equation}
+where $F(\dot{\mathbf{m}}(k)) \in \mathbb{R}^{(|\mathcal{L}|+|\mathcal{N}|-1)}$ is composed of two blocks: the nodal mass balance residuals $A_{\text{red}}\,\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{N}|-1}$, one equation per node excluding the reference node, and the pressure drop residuals $L \, \mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{L}|}$, one equation per fundamental loop, with the vector $\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{E}|}$ containing all the mass flow rates of the edges at timestep $k$ and $\mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{N}|}$ as the vector containing the pressure drop over all the edges. 
+
+The Hardy-Cross \cite{HardyCross} and Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods start with an initial guess of the flow and adjust it iteratively until it converges. While the Hardy-Cross method iterates through each loop independently, the Newton–Raphson method iterates through all loops simultaneously \cite{NewtonenHard}. As a result, Newton-Raphson generally converges more quickly than Hardy-Cross. While there are several articles claiming a faster convergence or more accurate determination of the mass flows in cases with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Raphson was selected for this work, given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
+
+% The developed simulation model uses the root function of scipy to \eqref{eq::KirchoffNR}, using the default method apply the modified Powell method. 
+
+% - resolution of the hydraulic dynamics is set to 4 number after the komma
+% - Over the course of a whole simulation the solver sometimes tends to not solve. In the rare moment this happesn it stays below 20 occurances, on a full day simulation with a timestep of 1 second. Then $\min F(x)$ is performed where the mass flow rates of the previous timesteps are used to warm start the minimization.  
+
+The developed simulation model solves \eqref{eq::KirchoffNR} using the \texttt{root} function of the \texttt{SciPy} \cite{scipy} package, with its default method, the modified Powell method. The Jacobian is derived analytically to aid the solver. The hydraulic dynamics are resolved to five decimal places. Over the course of a full simulation, the solver occasionally fails to converge. These occurrences are rare: fewer than 20 instances over a full-day simulation with a time step of one second, and in most simulations they do not occur at all. When this happens, the problem is solved by minimizing $\min ||F(x)||^{2}$ using the L-BFGS-B algorithm, with the mass flow rates from the previous time step used to warm-start the minimization.
+
+To validate the massflows, the results were re-implemented in ~\eqref{eq::KirchoffNR}. 
+\todo[inline]{uitvoeren van check van de kirchhoff vergelijkingen.}
+
+\subsection{Nodal energy conservation}
+The energy dynamics within the nodes are described by ~\eqref{eq::NTUnodes} and ~\eqref{eq::TempMix}, ensuring energy conservation at every node. To verify this, four simulations are performed, each with a different heat demand profile. At the end of each timestep the nodal energy balance of ~\eqref{eq::NodalEnergybal} is re-evaluated for all nodes that do not exchange heat with a heat exchanger ($n \in \mathcal{N} \setminus \mathcal{N}_{\text{hex}}$). For the remaining nodes ($n \in \mathcal{N}_{\text{hex}}$), the energy balance is checked by subtracting the heat transfer rate at the primary ('hot') side, 
+$\dot{Q}_h$, from that at the secondary ('cold') side, $\dot{Q}_c$, both defined in ~\eqref{eq::hotandcolheatratetransfer}. 
+The evaluations of the energy conservation within the heat exchanger nods showed evaluations showed errors below \num{1e-11} at every timestep, indicating that energy is conserved at the nodes.
+\todo[inline]{uitvoeren van de simulaties}
+
+\begin{equation}\label{eq::NodalEnergybal}
+        \sum_{e  \in \mathcal{E}_{\rightarrow n}} \dot{m}_e(k)T_e(k) = \sum_{e  \in \mathcal{E}_{n \rightarrow}} \dot{m}_e(k)T_e(k).
+\end{equation}
+
+
+% \subsection{Thermodynamic pipeline PDE}
+% -To validate the Node Method implementation 
+% -compared with real data from the article of van der Heijde et al. 
+% -The validated there own newly create thermo-hydraulic pipeline model to determine -the water temperature relation.  
+% - test setup is a 39m single steel pipe.
+% - inflowing water is heated by a boilar and the volume flow raate is measures. 
+% - the mass flow is kept constant
+% - needs to be rephrased: Before each test, the pipe was flushed with water from the city’s water supply system for about 10 min to bring the system to steady-state. Hereafter, the boiler was switched on and the water was heated until the desired inlet temperature was reached.
+% - conditions of the experiments (where you need to leave out the data set column: 
+% \begin{table}
+% \captionsetup{labelformat=empty}
+% \caption{Table 2
+% Conditions of experiments for one single pipe.}
+% \begin{tabular}{|l|l|l|l|l|}
+% \hline Exp. & Data set & $T_0\left[{ }^{\circ} \mathrm{C}\right]$ & $T_{\text {max }}\left[{ }^{\circ} \mathrm{C}\right]$ & $\dot{m}$ [kg/s] \\
+% \hline A & PipeDataULg151202 & 18 & 52 & 0.589 \\
+% \hline B & PipeDataULg160118_1 & 18 & 39 & 2.269 \\
+% \hline C & PipeDataULg151204_4 & 28 & 60 & 1.257 \\
+% \hline D & PipeDataULg160104_2 & 15 & 35 & 0.249 \\
+% \hline
+% \end{tabular}
+% \end{table}
+% - besides the experimental data the Node Method compared to that of a commonly used model, namely the dynamic pipe model (Modelica.Fluid. Pipes.DynamicPipe) from the Modelica Standard Library (MSL) version
+% - it is a FVT / FVM model (check this which one)
+% - for the implementatio I used 70 nodes. Which is quite a lot but no specific reason. Please make this sound reasible.
+% - the comparison results are shown in the figures below. Where the RMSE value is calculated for both the Modelica model and the Node method wrt to the experimental value, showing that the Node method does a comparable and even better job. 
+
+% \begin{figure}[h!]
+%     \centering
+%     \begin{subfigure}[b]{0.48\textwidth}
+%         \includegraphics[width=\textwidth]{figures_thesis/experimentA.pdf}
+%         \caption{Experiment A}
+%     \end{subfigure}
+%     \hfill
+%     \begin{subfigure}[b]{0.48\textwidth}
+%         \includegraphics[width=\textwidth]{figures_thesis/experimentB.pdf}
+%         \caption{Experiment B}
+%     \end{subfigure}
+
+%     \vspace{0.4cm}
+
+%     \begin{subfigure}[b]{0.48\textwidth}
+%         \includegraphics[width=\textwidth]{figures_thesis/experimentC.pdf}
+%         \caption{Experiment C}
+%     \end{subfigure}
+%     \hfill
+%     \begin{subfigure}[b]{0.48\textwidth}
+%         \includegraphics[width=\textwidth]{figures_thesis/experimentD.pdf}
+%         \caption{Experiment D}
+%     \end{subfigure}
+%     \caption{The measured outlet temperature compared against the Finite Volume method within the Modelica model and the Node Method for the four experiments of van der Heijde et al. Note that the timestep for experiment D is 30 seconds, while for the other experiments it is 1 second.}
+%     \label{fig::pipe_validation}
+% \end{figure}
+
+% \begin{table}[h!]
+% \centering
+% \caption{RMSE values of the outlet temperature predicted by the Finite Volume Method within the Modelica model and the Node Method with respect to the experimental measurements of van der Heijde et al. \cite{VANDERHEIJDE2017158}, for the four validation experiments.}
+% \label{tab::pipe_validation_rmse}
+% \begin{tabular}{lccc}
+% \hline
+% \textbf{Experiment} & \textbf{RMSE Modelica [°C]} & \textbf{RMSE Node Method [°C]} \\
+% \hline
+% A & 5.66 & 2.84 \\
+% B & 2.28 & 1.28 \\
+% C & 3.55 & 1.68 \\
+% D & 0.38 & 0.30 \\
+% \hline
+% \end{tabular}
+% \end{table}
 
 % Assessment goes here.
+\subsection{Thermodynamic pipeline PDE}
+To validate the implementation of the Node Method, the predicted outlet 
+temperature is compared with experimental measurements from van der Heijde et 
+al.\ \cite{VANDERHEIJDE2017158}, who used these measurements to validate their 
+own thermo-hydraulic pipeline model. The test setup consists of a single steel 
+pipe of 39 m, of which the parameters were already presented in 
+Table~\ref{tab:pipe_heijden_geometry}. The inflowing water is heated by a 
+boiler and the volume flow rate is measured, where the mass flow rate is kept 
+constant during each experiment. Before each experiment, the pipe was flushed 
+with water from the municipal water supply for approximately ten minutes to 
+bring the system to steady state, after which the boiler was switched on and 
+the water was heated to the desired inlet temperature. The conditions of the 
+four experiments are summarized in Table~\ref{tab::heijden_conditions}.
 
-\subsection{Energy conservation at every node}
+\begin{table}[h!]
+\centering
+\caption{Conditions of the four single-pipe experiments of van der Heijde et 
+al.\ \cite{VANDERHEIJDE2017158}.}
+\label{tab::heijden_conditions}
+\begin{tabular}{lccc}
+\hline
+\textbf{Experiment} & $T_0$ \textbf{[°C]} & $T_{\text{max}}$ \textbf{[°C]} & $\dot{m}$ \textbf{[kg/s]} \\
+\hline
+A & 18 & 52 & 0.589 \\
+B & 18 & 39 & 2.269 \\
+C & 28 & 60 & 1.257 \\
+D & 15 & 35 & 0.249 \\
+\hline
+\end{tabular}
+\end{table}
 
-% Assessment goes here.
-
-\subsection{Validation of the thermodynamic pipeline PDE}
-
-% Assessment goes here.
-
-\subsection{Physical constants}
-
-% Assessment goes here.
-
-\subsection{CFL condition is satisfied throughout the simulation}
-
-% Assessment goes here.
+Besides the experimental data, the Node Method is compared with a commonly 
+used pipe model: the dynamic pipe model 
+(\texttt{Modelica.Fluid.Pipes.DynamicPipe}) from the Modelica Standard Library 
+(MSL). This model solves the pipeline dynamics using a Finite Volume Method, 
+for which the pipe was discretized into 70 control volumes and by default solved with an implicit solver. For each experiment, the measured inlet temperature is applied as input to 
+both models. The resulting outlet temperatures are compared with the 
+measurements, as shown in Figure~\ref{fig::pipe_validation}. The RMSE of both 
+models with respect to the experimental data is presented in 
+Table~\ref{tab::pipe_validation_rmse}. The Node Method outperforms the Finite Volume model in all four experiments. Based on these results, the 
+Node Method implementation is considered validated for the pipeline thermodynamics.
 
 \begin{figure}[h!]
     \centering
@@ -115,9 +245,7 @@ The model assessment will be performed by addressing the five criteria points st
         \includegraphics[width=\textwidth]{figures_thesis/experimentB.pdf}
         \caption{Experiment B}
     \end{subfigure}
-
     \vspace{0.4cm}
-
     \begin{subfigure}[b]{0.48\textwidth}
         \includegraphics[width=\textwidth]{figures_thesis/experimentC.pdf}
         \caption{Experiment C}
@@ -127,15 +255,21 @@ The model assessment will be performed by addressing the five criteria points st
         \includegraphics[width=\textwidth]{figures_thesis/experimentD.pdf}
         \caption{Experiment D}
     \end{subfigure}
-    \caption{The measured outlet temperature compared against the Finite Volume method within the Modelica model and the Node Method for the four experiments of van der Heijde et al. Note that the timestep for experiment D is 30 seconds, while for the other experiments it is 1 second.}
+    \caption{The measured outlet temperature compared against the Finite 
+    Volume method within the Modelica model and the Node Method for the four 
+    experiments of van der Heijde et al. Note that the timestep for experiment 
+    D is 30 seconds, while for the other experiments it is 1 second.}
     \label{fig::pipe_validation}
 \end{figure}
 
 \begin{table}[h!]
 \centering
-\caption{RMSE values of the outlet temperature predicted by the Finite Volume Method within the Modelica model and the Node Method with respect to the experimental measurements of van der Heijde et al. \cite{VANDERHEIJDE2017158}, for the four validation experiments.}
+\caption{RMSE values of the outlet temperature predicted by the Finite Volume 
+Method within the Modelica model and the Node Method with respect to the 
+experimental measurements of van der Heijde et al.\ \cite{VANDERHEIJDE2017158}, 
+for the four validation experiments.}
 \label{tab::pipe_validation_rmse}
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \hline
 \textbf{Experiment} & \textbf{RMSE Modelica [°C]} & \textbf{RMSE Node Method [°C]} \\
 \hline
@@ -146,6 +280,139 @@ D & 0.38 & 0.30 \\
 \hline
 \end{tabular}
 \end{table}
+
+
+
+
+\subsection{Physical constants}
+
+
+\subsubsection{Pipes}
+These are the physical constants used for the pipes, shown for DN20, DN25, DN32, DN40 and the used values to validate the thermodynamic pipeline model of Van der Heijde et al \cite{VANDERHEIJDE2017158}. 
+
+\begin{table}[h!]
+\centering
+\caption{Common pipe parameters for all DN pipe configurations and the van der Heijden experiment.}
+\label{tab:pipe_dn_common}
+\begin{tabular}{llll}
+\hline
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Unit} & \textbf{Value} \\
+\hline
+Pipe density            & $\rho_{pipe}$   & kg/m$^3$          & 8000                 \\
+Insulation density      & $\rho_{insu}$   & kg/m$^3$          & 32                   \\
+Pipe heat capacity      & $c_{p,pipe}$    & J/(kgK)           & 500                  \\
+% Insulation heat capacity& $c_{p,insu}$    & J/(kgK)           & 2500                 \\
+Pipe conductivity       & $k_{pipe}$      & W/(mK)            & 14.9                 \\
+Insulation conductivity & $k_{insu}$      & W/(mK)            & 0.04                 \\
+Convection coefficient  & $\bar{h}$       & W/(m$^2$K)        & 5                    \\
+Pipe roughness          & $\epsilon$      & m                 & $4.5 \times 10^{-5}$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Geometry parameters for DN20, DN25, DN32 and DN40 \cite{VIB2025}.}
+\label{tab:pipe_dn_geometry}
+\begin{tabular}{lllllll}
+\hline
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Unit} & \textbf{DN20} & \textbf{DN25} & \textbf{DN32} & \textbf{DN40} \\
+\hline
+Inner radius         & $r_a$  & m & 0.0100 & 0.0125 & 0.0160 & 0.0200 \\
+Outer radius         & $r_b$  & m & 0.0135 & 0.0169 & 0.0210 & 0.0242 \\
+Insulation thickness & $d_{\text{insu}}$     & m & 0.021  & 0.025  & 0.029  & 0.031  \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Geometry parameters for the van der Heijden experiment configuration.}
+\label{tab:pipe_heijden_geometry}
+\begin{tabular}{llll}
+\hline
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Unit} & \textbf{Value} \\
+\hline
+Inner radius         & $r_a$  & m & 0.02624 \\
+Outer radius         & $r_b$  & m & 0.02819 \\
+Insulation thickness & $d_{\text{insu}}$     & m & 0.013   \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Thermostatic bypass valve}
+
+
+\subsubsection{Heat exchangers}
+The thermal conductance at design point and the pressure loss coefficient are 
+deducted from the information brochure of the Arctic WKW-S 4P 
+\cite{fortes_wkw_s_4p}. The PI-controller values were chosen after some tuning, resulting in a controller that is neither saturated nor closing unrealistically rapid. The hydraulic conductivity required considerably more work, as no accurate value was provided in the brochure.
+
+To determine a realistic $K_{vs}$, the valve positions required to reproduce a 
+measured mass flow distribution in the network are first derived, after which the range of $K_{vs}$ values that maps these positions onto physically valid valve lifts $h \in [0, 1]$ is established. The mass flow distribution is obtained from fluid velocity data generated by an in-house steady-state model used by Eneco for a 23-floor building, provided by Rutger, from which the mass flows per pipe segment are computed directly.
+
+The loop residual is evaluated at these mass flows, with the valve contribution separated from the remaining friction and pump terms. Following the pressure loss definitions from Section~\ref{sec::hydromodel}, the pressure loss vector without valve contributions is:
+
+\begin{equation}
+    \mathbf{f} = f \frac{8L}{\pi^2 D^5 \rho_w} + K_p
+\end{equation}
+
+\noindent giving the loop residual:
+
+\begin{equation}
+    \mathbf{r}_{\text{loop}} = \mathbf{L}\,\Delta p_{\text{pump}} - 
+    \mathbf{L}\left(\mathbf{f} \cdot |\dot{\mathbf{m}}| \cdot \dot{\mathbf{m}}\right)
+\end{equation}
+
+\noindent where $\mathbf{L}$ is the loop matrix and $\Delta p_{\text{pump}}$ is the pump pressure evaluated at the known mass flows following \ref{eq::pump2order}. This residual must be absorbed by the valve pressure drops. Following \ref{eq::valvedp}, the valve contribution to the loop equations is:
+
+\begin{equation}
+    \mathbf{r}_{\text{valve}} = \mathbf{L}\left(\boldsymbol{\delta}_v \cdot 
+    |\dot{\mathbf{m}}| \cdot \dot{\mathbf{m}}\right)
+\end{equation}
+
+\noindent where $\boldsymbol{\delta}_v$ is a binary vector indicating which pipes 
+contain a valve. Since $\Delta p_v = \dot{m}|\dot{m}| / K_v^2$ from 
+(\ref{eq::valvedp}), requiring loop closure yields:
+
+\begin{equation}
+    K_v = \sqrt{\frac{\mathbf{r}_{\text{valve}}}{\mathbf{r}_{\text{loop}}}}
+    \label{eq:Kv_fit}
+\end{equation}
+
+\noindent These $K_v$ values are verified with the Newton-Raphson solver, 
+recovering the original mass flow distribution with a residual of order 
+$\mathcal{O}(10^{-8})$ kg/s. The valid $K_{vs}$ range is then determined in the following section.
+
+\todo[inline]{need to still add the part of how to determine Kvs also further elaborate with the dimsnesions of the arrays}
+
+\begin{table}[h!]
+\centering
+\caption{Heat exchanger and valve parameters.}
+\label{tab:hex_constants}
+\begin{tabular}{llll}
+\hline
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Unit} & \textbf{Value} \\
+\hline
+Thermal conductance at design point  & $UA_{\text{des}}$            & W/K        & 2625    \\
+Pressure loss coefficient          & $K_{p,dp}$     & 1/(kg m)          & 160     \\
+Hydraulic conductivity & $K_{vs}$       & kg/(s Pa$^{0.5}$) & 0.003   \\
+Proportional gain                  & $K_p$          & --                & 0.02    \\
+Integral gain                      & $K_i$          & --                & $1\times10^{-5}$ \\
+
+\hline
+\end{tabular}
+\end{table}
+
+
+% Assessment goes here.
+
+\subsection{CFL condition}
+The Courant-Friedrichs-Lewy condition is a criterion for ensuring numerical stability when solving partial differential equations using an explicit approach. This is validated by an \texttt{assert} statement that checks the condition in the code after the mass flows are computed.
+
+% Assessment goes here.
+
+
 
 
 
