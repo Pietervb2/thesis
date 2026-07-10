@@ -141,8 +141,9 @@ Up to now, only a single inequality constraint has been considered. The approach
 \begin{equation}
     \mathrm{PF}(x_{n+1}) = \Pr\left[\tilde{c}_1(x_{n+1}) \leq \lambda_1, \dots, \tilde{c}_k(x_{n+1}) \leq \lambda_k\right],
 \end{equation}
-while the rest of the expected constrained improvement in Equation \ref{eq::addingconstraint2EI} stays the same. This joint probability is now a multivariate Gaussian, which can be computed using available numerical methods \cite{gardner2014bayesian}. When the constraints are assumed to be conditionally independent given the sampling point, the probability simplifies into a product of univariate Gaussian CDFs, $\prod_{i=1}^{k} \Pr[\tilde{c}_i(x_{n+1}) \leq \lambda_i]$, making the evaluation just as cheap as with a single constraint.
+while the rest of the expected constrained improvement in  ~\eqref{eq::addingconstraint2EI} stays the same. This joint probability is now a multivariate Gaussian, which can be computed using available numerical methods \cite{gardner2014bayesian}. When the constraints are assumed to be conditionally independent given the sampling point, the probability simplifies into a product of univariate Gaussian CDFs, $\prod_{i=1}^{k} \Pr[\tilde{c}_i(x_{n+1}) \leq \lambda_i]$, making the evaluation just as cheap as with a single constraint.
 
+\clearpage
 \section{Problem definition}
 The optimization problem is defined as follows:
 
@@ -212,6 +213,8 @@ The optimization variable $\boldsymbol{\theta}$ is used to parameterize the cont
 The goal of the control policy is to lower the return temperature while still sufficiently meeting the heat demand and the response requirements. Lowering the return temperature primarily serves to prevent heat pump failure caused by excessive return temperatures. Even when no failure occurs, a high return temperature still requires more energy from the heat pump to store water in the hot well of the ATES. This is simplified to $\dot{m}_r(k)\, c_p \big(T_r(k) - 10\big)$, where the hot ATES well is assumed to be at a constant temperature of $10\,^{\circ}$C. Since this term only penalizes high return temperatures rather than strictly preventing them, an explicit constraint on the return temperature is added as well, which is discussed in Section \ref{sec::optconstraints}.
 
 In addition to the energy required for storage, the energy supplied to the network is included in the cost function, ensuring that the complete energy consumption of the DCS is addressed. During summer operation, the hot water is not extracted from the ATES but is instead supplied by the backup district heating network. The energy delivered by this network to heat the supply water is simplified to $\dot{m}_s(k)\, c_p \big(T_s(k) - 20\big)$, where it is assumed that the water is heated starting from the ambient temperature of $20\,^{\circ}$C.
+
+\todo[inline]{Regularization term!}
  
 
 \subsubsection{Constraints}\label{sec::optconstraints}
@@ -327,12 +330,11 @@ The length scales $l$ used for the kernels of both the objective function and th
 \end{equation}
 with $K$ as the covariance matrix $k(\boldsymbol{X},\boldsymbol{X})$. 
 
-
-The term $\alpha I$ in Equation \eqref{eq::lml} represents the level of observation noise the Gaussian Process can handle, which the package defines via the parameter $\alpha$. It enters the model as additive Gaussian noise on the diagonal of the covariance matrix:
+The term $\alpha I$ in ~\eqref{eq::lml} represents the level of observation noise the Gaussian Process can handle, which the package defines via the parameter $\alpha$. It enters the model as additive Gaussian noise on the diagonal of the covariance matrix:
 \begin{equation}\label{eq::nugget}
     \tilde{K} = K + \alpha I.
 \end{equation}
-This term, known as the nugget, is generally used to account for noise in the function evaluations. A second purpose it serves is to improve the conditioning of the covariance matrix, preventing it from becoming numerically singular when sampled points lie close together. For this reason, the default value of $\alpha = 10^{-6}$ is retained even though no noise is modeled and the model is deterministic. 
+This term, known as the nugget, is generally used to account for noise in the function evaluations. A second purpose it serves is to improve the conditioning of the covariance matrix, preventing it from becoming numerically singular when sampled points lie close together. For this reason, the default value of $\alpha = 10^{-6}$ is kept even though no noise is modeled and the model is deterministic. 
 
 \subsection{Acquisition Function}
 Following the constrained Bayesian Optimization implementation of Gardner et al. \cite{gardner2014bayesian} discussed in Section \ref{sec::constacq}, the Expected Improvement acquisition function is applied, weighted by the probability of feasibility of the candidate point. Expected Improvement was chosen because it is the acquisition function for which this constrained formulation is derived.
@@ -351,7 +353,7 @@ To validate the constraint Bayesian Optimization setup, the optimization of the 
 \begin{figure}
     \centering
     \includegraphics[width=0.5\linewidth]{Thesis report/figures_thesis/validation_simulation.png}
-    \caption{Result of constrained Bayesian Optimization performed on \ref{eq::simuliont1}. White points indicate feasible points and the black crosses indicate infeasible points.}
+    \caption{Result of constrained Bayesian Optimization performed on ~\eqref{eq::simuliont1}. White points indicate feasible points and the black crosses indicate infeasible points.}
     \label{fig::validationSimulation}
 \end{figure}
 
