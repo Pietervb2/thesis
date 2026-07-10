@@ -1,116 +1,166 @@
 \chapter{Discussion}\label{chapter:Discussion}
+The discussion on this thesis project is split into a part concerning the developed simulation model and control policy implemented by constrained Bayesian Optimization. 
 
-\begin{itemize}
 
-    \item Hydraulic balancing has a significant impact on system performance; as discussed in 
-    [Enhancing district heating…],  even a single consumer's valve can noticeably affect the entire network.
+% \section{Simulation model}
+% One of the main discussion points concerning the developed simulation model is the small timestep of 1 second. This has been caused by the Node Method being is an explicit approach to solve the PDE of the water temperature within the pipeline. Due to the nodes within the risers to be 3 m apart and with a maximum velocity around 1.5 m/s this forces the simulation to be 1 second. This puts steady state assumptions more under pressure and causes the simulation to take significantly more time than with bigger timesteps. In addition the Node Method is not defined for zero mass flow, therefore an extra assumption needed to be made. Would prefer a method which handles the massflows out of itself.
 
-    \item The Bayesian Optimization approach introduces serious assumptions that warrant further scrutiny, 
-    including the choice of acquisition function, kernel, and hyperparameter settings.
+% This small timestep puts the assumptoins regarding the heat exchanger model under pressure that the steady state assumptions revolving the Effectiveness-NTU model used to model the heat exchangers do not hold for very low mass flow rats as it is assumed that the water passes through the heat exchanger within one timestep. This needs to be o handle this behavior, a dynamic model of the heat exchanger should be implemented that takes into account the traveling time through the heat exchanger. 
 
-    \item The deviation between the model and the data from Van der Heijden may be partly caused by 
-    the mass flow rate not being controllable with sufficient precision.
+% The small timestep also puts the ideal represntation of the valves under pressure as within normal valves there is hysteresis-like behavior. Although the effect of the incorporating the valve imperfections would be largely averged out when you look at the hole system, on a small scale looking at the vale it would possibly deviate from reality. Where the effect of the thermostatic bypass valve is quite large during periods of low heat demand therefore this could still inpact the overall return and supply tempretaure behavior. 
 
-    \item The PhD thesis provides a relevant discussion on valve actuation control that could inform 
-    further refinements [phdThesis].
 
-    \item On page 54 of the PhD thesis, the valve actuator is described in detail. This level of 
-    modelling is not applied here, leaving room for increased precision. The relevance depends on 
-    the required accuracy. Additionally, hysteresis is noted to apply primarily to large valves, 
-    not necessarily to small valves used in thermal end units.
+% The scaling of the the heat transfer coefficient through the heat exchanger leanson the assumption that the flow through the heat exchanger is turbulent, but this does not always hold. Due to the small timestep this difference might be enlarged. 
 
-    \item A constant Reynolds number is assumed, which is physically incorrect. This also renders the 
-    Haaland equation invalid in cases where the actual Reynolds number falls below its applicable range.
+% Another remark is that the pump is no modelled like it only operates at one heating curve, a more soffisticated model of this would result in a more realistic pump behavior. The same holds of course for the modelling of the supplied heat and the storing of energy within the ATES and more realistic heat demand profiles would increase the reality of the model. 
 
-    \item Minor losses are not accounted for in the hydraulic model.
+\chapter{Discussion}\label{chapter:Discussion}
+The discussion of this thesis project is split into two parts: one concerning the developed simulation model, and one concerning the control policy implemented through constrained Bayesian Optimization.
 
-    \item Scaling the UA value based on the Reynolds number could improve the realism of the heat 
-    exchanger model, bringing it closer to physically observed behaviour.
+\section{Simulation model}
+One of the main discussion points regarding the developed simulation model is the small timestep of 1 second. This is a consequence of the Node Method being an explicit approach to solving the PDE of the water temperature within the pipeline. The CFL condition forces the timestep down to 1 second. This puts the steady-state assumptions under additional pressure and causes the simulation to take considerably more time than it would with larger timesteps. In addition, the Node Method is not defined for zero mass flow, so an extra assumption had to be introduced to handle this case. A method that handles mass flow rate of zero natively would therefore be preferable.
 
-    \item The Node method limits the ability to accurately control pressure across a pipeline, 
-    though the extent of this limitation depends on the specific configuration.
+The steady-state assumptions of the Effectiveness-NTU method used to model the heat exchangers do not hold at very low mass flow rates, since the method assumes that the water passes through the heat exchanger within a single timestep. To handle this behavior more realistically, a dynamic heat exchanger model should be implemented that accounts for the travel time of the water through the heat exchanger.
 
-    \item Valve opening displacement introduces a delay, though this may be negligible given the 
-    one-minute time step used in the simulation.
+Similarly, the small timestep challenges the idealized representation of the valves, as real valves exhibit hysteresis-like behavior. Although the effect of such valve imperfections would largely average out at the level of the whole system, on the scale of an individual valve the behavior could deviate from reality. Since the influence of the thermostatic bypass valve is particularly large during periods of low heat demand, this could still affect the overall supply and return temperature behavior.
 
-    \item Valve hysteresis and other non-ideal valve characteristics are not incorporated into the model.
+Furthermore, the scaling of the heat transfer coefficient through the heat 
+exchanger relies on the assumption that the flow through the heat exchanger is turbulent, which does not always hold. 
 
-    \item The heat capacity in the Node method is overweighted because the pipe temperature $T_\text{pipe}$ 
-    is not assumed to decrease, which may cause the model to cool down more slowly than reality, 
-    particularly when convection and conduction interact differently at low or zero flow. And it doens't include the heat capacity of the insulation layer. 
+Another remark concerns the pump, which is modeled as operating on only a 
+single head curve; a more sophisticated pump model would yield more realistic pump behavior. The same applies to the modeling of the supplied heat and the storage of energy in the ATES, while more realistic heat demand profiles would further improve the fidelity of the model.
 
-    \item The Node method is not well-suited for zero mass flow conditions, as pipe temperatures do 
-    not decrease when water is stationary. This introduces a discrepancy between convective and 
-    conductive heat transfer, potentially causing the model to underestimate cooling rates.
+% \section{Control policy}
+% The initial time taken for the system to warm up is now stated at 6 hours. This was based on the amount of times it takes before the sensor temperature of the thermostatic bypass valve stabelizes, but this does not mean the water temperature with the pipes and the temperature of the pipes itself has reached steady state. Therefore a longer simulation time in combinatio with a longer warm up time would be better to lower the effect of the initialization settings. 
 
-    \item Overshoot in heat supply may result from the PI controller being tuned for a single floor 
-    rather than being adjusted on a per-floor basis.
+% also no sensitivty analsys is performed for the Bayesian Optimization. Therefore one does not known what for effect the deviations of the model wrt to reaility have on the effect of the control policy. This could be performed by placing some noise on the obtained return and supply temprature to see how the bayesian optimizaiotn handles it, while it automatically requries to expand the Bayesian Optimizaotin approach into handling the noise for instance with a nugget on the GP. 
 
-    \item The NTU method assumes that the fluid passes through the heat exchanger within a single 
-    time step and exchanges all energy instantaneously, whereas the NTU formulation fundamentally 
-    assumes steady-state conditions. So you immediately assume that all the water within the heat exchanger is exchanged while you could also implement a time delay step. To more mimic this behavior like Femke did in here thesis p70.
+% The cost function is a heavily simplified version of the amount of energy used by the DCS network as for instance the effectiveness of the heat pump based on the return temreature is not taken into account. It was tried before but it forced the acquistiiton function continuously outside of the feasible region, although it must be noted that when this was tried the lengthscales of the Gaussian Processes used to model the constraints were nt fitted. So a new attempt with this approach might lead to better results. Besides this the cost function many optoins are there to expand the cost function as there are more imprtant aspects than just the energy put into the system. Can also be expended with terms taken into account the wearance (slijtage) of the valves or other mechanical compnents,  or the fact that low temperature throughtout the whole system is desired to increase its efficiency of the system  or take into account the fast changing of supply temperature which is also undesirable. The last cost term was tried to implement, in the form of $\text{max}\ \text{d}T_s$ thereby punshing large changes with T_s. However it was too dominant with the system and it was decided to further simplify the cost function in order to first obtain a workin optimization. 
 
-    \item The pump model could be extended substantially to capture more realistic behaviour.
+% That 16 lengtscales are fitted based on 26 function evaluatoins looks a lot like overfitting, therefore the number of 
 
-    \item Low flow rates in the model compared to reality may stem from overflow dynamics. In practice, 
-    the valve opens significantly further than what is achievable in the current modelling setup, 
-    at least within the available calibration time. See the elaboration in \textit{Obtain Realistic Parameters}.
+% It would also be intresting to furhter expand the model with water storages, more realistic ATeS model and more realistic pump model to research there effects on the optimization approach.
 
-    \item Thermal end unit keep-warm settings are not accounted for in the consumer model.
+\section{Control policy}
+The initial warm-up time of the system is currently set at 6 hours. This was based on the time it takes for the sensor temperature of the thermostatic bypass valve to stabilize, but this does not imply that the water within the pipes and the pipes themselves have reached steady state. A longer simulation combined with a longer warm-up time would therefore be preferable, as it would reduce the influence of the initialization settings on the results.
 
-    \item All consumer units are modelled with identical assumptions, without accounting for the 
-    fact that upper-floor apartments receive less flow than lower-floor ones.
+Furthermore, no sensitivity analysis was performed for the Bayesian 
+Optimization. As a result, it is not known what effect the deviations of the model with respect to reality have on the resulting control policy. Such an analysis could be carried out by adding noise to the obtained supply and return temperatures and observing how the Bayesian Optimization handles it. This would, however, require extending the Bayesian Optimization approach to handle noisy observations, for instance by adding a nugget to the Gaussian Processes.
 
-    \item Directly adopting the pipe water temperature at small time steps may introduce errors, 
-    as in reality the pipe does not lose energy as rapidly as the model assumes.
+The cost function is a heavily simplified representation of the total energy used by the DCS network. For instance, the efficiency of the heat pump, which depends on the return temperature, is not taken into account. Incorporating it was attempted earlier, but it drove the acquisition function persistently outside the feasible region. It should be noted, however, that in this attempt the length scales of the Gaussian Processes modeling the constraints were not yet fitted, so a renewed attempt with the fitted constraint GPs might yield better results.
 
-    \item Extending the valve model to include non-linearities such as hysteresis and deadband raises 
-    the question of compatibility with Bayesian Optimization, which is generally not well-suited 
-    for highly non-linear and discontinuous input-output relationships https://instrunexus.com/understanding-control-valve-hysteresis-deadband-response-time/.
+Beyond this, there are many options to extend the cost function, as several aspects are arguably more important than the energy put into the system alone. The cost function could be expanded with terms accounting for the wear of the valves and other mechanical components, for the fact that a low temperature throughout the system is desired to increase its efficiency, or for the penalization of rapid changes in the supply temperature, which are likewise undesirable. This last term was in fact implemented, with a term penalizing the maximum change in supply temperature between timesteps. However, it proved too dominant within the cost function, and it was decided to simplify the cost function further in order to first obtain a working optimization before further trying to implement such a term. 
 
-    \item The consumer-side flow rate naturally decreases with height in the building, which is not 
-    reflected in the current model.
 
-    \item Assuming a constant ambient temperature is a simplification that does not reflect realistic 
-    operating conditions.
 
-    \item A more realistic model for supply temperature production and return temperature handling, 
-    such as an ATES model, could be implemented to improve overall system representation.
 
-    \item The supply temperature is assumed to be directly controllable, without modelling the 
-    heat supply system itself.
+% \begin{itemize}
 
-    \item All assumptions made in selecting the hyperparameters of the Bayesian Optimization deserve 
-    explicit justification and sensitivity analysis.
+    % \item Hydraulic balancing has a significant impact on system performance; as discussed in 
+    % [Enhancing district heating…],  even a single consumer's valve can noticeably affect the entire network.
 
-    \item too good working overflow valve which causes a low mass flow.It might be not realistic so this could have an important impact as there might be some minimal flow or sometime
+    % \item The Bayesian Optimization approach introduces serious assumptions that warrant further scrutiny, 
+    % including the choice of acquisition function, kernel, and hyperparameter settings.
 
-    \item pressure drop over heat exchanger is not modelled detailed enough (like in the thesis of Femke Janssen). 
+    % \item The deviation between the model and the data from Van der Heijden may be partly caused by 
+    % the mass flow rate not being controllable with sufficient precision.
 
-    \item mogelijk überhaupt meer aandacht besteden aan de dimensieloze getallen zoals Pr / Nu door de kleine tijdsstap als vervolg. 
+    % \item The PhD thesis provides a relevant discussion on valve actuation control that could inform 
+    % further refinements [phdThesis].
 
-    \item verschil tussen toestel wachttijd en leidingwachttijd. Bij mij wordt er vanuit gegaan dat het water meteen bij de klant is. En ik meet vanaf het toestel. Dus dat is meteen 35 seconden, niet tot aan de tap. 
+    % \item On page 54 of the PhD thesis, the valve actuator is described in detail. This level of 
+    % modelling is not applied here, leaving room for increased precision. The relevance depends on 
+    % the required accuracy. Additionally, hysteresis is noted to apply primarily to large valves, 
+    % not necessarily to small valves used in thermal end units.
 
-    \item Daarnaast ook belangrijk om te realiseren dat het al bijna 30 seconden duurt om nu de klep te openen. Daardoor krijg je niet snel genoeg het water bij je. En dit is al bij HEX 1 dus de rest duurt nog veel langer. Maar precies model met preciezer gegevens rondom de kleppen en warmte wissellaars gaat dit preciezer maken en je een beter idee geven van de daadwerkelijke flow rate.
 
-    \item could have handled the PDE in a more graph like approach (look at [A Graph theoretical approach...] of Johan Simonsson. Look at how the calculations would have gone. 
 
-    \item ARtificial diffusion of node method within [Equivalent models of] van Pallson
+    % \item Scaling the UA value based on the Reynolds number could improve the realism of the heat 
+    % exchanger model, bringing it closer to physically observed behaviour.
 
-    \item further research in the time it takes to run the simulation using the method applied by the researchers using the auxiliary constraints to fix the non convexity of the node method. 
+    % \item The Node method limits the ability to accurately control pressure across a pipeline, 
+    % though the extent of this limitation depends on the specific configuration.
 
-    \item Robustness of the method not known, important for further research for applying noise on the the system. 
+    % \item Valve opening displacement introduces a delay, though this may be negligible given the one-minute time step used in the simulation.
 
-    \item The $Q_{\text{resp}}$ term requires modification in case more realisitc heating profiles are used.
+    % \item Valve hysteresis and other non-ideal valve characteristics are not incorporated into the model.
 
-    \item{toepassing van andere cost functie termen zoals de variering in dTs niet gedaan want... }
+    % \item The heat capacity in the Node method is overweighted because the pipe temperature $T_\text{pipe}$ 
+    % is not assumed to decrease, which may cause the model to cool down more slowly than reality, 
+    % particularly when convection and conduction interact differently at low or zero flow. And it doens't include the heat capacity of the insulation layer. 
 
-\end{itemize}
+    % \item The Node method is not well-suited for zero mass flow conditions, as pipe temperatures do 
+    % not decrease when water is stationary. This introduces a discrepancy between convective and 
+    % conductive heat transfer, potentially causing the model to underestimate cooling rates.
 
-\todo[inline]{licht toe dat je het geprobeerd de natuurkundige constante in de overflow afhankelijk te maken van de flow en variatie aan te brengen in tau om zo te kijken dat er meer stroming door de overflow zou komen. Echter dat het niet hielp.}
-\todo[inline]{daarnaast ook met een minimale opening toe te passen van  1 / 2 procent alleen dat dat ook leidde tot het feit dat de overflow niks meer deed.}
+    % \item Overshoot in heat supply may result from the PI controller being tuned for a single floor 
+    % rather than being adjusted on a per-floor basis.
 
-\todo[inline]{mogelijk verwerken van valve authority in de discussie}
+    % \item The NTU method assumes that the fluid passes through the heat exchanger within a single 
+    % time step and exchanges all energy instantaneously, whereas the NTU formulation fundamentally 
+    % assumes steady-state conditions. So you immediately assume that all the water within the heat exchanger is exchanged while you could also implement a time delay step. To more mimic this behavior like Femke did in here thesis p70.
+
+%     \item The pump model could be extended substantially to capture more realistic behaviour.
+
+%     \item Low flow rates in the model compared to reality may stem from overflow dynamics. In practice, 
+%     the valve opens significantly further than what is achievable in the current modelling setup, 
+%     at least within the available calibration time. See the elaboration in \textit{Obtain Realistic Parameters}.
+
+%     \item Thermal end unit keep-warm settings are not accounted for in the consumer model.
+
+%     \item All consumer units are modelled with identical assumptions, without accounting for the 
+%     fact that upper-floor apartments receive less flow than lower-floor ones.
+
+%     \item Directly adopting the pipe water temperature at small time steps may introduce errors, 
+%     as in reality the pipe does not lose energy as rapidly as the model assumes.
+
+%     \item Extending the valve model to include non-linearities such as hysteresis and deadband raises 
+%     the question of compatibility with Bayesian Optimization, which is generally not well-suited 
+%     for highly non-linear and discontinuous input-output relationships https://instrunexus.com/understanding-control-valve-hysteresis-deadband-response-time/.
+
+%     \item The consumer-side flow rate naturally decreases with height in the building, which is not 
+%     reflected in the current model.
+
+%     \item Assuming a constant ambient temperature is a simplification that does not reflect realistic 
+%     operating conditions.
+
+%     \item A more realistic model for supply temperature production and return temperature handling, 
+%     such as an ATES model, could be implemented to improve overall system representation.
+
+%     \item The supply temperature is assumed to be directly controllable, without modelling the 
+%     heat supply system itself.
+
+%     \item All assumptions made in selecting the hyperparameters of the Bayesian Optimization deserve 
+%     explicit justification and sensitivity analysis.
+
+%     \item too good working overflow valve which causes a low mass flow.It might be not realistic so this could have an important impact as there might be some minimal flow or sometime
+
+%     \item pressure drop over heat exchanger is not modelled detailed enough (like in the thesis of Femke Janssen). 
+
+%     \item mogelijk überhaupt meer aandacht besteden aan de dimensieloze getallen zoals Pr / Nu door de kleine tijdsstap als vervolg. 
+
+%     \item verschil tussen toestel wachttijd en leidingwachttijd. Bij mij wordt er vanuit gegaan dat het water meteen bij de klant is. En ik meet vanaf het toestel. Dus dat is meteen 35 seconden, niet tot aan de tap. 
+
+%     \item Daarnaast ook belangrijk om te realiseren dat het al bijna 30 seconden duurt om nu de klep te openen. Daardoor krijg je niet snel genoeg het water bij je. En dit is al bij HEX 1 dus de rest duurt nog veel langer. Maar precies model met preciezer gegevens rondom de kleppen en warmte wissellaars gaat dit preciezer maken en je een beter idee geven van de daadwerkelijke flow rate.
+
+%     \item could have handled the PDE in a more graph like approach (look at [A Graph theoretical approach...] of Johan Simonsson. Look at how the calculations would have gone. 
+
+%     \item ARtificial diffusion of node method within [Equivalent models of] van Pallson
+
+%     \item further research in the time it takes to run the simulation using the method applied by the researchers using the auxiliary constraints to fix the non convexity of the node method. 
+
+%     \item Robustness of the method not known, important for further research for applying noise on the the system. 
+
+%     \item The $Q_{\text{resp}}$ term requires modification in case more realisitc heating profiles are used.
+
+%     \item{toepassing van andere cost functie termen zoals de variering in dTs niet gedaan want... }
+
+% \end{itemize}
+
+% \todo[inline]{licht toe dat je het geprobeerd de natuurkundige constante in de overflow afhankelijk te maken van de flow en variatie aan te brengen in tau om zo te kijken dat er meer stroming door de overflow zou komen. Echter dat het niet hielp.}
+% \todo[inline]{daarnaast ook met een minimale opening toe te passen van  1 / 2 procent alleen dat dat ook leidde tot het feit dat de overflow niks meer deed.}
+
+% \todo[inline]{mogelijk verwerken van valve authority in de discussie}
 % In theory, if the differential pressure across the valve remains constant, the flow characteristic w.r.t. the valve opening would exactly match the valve characteristic. However, in reality this is not the case as the differential pressure over the valve depends on the valve position. The distortion of the $K_v$ characteristic is defined by the valve authority ($\beta$), which is the ratio of the differential pressure over the valve when it is fully opened ($\Delta p_{v,h=1}$) and fully closed ($\Delta p_{v,h=0}$). In case the system is hydraulically balanced the differential pressure over the closed valve can be replaced by the pump pressure.  
 % \begin{equation}
 %     \beta = \frac{\Delta p_{v,h=1}}{\Delta p_{v,h=0}} = \frac{\Delta p_{v,h=1}}{\Delta p_{\text{p}}}
@@ -119,4 +169,4 @@
 
 % Besides the pressure changes caused by the displacement of the valve itself, other control valves or active components in the system induce pressure variations over the valve. This phenomenon is called hydraulic interactivity. Compensating for this change in pressure might lead to an oscillating valve behavior and instable control. One can counter such behavior by using a Differential Pressure Control Valve (DPCV) which ensures a constant differential pressure over the valve. The use of such a valve would be interesting in our case as the delivery sets contain dynamic control valves.
 
-\section{Summary}
+% \section{Summary}

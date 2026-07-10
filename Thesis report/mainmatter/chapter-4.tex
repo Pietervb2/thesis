@@ -96,7 +96,7 @@ E I(\hat{\mathbf{x}}) & =\tilde{\Sigma}_{\ell}(\hat{\mathbf{x}})(Z \Phi(Z)+\phi(
 & \text { with: } Z=\frac{\tilde{\mu}_{\ell}(\hat{\mathbf{x}})-\ell\left(\mathbf{x}^{+}\right) - \xi}{\tilde{\Sigma}_{\ell}(\hat{\mathbf{x}})},
 \end{array}
 \end{equation}
-in which $\Phi$ and $\phi$ denote the cumulative distribution function and probability density function of the standard normal distribution, respectively \cite{gardner2014bayesian}. Where $\xi$ is introduced by Lizotte \cite{Lizotte2008} as an extra parameter to improve the trade-off towards more exploration in stead of exploitation. 
+in which $\Phi$ and $\phi$ denote the cumulative distribution function and probability density function of the standard normal distribution, respectively \cite{gardner2014bayesian}. Where $\xi$ is introduced by Lizotte \cite{Lizotte2008} as an extra parameter to improve the trade-off towards more exploration instead of exploitation. 
 
 \subsubsection{Constrained Acquisition Function}\label{sec::constacq}
 Up to now, we have only looked at unconstrained Bayesian Optimization. In order to extend the Bayesian Optimization approach incorporating inequality constraints, the problem becomes:
@@ -315,7 +315,7 @@ with $d(\cdot,\cdot)$ as the Euclidean distance,  $Kv(\cdot)$ the modified Besse
 % \begin{equation}\label{eq::matern}
 %     k(x, x') = \sigma_f^2 \, \frac{2^{1-\nu}}{\Gamma(\nu)} \left( \sqrt{2\nu}\, r \right)^{\!\nu} K_\nu\!\left( \sqrt{2\nu}\, r \right), \qquad r = \sqrt{\sum_{d=1}^{D} \frac{(x_d - x_d')^2}{l_d^2}},
 % \end{equation}
-% where $\sigma_f^2$ is the signal variance, $\Gamma$ the gamma function, and $K_\nu$ the modified Bessel function of the second kind. An anisotropic formulation is used, in which each of the $D$ input dimensions has its own lengthscale $l_d$, such that the model can adapt its sensitivity per input parameter. The smoothness parameter $\nu$ controls the differentiability of the functions drawn from the GP prior: sample paths are $\lceil \nu \rceil - 1$ times differentiable. In this work, $\nu = 5/2$ is used, for which the kernel reduces to the simple closed form:
+% where $\sigma_f^2$ is the signal variance, $\Gamma$ the gamma function, and $K_\nu$ the modified Bessel function of the second kind. An anisotropic formulation is used, in which each of the $D$ input dimensions has its own length scale $l_d$, such that the model can adapt its sensitivity per input parameter. The smoothness parameter $\nu$ controls the differentiability of the functions drawn from the GP prior: sample paths are $\lceil \nu \rceil - 1$ times differentiable. In this work, $\nu = 5/2$ is used, for which the kernel reduces to the simple closed form:
 % \begin{equation}\label{eq::matern52}
 %     k(x, x') = \sigma_f^2 \left( 1 + \sqrt{5}\, r + \tfrac{5}{3} r^2 \right) \exp\!\left( -\sqrt{5}\, r \right),
 % \end{equation}

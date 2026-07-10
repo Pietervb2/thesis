@@ -4,7 +4,7 @@
 This Chapter presents the results of the constrained Bayesian Optimization applied to a full-day simulation compared with the defined benchmark simulation. Before presenting the control results, the simulation settings, the ranges of the control inputs, and the fixed values of two control inputs are described.
 
 \section{Simulation settings}
-Besides the constants presented in Section~\ref{sec::physicalConstants}, the following simulation parameters are applied. The ambient temperature is set constant at 20\,°C, and the initial temperature of the water and the pipes is set equal to this ambient temperature. Furthermore, the maximum pump pressure is set at 50 kPa.
+Besides the constants presented in Section~\ref{sec::physicalConstants}, the following simulation parameters are applied. The ambient temperature is set constant at 20\,°C, and the initial temperature of the water and the pipes is set equal to this ambient temperature and the maximum pump pressure is set at 50 kPa. Furthermore, the simulation timestep $\Delta k$ is set to 1 second in order to always conform to the CFL condition. 
 
 The network used for the simulations is similar to the network used by Eneco for its in-house steady-state model of the heat distribution within a DCS project. The simulated network represents a 23-floor building, with the floors spaced 3 m apart. At every floor, a heat exchanger is connected to the riser at a distance of 2.5 m from the junction, using DN20 piping. The supply and return risers themselves are divided into three sections with decreasing diameter along the height of the building: DN40 for the lowest 6 floors, DN32 for the following 14 floors, and DN25 for the top 3 floors. The parameters of the four pipe types were presented in Tables~\ref{tab:pipe_dn_common} and~\ref{tab:pipe_dn_geometry}.
 
@@ -14,11 +14,11 @@ $\frac{1}{4181} \cdot 10^{-3}$, thereby equally prioritizing both terms. Scaling
 \section{Control inputs}
 While performing the optimization, the control inputs $\theta_4$ and $\theta_6$ 
 appeared to not influence the objective function. This was indicated by 
-the size of their fitted lengthscales: during the fitting of the Gaussian 
-Process, the lengthscales are allowed to vary between 0.05 and 3 times the 
+the size of their fitted length scales: during the fitting of the Gaussian 
+Process, the length scales are allowed to vary between 0.05 and 3 times the 
 range of their respective input parameter, and for both $\theta_4$ and 
-$\theta_6$ the fitted lengthscale reached this upper bound. Such a large 
-lengthscale implies that the objective function barely varies over the entire 
+$\theta_6$ the fitted length scale reached this upper bound. Such a large 
+length scale implies that the objective function barely varies over the entire 
 parameter range, indicating that the parameter has almost no effect within 
 its bounds. Based on this, it was decided to fix $\theta_6$ at 3 $^{\circ}C$.
 
@@ -46,7 +46,7 @@ In the case of $\theta_4$, it was decided to verify that the Gaussian Process co
 \label{tab:physical_bounds}
 \begin{tabular}{ccccc}
 \hline
-\textbf{Parameter} & $f(x)$ & $\Delta Q_{\mathrm{tot}}$ & $\Delta Q_{\mathrm{resp,max}}$ & $\mathrm{softmax}_k T_r$ \\
+\textbf{Parameter} & $f(x)$ & $\Delta Q_{\mathrm{tot}} (\%)$ & $\Delta Q_{\mathrm{resp,max}} (\%)$ & $\mathrm{softmax}_k T_r (\%)$ \\
 \hline
 $\theta_2$ & -25.17 & -37.76 & -25.00 & -0.75 \\
 $\theta_3$ & 9.96 & -46.55 & -23.57 & 1.07 \\
@@ -91,19 +91,19 @@ $\theta_5$  & 30 & 55 \\
 \end{table}
 
 \section{Control results}
-This section presents the results of the constrained Bayesian optimization applied to a full-day simulation compared with the defined benchmark simulation. Three tolerance values, $\alpha = \beta \in \{0.05, 0.15, 0.25\}$ are considered, each applied to simulations using the four heat demand profiles introduced in Section~\ref{sec::heatdemand}. In addition to the plots of the optimized simulations, the optimized control input values and the fitted lengthscales of the Gaussian Process are shown. 
+This section presents the results of the constrained Bayesian optimization applied to a full-day simulation compared with the defined benchmark simulation. Three tolerance values, $\alpha = \beta \in \{0.05, 0.15, 0.25\}$ are considered, each applied to simulations using the four heat demand profiles introduced in Section~\ref{sec::heatdemand}. In addition to the plots of the optimized simulations, the optimized control input values and the fitted length scales of the Gaussian Process are shown. The length scale values presented in $\boldsymbol{\text{bold}}$ are at the minimum or maximum bound of the allowed length scale. The fitted length scale values of the constraint GPs can be found in Chapter ~\eqref{chapter::appendixExtraPlots}.
+In the case of heat demand Profile 1, the optimization using the tolerance value of 0.05 failed because it could not find a feasible point, and the initial probe point was infeasible as well.
  
 \clearpage
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_1.pdf}
-    \caption{Profile 1}
+    \caption{Supply and return temperature obtained from the optimized simulations for all tolerance values and the benchmark case for heat demand Profile 1.}
     \label{fig::supply_return_profile1}
 \end{figure}
  
- 
-\begin{table}[h!]
+ \begin{table}[h!]
 \centering
 \caption{Optimal control inputs found by the constrained Bayesian optimization 
 for Profile 1, for the three constraint tolerance values. The parameters 
@@ -118,6 +118,20 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 \hline
 \end{tabular}
 \end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Fitted length scale values per control input obtained after the constrained Bayesian Optimization with heat demand Profile 1 and the tolerance values of 0.25 and 0.15.}
+\label{tab::lengthscale_profile1}
+\begin{tabular}{ccccc}
+\hline
+$\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_5$ [°C]  \\
+\hline
+0.15 & 1.66 & 0.382 & $\boldsymbol{900}$ & 33 \\
+0.25 & 1.36 & 2.1 & 125  & 26.1 \\
+\hline
+\end{tabular}
+\end{table}
  
 \FloatBarrier
 \clearpage
@@ -125,8 +139,7 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 \begin{figure}[h!]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_2.pdf}
-    \caption{Profile 2}
-    \label{fig::supply_return_profile2}
+    \caption{Supply and return temperature obtained from the optimized simulations for all tolerance values and the benchmark case for heat demand Profile 2.}\label{fig::supply_return_profile2}
 \end{figure}
  
  
@@ -146,6 +159,21 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 \hline
 \end{tabular}
 \end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Fitted length scale values per control input obtained after the constrained Bayesian Optimization with heat demand Profile 2 and all the tolerance values.}
+\label{tab::lengthscale_profile2}
+\begin{tabular}{ccccc}
+\hline
+$\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_5$ [°C]  \\
+\hline
+0.05 & 1.21 & 0.25 & $\boldsymbol{930}$ & $\boldsymbol{75}$ \\
+0.15 & 1.94 & 0.88 & $\boldsymbol{930}$ & 52.4 \\
+0.25 & 2.22 & 1.13 & $\boldsymbol{930}$ & $\boldsymbol{75}$ \\
+\hline
+\end{tabular}
+\end{table}
  
 \FloatBarrier
 \clearpage
@@ -154,8 +182,7 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 \begin{figure}[h!]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_3.pdf}
-    \caption{Profile 3}
-    \label{fig::supply_return_profile3}
+    \caption{Supply and return temperature obtained from the optimized simulations for all tolerance values and the benchmark case for heat demand Profile 3.}\label{fig::supply_return_profile3}
 \end{figure}
  
 \begin{table}[h!]
@@ -174,6 +201,21 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 \hline
 \end{tabular}
 \end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Fitted length scale values per control input obtained after the constrained Bayesian Optimization with heat demand Profile 3 and all the tolerance values. Length scale values that are either at the minimum or maximum possible value}.
+\label{tab::lengthscale_profile3}
+\begin{tabular}{ccccc}
+\hline
+$\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_5$ [°C]  \\
+\hline
+0.05 & 0.63 & 0.54 & $\boldsymbol{900}$ & $\boldsymbol{75}$ \\
+0.15 & 0.25 & 4.12 & $\boldsymbol{900}$ & $\boldsymbol{75}$ \\
+0.25 & $\boldsymbol{15}$ & 2.93 & 277 & $ 4.18$ \\
+\hline
+\end{tabular}
+\end{table}
  
 \FloatBarrier
 \clearpage
@@ -181,8 +223,7 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 \begin{figure}[h!]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_4.pdf}
-    \caption{Profile 4}
-    \label{fig::supply_return_profile4}
+    \caption{Supply and return temperature obtained from the optimized simulations for all tolerance values and the benchmark case for heat demand Profile 4.}    \label{fig::supply_return_profile4}
 \end{figure}
  
 \begin{table}[h!]
@@ -201,127 +242,51 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 \hline
 \end{tabular}
 \end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Fitted length scale values per control input obtained after the constrained Bayesian Optimization with heat demand Profile 4 and all the tolerance values.}
+\label{tab::lengthscale_profile4}
+\begin{tabular}{ccccc}
+\hline
+$\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_5$ [°C]  \\
+\hline
+0.05 & 2.33 & 1.25 & $\boldsymbol{450}$ & $\boldsymbol{75}$ \\
+0.15 & $\boldsymbol{15}$ & $\boldsymbol{15}$ & $\boldsymbol{7.5}$ & $\boldsymbol{75}$ \\
+0.25 & $\boldsymbol{15}$ & $\boldsymbol{15}$ & $\boldsymbol{7.5}$ & $\boldsymbol{75}$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\clearpage
  
-\section{Summary}
+% \section{Analysis of the Control Results}
+% The following observations can be made concerning the obtained results:
 
+% \begin{itemize}
+%     \item An increase of tolerence leads to an decrease of $\theta_5$. This behavior is shown over all heat demand profiles. This is as expected as the temperature setpoint of the thermostatic bypass valve plays an important role in confirming to the heat demand constraints. this is also indicated by the obtained contrained length scales. 
+%     \item Also an decrease in tolerence values leads to $\theta_1$ and $\theta_2$ being pushed to or being 65 degrees. As one can expect as to ablige to the tighting constraints the thermostatic bypass valve cannot close the gap while the supply temperature stays relatively low. 
+%     \item Looking at the objective GP length scale values of $\theta_3$ shows that for the most of the optimized simulations it is either at is minimum or maximum bound. with the low bound indicating that the Gaussian Process sees it as noise while at the high bound it does not effect the objective function. One could argue to also fix this control input but looking at the length scales of the constraint GPs $\theta_3$ still plays some role for the first two profiles in order to oblige to the heat demand constraints. For heat demand profile 3 and 4 it doesnt effect it at all, this is due to the lower simultaineity of the heat demand the change in heat demand is less abrupt therefore covering the heat demand range more densiley and feeling less effect of $\theta_3$.
+%     \item The same holds for the effect of $\theta_5$ on the objective function as it appears often to have a maximum lengtscale value for the objective funcion GP. However plays a big role in passing the constraints and therefore it can be argued to still use it. 
+%     \item for demand profile 4 it seems like all the control input variables are seem to have no influence on the cost function value. This might be explained by the more spread out heat demand therefore the pipes within the network are warmer and changes within the control input ranges would not affect it a lot. however looking at the constrained GP length scales it seems that only $\theta_1$ and $\theta_5$ have influence on getting within the feasible region. These reason behind the setting of the length scales would require a closer look at behavior within Profile 4.
+    
+% \end{itemize}
 
+\section{Analysis of the Control Results}
+Several observations can be made concerning the obtained results. First, an increase in the tolerance leads to a decrease of $\theta_5$ across all four heat demand profiles. This is as expected, since the temperature setpoint of the thermostatic bypass valve plays an important role in satisfying the heat demand constraints, which is also reflected in the length scales of the constraint GPs.
 
-% \section{Fixation of control inputs}
+A decrease in the tolerance, on the other hand, pushes $\theta_1$ and 
+$\theta_2$ towards their upper bound of 65\,°C. This too is expected: to 
+comply with the tighter constraints, the supply temperature cannot remain 
+relatively low, as the thermostatic bypass valve would then be unable to 
+close the gap to the required heat demand.
 
-% This results in the following control input bounds:
-% \begin{table}[ht]
-% \centering
-% \caption{Upper and lower bounds of $\theta_1, \theta_2$ and $ \theta_5$. }
-% \begin{tabular}{ccc}
-% \hline
-% Parameter & Lower bound & Upper bound \\
-% \hline
-% $\theta_1$ [$^{\circ}C$]& $60$ & $65$ \\
-% $\theta_2$ [$^{\circ}C$]& $60$ & $65$ \\
-% $\theta_5$ [$^{\circ}C$]& $30$ & $55$ \\
-% \hline
-% \end{tabular}
-% \label{tab:physical_bounds}
-% \end{table}
+The objective GP length scale of $\theta_3$ lies at either its lower or upper bound for most of the optimized simulations. A length scale at the lower bound indicates that the Gaussian Process interprets the parameter as noise, whereas a length scale at the upper bound indicates that it does not affect the objective function. This might suggest that $\theta_3$ could be fixed as well. However, the length scales of the constraint GPs show that $\theta_3$ still plays a role in satisfying the heat demand constraints for the first two profiles. For Profiles 3 and 4, it has no effect at all, which is attributed to the lower simultaneity of the heat demand: the change in demand is less abrupt, covering the heat demand range more densely and thereby reducing the influence 
+of $\theta_3$.
 
+A similar observation holds for $\theta_5$, whose objective GP length scale is frequently at its maximum value. Nevertheless, $\theta_5$ plays a significant role in satisfying the constraints, and it is therefore kept as a control input.
 
-% \begin{table}[ht]
-% \centering
-% \caption{Profile-dependent input constraints for $\theta_3$.}
-% \begin{tabular}{cc}
-% \hline
-% Profile & $\theta_3$ \\
-% \hline
-% Profile 1 & $[200,\,500]\times10^3$ \\
-% Profile 2 & $[40,\,350]\times10^3$ \\
-% Profile 3 & $[0,\,300]\times10^3$ \\
-% Profile 4 & $[0,\,150]\times10^3$ \\
-% \hline
-% \end{tabular}
-% \label{tab:input_constraints}
-% \end{table}
+For Profile 4, none of the control inputs appear to influence the 
+objective function value. This may be explained by the more spread-out heat demand of this profile: the pipes within the network remain warmer, such that changes within the control input ranges have little effect. The constraint GP length scales, however, indicate that $\theta_1$ and $\theta_5$ do influence whether the feasible region is reached. The exact cause of these length scale values would require a closer look at the network behavior under Profile 4.
 
-
-% \section{Control results}
-% \begin{figure}[h!]
-%     \centering
-%     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_1.pdf}
-%     \caption{Profile 1}
-%     \label{fig::supply_return_profile1}
-% \end{figure}
- 
-
-% \begin{table}[h!]
-% \centering
-% \caption{Profile 1}
-% \begin{tabular}{l|llllll}
-% $\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ [$^{\circ}C]$  \\ \hline
-% 0.05                                          & 65                       & 65                       & 0                        & 100000                   & 48.40                    & 3                        \\
-% 0.15                                          & 63.38                    & 65                       & 88827                    & 100000                   & 46.21                    & 3                        \\
-% 0.25                                          & 60.374                   & 65                       & 0                        & 100000                   & 40.36                    & 3                       
-% \end{tabular}
-% \end{table}
-
-% \FloatBarrier
-
-
-% \begin{figure}[h!]
-%     \centering
-%     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_2.pdf}
-%     \caption{Profile 2}
-%     \label{fig::supply_return_profile2}
-% \end{figure}
-
-
-% \begin{table}[h!]
-% \centering
-% \caption{Profile 2}
-% \begin{tabular}{l|llllll}
-% {}$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ [$^{\circ}C]$  \\ \hline
-% 0.05                                          & 65                       & 65                       & 170395                   & 100000                   & 49.93                    & 3                        \\
-% 0.15                                          & 65                       & 65                       & 40952                    & 100000                   & 43.27                    & 3                        \\
-% 0.25                                          & 63.75                    & 64.52                    & 43122                    & 100000                   & 37.39                    & 3                       
-% \end{tabular}
-% \end{table}
-
-% \FloatBarrier
-
-% \begin{figure}[h!]
-%     \centering
-%     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_3.pdf}
-%     \caption{Profile 3}
-%     \label{fig::supply_return_profile3}
-% \end{figure}
-
-% \begin{table}[h!]
-% \centering
-% \caption{Profile 3}
-% \begin{tabular}{l|llllll}
-% $\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ [$^{\circ}C]$  \\ \hline
-% 0.05                                          & 65                       & 65                       & 170395                   & 100000                   & 49.93                    & 3                        \\
-% 0.15                                          & 65                       & 65                       & 40952                    & 100000                   & 43.27                    & 3                        \\
-% 0.25                                          & 63.75                    & 64.52                    & 43122                    & 100000                   & 37.39                    & 3                       
-% \end{tabular}
-% \end{table}
-
-% \FloatBarrier
-% \begin{figure}[h!]
-%     \centering
-%     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_4.pdf}
-%     \caption{Profile 4}
-%     \label{fig::supply_return_profile4}
-% \end{figure}
-
-% \begin{table}[h!]
-% \centering
-% \caption{Profile 4}
-% \begin{tabular}{l|llllll}
-% $\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ [$^{\circ}C]$  \\ \hline
-% 0.05                                          & 65                       & 65                       & 0                        & 100000                   & 48.40                    & 3                        \\
-% 0.15                                          & 63.38                    & 65                       & 88827                    & 100000                   & 46.21                    & 3                        \\
-% 0.25                                          & 60.374                   & 65                       & 0                        & 100000                   & 40.36                    & 3                       
-% \end{tabular}
-% \end{table}
-
-% \section{Summary}
-
+As a final remark, the return temperature in all profiles approaches 15\,°C, which is extraordinarily low. This behavior is caused by the $\epsilon$-NTU method. When the consumers start demanding heat, the valves open only gradually, resulting in very low mass flows. Since the NTU method assumes that the water passes through the heat exchanger within a single timestep, a large amount of energy is extracted from this small mass of water. As the water in the pipeline is around 20\,°C, the combination of a low mass flow and this high extracted energy per unit mass leads to a dip to very low temperatures. To handle this behavior, a dynamic model of the heat exchanger should be implemented that takes into account the traveling time through the heat exchanger. 

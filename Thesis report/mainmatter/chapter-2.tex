@@ -1,5 +1,5 @@
 \chapter{System Modeling}\label{chapter:sysmodel}
-\todo[inline]{Dat alle vergelijkingen goed in elkaar overlopen qua constants ivm continuous vs discrete}
+% \todo[inline]{Dat alle vergelijkingen goed in elkaar overlopen qua constants ivm continuous vs discrete}
 
 This chapter presents the mathematical models of the thermodynamic and hydraulic behavior of the Decentralized Solution. The modeling assumptions and relevant dimensionless numbers are first presented. Second, the overall model structure is discussed, followed by the individual components. For each component, the theoretical model is presented. Third, the models describing heat demand and supply are discussed. The chapter concludes with the mathematical formulation of the Graph connecting the components. 
 
@@ -616,7 +616,7 @@ The solution of the PDE \eqref{eq::thermopde} is calculated using the Node Metho
     - T_a(k)\right)\exp\!\left(-\frac{t_{\mathrm{stay,e}}(k)}{R_e'\rho_{w,e} c_{p,w,e} A_e}\right)
 \end{equation}
 
-\todo[inline]{de definitie van T(L,k) komt niet helemaal overeen met de edge definitie met name met betrekking tot discretizatie, ook iets over de definitie van het $e$ subscript. Maar deze tod opas aan het einde doen. }
+% \todo[inline]{de definitie van T(L,k) komt niet helemaal overeen met de edge definitie met name met betrekking tot discretizatie, ook iets over de definitie van het $e$ subscript. Maar deze tod opas aan het einde doen. }
 \subsection{Nodes}
 The first Kirchhoff law states that the sum of flows entering a node equals the sum of flows exiting the node. This results in the conservation of mass over every node due to the assumed incompressibility of the water. For any node $n \in \mathcal{N}$, the edge sets $\mathcal{E}_{\rightarrow n} = \left\{ e \in \mathcal{E} : e \  \text{enters} \ n\right\}$ and $\mathcal{E}_{n\rightarrow } = \left\{ e \in \mathcal{E} : e \  \text{exits} \ n\right\}$ are respectively the entering and exiting sets of edges. The mass conservation is given by
 
