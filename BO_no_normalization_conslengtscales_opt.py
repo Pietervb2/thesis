@@ -255,18 +255,6 @@ def make_constraint_gp(ls_init, ls_bounds, n_restarts=15, alpha=1e-6):
     length-scale bounds scaled to the physical parameter ranges (same approach
     as the objective GP).
 
-    Notes:
-    - By default bayes_opt gives each constraint GP a scalar length_scale=1
-      without bounds, so it cannot learn the correct spatial scale per
-      parameter in physical (non-normalized) space.
-    - normalize_y=True must be set explicitly here: bayes_opt's own GP has it
-      by default, but we are constructing these GPs ourselves. Without it,
-      the zero-mean prior would predict "constraint value ~ 0" (i.e. exactly
-      on the feasibility boundary) in unexplored regions.
-    - bayes_opt refits ALL constraint GPs automatically every iteration via
-      AcquisitionFunction._fit_gp(), so replacing the models once before
-      maximize() is sufficient; the length-scales are then re-fitted to the
-      data at every iteration by maximizing the marginal likelihood.
     """
     return GaussianProcessRegressor(
         kernel=Matern(nu=2.5,
