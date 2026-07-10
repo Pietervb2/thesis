@@ -163,7 +163,7 @@ The optimization problem is defined as follows:
   % \addConstraint{(\boldsymbol{x}(k),\, \boldsymbol{\theta})}{\in \mathcal{X} \times \Theta}{}
 \end{mini!}
 
-where $T_s(k)$ and $T_r(k)$ are respectively the supply and return water temperature of the network, $\dot{m}_s(k)$ and $\dot{m}_r(k)$ the supply and return mass flow rates, $w_1$ and $w_2$ are weighting factors and $\Delta k$ is the discretization timestep. The summation starts at $k_w$ once the initialization warm-up is complete. The state vector $\boldsymbol{x}(k) \in \mathbb{R}^{|\mathcal{N}| + |\mathcal{E}|} $ contains the temperatures of all the nodes and the inlet mass flow rates of all edges for timestep $k$.
+where $T_s(k)$ and $T_r(k)$ are respectively the supply and return water temperature of the network, $\dot{m}_s(k)$ and $\dot{m}_r(k)$ the supply and return mass flow rates, $w_1$ and $w_2$ are weighting factors and $\Delta k$ is the discretization timestep. The summation starts at $k_w$ once the initialization warm-up is completed. The state vector $\boldsymbol{x}(k) \in \mathbb{R}^{|\mathcal{N}| + |\mathcal{E}|} $ contains the temperatures of all the nodes and the inlet mass flow rates of all edges for timestep $k$.
 
 \[
 \boldsymbol{x}(k) =
@@ -297,8 +297,11 @@ This reduces the optimization variables to $\boldsymbol{\theta} = \left[\theta_1
     \label{fig:lumped control.}
 \end{figure}
 
-\section{Implementation of Bayesian optimization} \label{sec::BOimplementation}
-This section discusses parameter settings of the Bayesian Optimization implementation. It is implemented using the Python package 'bayesian-optimization' because it provides a user-friendly interface and is well-documented. 
+\section{Implementation details} \label{sec::BOimplementation}
+This section presents the settings chosen for the constrained Bayesian Optimization used to generate the results. The Python package used to implement the optimization is 'bayesian-optimization' because it provides a user-friendly interface and is well-documented. 
+
+\subsection{Stopping criterion}
+In conventional optimization, the algorithm terminates once a convergence criterion such as $||x^{+} -x|| \leq \varepsilon$ is satisfied. For Bayesian optimization, such a criterion is of limited use: the number of function evaluations is deliberately kept small, and convergence in this sense may never be observed. Instead, the total evaluation budget is typically specified upfront \cite{bo_tutorial}. This budget consists of two parts: an initialization phase, in which points are sampled randomly to diversify the exploration of the search space, and the subsequent Bayesian optimization phase, in which new evaluation points are selected by maximizing the acquisition function. Since the optimization is subject to constraints, the algorithm must find points within the feasible region. To assist with this, an initial probe point that is known to be feasible is supplied, ensuring that the algorithm starts with at least some knowledge of the feasible region. Without such a point, the algorithm may fail to locate the feasible region during random exploration, in which case it terminates prematurely, as it is unable to propose feasible candidate points. Since a one-day simulation takes approximately 20 minutes on an HP ZBook Studio G4 laptop with an Intel Core i7 processor, the random exploration phase was set to 10 function evaluations and the number of evaluations performed for the Bayesian Optimization was set to 15, such that a full optimization run could be performed overnight. 
 
 \subsection{Kernel}
 The package uses a Mat\'ern  covariance kernel, which is a common choice within BO \cite{bo_tutorial}. The Mat\'ern kernel is defined as \cite{rasmussen2006gaussian}:
@@ -307,7 +310,7 @@ The package uses a Mat\'ern  covariance kernel, which is a common choice within 
 k\left(x_i, x_j\right)=\frac{1}{\Gamma(\nu) 2^{\nu-1}}\left(\frac{\sqrt{2 \nu}}{l} d\left(x_i, x_j\right)\right)^\nu K_\nu\left(\frac{\sqrt{2 \nu}}{l} d\left(x_i, x_j\right)\right),
 \end{equation}
 
-with $d(\cdot,\cdot)$ as the Euclidean distance,  $Kv(\cdot)$ the modified Bessel function and $\Gamma (\cdot)$ the gamma function. To handle the different parameter ranges of $\boldsymbol{\theta}$ and the model sensitivity per input parameter, an anisotropic formulation is used. Resulting in separate length scales per input dimension. The input parameter $v$ controls the smoothness of the resulting Gaussian Process. The smaller $\nu$, the smoother the GP definition. In this work, $\nu = 5/2$ is used, which implies that the objective function will be recreated using a twice differentiable Gaussian Process. Even though the objective is not smooth everywhere, the simulation exhibits a discontinuity at zero mass flow rate in the Node method described at the end of Section \ref{sec::NodeMethod}, and the lumped control functions introduce non-differentiable points. It was assumed that the Mat\'ern 5/2 kernel could still be applied, as the Gaussian Process will approximate these regions with a smooth interpolation. A more sophisticated determination of the kernel might yield better optimization results; however, due to the thesis's time constraints, it is outside its scope.
+with $d(\cdot,\cdot)$ as the Euclidean distance,  $Kv(\cdot)$ the modified Bessel function and $\Gamma (\cdot)$ the gamma function. To handle the different parameter ranges of $\boldsymbol{\theta}$ and the model sensitivity per input parameter, an anisotropic formulation is used. Resulting in separate length scales per input dimension. The input parameter $v$ controls the smoothness of the resulting Gaussian Process. The smaller $\nu$, the smoother the GP definition. In this work, $\nu = 5/2$ is used, which implies that the objective function will be recreated using a twice-differentiable Gaussian Process. Even though the objective is not smooth everywhere, the simulation exhibits a discontinuity at zero mass flow rate in the Node method described at the end of Section \ref{sec::NodeMethod}, and the lumped control functions introduce non-differentiable points. It was assumed that the Mat\'ern 5/2 kernel could still be applied, as the Gaussian Process will approximate these regions with a smooth interpolation. A more sophisticated determination of the kernel might yield better optimization results; however, due to the thesis's time constraints, it is outside its scope.
 
 % \begin{equation}\label{eq::matern}
 %     k(x, x') = \sigma_f^2 \, \frac{2^{1-\nu}}{\Gamma(\nu)} \left( \sqrt{2\nu}\, r \right)^{\!\nu} K_\nu\!\left( \sqrt{2\nu}\, r \right), \qquad r = \sqrt{\sum_{d=1}^{D} \frac{(x_d - x_d')^2}{l_d^2}},
@@ -324,7 +327,6 @@ The length scales $l$ used for the kernels of both the objective function and th
 \end{equation}
 with $K$ as the covariance matrix $k(\boldsymbol{X},\boldsymbol{X})$. 
 
-% The length scales of the constraint GPs are not optimized, as each additional constraint would further increase the number of hyperparameters to be fitted, which, given the small number of samples, could lead to overfitting. Instead, the lengthscale of each constraint GP is fixed per dimension to the range of the corresponding input parameter.
 
 The term $\alpha I$ in Equation \eqref{eq::lml} represents the level of observation noise the Gaussian Process can handle, which the package defines via the parameter $\alpha$. It enters the model as additive Gaussian noise on the diagonal of the covariance matrix:
 \begin{equation}\label{eq::nugget}
@@ -338,22 +340,20 @@ Following the constrained Bayesian Optimization implementation of Gardner et al.
 \subsection{Setup validation}
 To validate the constraint Bayesian Optimization setup, the optimization of the first simulation used by Gardner et al. to validate their own approach has been replicated. It revolves around the problem stated below. It was successfully solved, and Figure 2 from the article was recreated, as shown below.
 
-\begin{mini!}|s|
+\begin{mini}|s|
   {x,y}
   {\text{cos}(2x) \ \text{cos}(y)+\text{sin}(x)}
-  {}
+  {\label{eq::simuliont1}}
   {}
   \addConstraint{\text{cos}(x) \ \text{cos}(y) - \text{sin}(x) \ \text{sin}(y) \leq 0.5}{}
-\end{mini!}
+\end{mini}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.5\linewidth]{Thesis report/figures_thesis/validation_simulation.png}
-    \caption{Result of constrained Bayesian Optimization performed on \ref{eq::simulation1}. White points indicate feasible points and the black crosses indicate infeasible points.}
-    \label{fig:placeholder}
+    \caption{Result of constrained Bayesian Optimization performed on \ref{eq::simuliont1}. White points indicate feasible points and the black crosses indicate infeasible points.}
+    \label{fig::validationSimulation}
 \end{figure}
-
-\newpage
 
 \section{Summary}
 To handle the non-convexity within the developed simulation model, caused by, for instance, Kirchhoff's second law, it was decided to make use of Bayesian Optimization. Bayesian Optimization is used to find the extreme of functions that are expensive to evaluate and is considered highly efficient considering the number of samples needed to find the optimum. It incorporates a prior belief about the objective function, which helps in sampling the data points by the acquisition function. This prior is combined with the likelihood function obtained after each sample, yielding a posterior over the objective. To incorporate constraints into the optimization, the approach of Gardner et al. \cite{gardner2014bayesian} uses the expected constrained improvement acquisition function. 
