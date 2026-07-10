@@ -1,44 +1,99 @@
-\chapter{Control results}
+\chapter{Results}
 \label{chapter:Results}
+This section presents the results of the constrained Bayesian optimization applied to a full-day simulation compared with the defined benchmark simulation. Three tolerance values, $\alpha = \beta \in \{0.05, 0.15, 0.25\}$ are considered, each applied to simulations using the four heat demand profiles introduced in Section~\ref{sec::heatdemand}. Before presenting the control results, the simulation parameters and the fixing of two of the control input parameters are discussed.
 
-\begin{table}[]
+
+\section{Simulation parameters}
+- besides the constants presented in Section ~\ref{sec::physicalConstants}, the following other simulation parameters are applied: 
+
+T_{\text{ambt}} = 20
+T_init_water = 20
+T_init_pipe = 20
+$\Delta \text{pump}$ = 50 kPa
+
+The network used for the simulations is similair to the network used by Eneco for its in-house steady-state model of the heat distribution within a DCS project. The simulated network represents a 23-floor building, with the floors spaced 3 m apart. At every floor, a heat exchanger is connected to the riser at a distance of 2.5 m from the junction, using DN20 piping. The supply and return risers themselves are divided into three sections with decreasing diameter along the height of the building: DN40 for the lowest six floors, DN32 for the following fourteen floors, and DN25 for the top three floors. The parameters of the four pipe types were presented in Tables~\ref{tab:pipe_dn_common} and~\ref{tab:pipe_dn_geometry}.
+
+For the optimization both weights $w_1$ and $w_2$ are set equal to each other with a value of 1/4181 * 1e-3. Therefore not prioritizing the energy used to heat up the system or the energy used by the heat pump to store it. scaling down the weights made the outcome of the cost function more readable. The starting timestep $k_w$ after which the values of the simulation results are used is set equivalent to 6 hours. It was chosen in this way as this is the time it takes before the sensor temperature within the thermostatic bypass valve has stabilized. 
+
+
+
+\section{Fixation of control inputs}
+
+\section{Control results}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_1.pdf}
+    \caption{Profile 1}
+    \label{fig:placeholder}
+\end{figure}
+ 
+
+\begin{table}[htbp]
 \centering
 \caption{Profile 1}
 \begin{tabular}{l|llllll}
-\textbackslash{}alpha \& \textbackslash{}beta & \textbackslash{}theta\_1 & \textbackslash{}theta\_2 & \textbackslash{}theta\_3 & \textbackslash{}theta\_4 & \textbackslash{}theta\_5 & \textbackslash{}theta\_6 \\ \hline
+$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ \\ \hline
 0.05                                          & 65                       & 65                       & 0                        & 100000                   & 48.40                    & 3                        \\
 0.15                                          & 63.38                    & 65                       & 88827                    & 100000                   & 46.21                    & 3                        \\
 0.25                                          & 60.374                   & 65                       & 0                        & 100000                   & 40.36                    & 3                       
 \end{tabular}
 \end{table}
 
-\begin{table}[]
+\FloatBarrier
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_2.pdf}
+    \caption{Profile 2}
+    \label{fig:placeholder}
+\end{figure}
+
+
+\begin{table}[htbp]
 \centering
 \caption{Profile 2}
 \begin{tabular}{l|llllll}
-\textbackslash{}alpha \& \textbackslash{}beta & \textbackslash{}theta\_1 & \textbackslash{}theta\_2 & \textbackslash{}theta\_3 & \textbackslash{}theta\_4 & \textbackslash{}theta\_5 & \textbackslash{}theta\_6 \\ \hline
+{}$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ \\ \hline
 0.05                                          & 65                       & 65                       & 170395                   & 100000                   & 49.93                    & 3                        \\
 0.15                                          & 65                       & 65                       & 40952                    & 100000                   & 43.27                    & 3                        \\
 0.25                                          & 63.75                    & 64.52                    & 43122                    & 100000                   & 37.39                    & 3                       
 \end{tabular}
 \end{table}
 
-\begin{table}[]
+\FloatBarrier
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_3.pdf}
+    \caption{Profile 3}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{table}[htbp]
 \centering
 \caption{Profile 3}
 \begin{tabular}{l|llllll}
-\textbackslash{}alpha \& \textbackslash{}beta & \textbackslash{}theta\_1 & \textbackslash{}theta\_2 & \textbackslash{}theta\_3 & \textbackslash{}theta\_4 & \textbackslash{}theta\_5 & \textbackslash{}theta\_6 \\ \hline
+$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ \\ \hline
 0.05                                          & 65                       & 65                       & 170395                   & 100000                   & 49.93                    & 3                        \\
 0.15                                          & 65                       & 65                       & 40952                    & 100000                   & 43.27                    & 3                        \\
 0.25                                          & 63.75                    & 64.52                    & 43122                    & 100000                   & 37.39                    & 3                       
 \end{tabular}
 \end{table}
 
-\begin{table}[]
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_4.pdf}
+    \caption{Profile 4}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{table}[htbp]
 \centering
 \caption{Profile 4}
 \begin{tabular}{l|llllll}
-\textbackslash{}alpha \& \textbackslash{}beta & \textbackslash{}theta\_1 & \textbackslash{}theta\_2 & \textbackslash{}theta\_3 & \textbackslash{}theta\_4 & \textbackslash{}theta\_5 & \textbackslash{}theta\_6 \\ \hline
+$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ \\ \hline
 0.05                                          & 65                       & 65                       & 0                        & 100000                   & 48.40                    & 3                        \\
 0.15                                          & 63.38                    & 65                       & 88827                    & 100000                   & 46.21                    & 3                        \\
 0.25                                          & 60.374                   & 65                       & 0                        & 100000                   & 40.36                    & 3                       
