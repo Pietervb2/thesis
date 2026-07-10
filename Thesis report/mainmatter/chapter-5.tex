@@ -1,108 +1,273 @@
 \chapter{Results}
 \label{chapter:Results}
-This section presents the results of the constrained Bayesian optimization applied to a full-day simulation compared with the defined benchmark simulation. Three tolerance values, $\alpha = \beta \in \{0.05, 0.15, 0.25\}$ are considered, each applied to simulations using the four heat demand profiles introduced in Section~\ref{sec::heatdemand}. Before presenting the control results, the simulation parameters and the fixing of two of the control input parameters are discussed.
+This section presents the results of the constrained Bayesian optimization applied to a full-day simulation compared with the defined benchmark simulation. Three tolerance values, $\alpha = \beta \in \{0.05, 0.15, 0.25\}$ are considered, each applied to simulations using the four heat demand profiles introduced in Section~\ref{sec::heatdemand}. Before presenting the control results, the simulation settings, the ranges of the control inputs, and the fixed values of two control inputs are described.
+
+\section{Simulation settings}
+Besides the constants presented in Section~\ref{sec::physicalConstants}, the following simulation parameters are applied. The ambient temperature is set constant at 20\,°C, and the initial temperature of the water and the pipes is set equal to this ambient temperature. Furthermore, the maximum pump pressure is set at 50 kPa.
+
+The network used for the simulations is similar to the network used by Eneco for its in-house steady-state model of the heat distribution within a DCS project. The simulated network represents a 23-floor building, with the floors spaced 3 m apart. At every floor, a heat exchanger is connected to the riser at a distance of 2.5 m from the junction, using DN20 piping. The supply and return risers themselves are divided into three sections with decreasing diameter along the height of the building: DN40 for the lowest 6 floors, DN32 for the following 14 floors, and DN25 for the top 3 floors. The parameters of the four pipe types were presented in Tables~\ref{tab:pipe_dn_common} and~\ref{tab:pipe_dn_geometry}.
+
+For the optimization, both weights $w_1$ and $w_2$ are set equal to 
+$\frac{1}{4181} \cdot 10^{-3}$, thereby equally prioritizing both terms. Scaling down the weights in this manner keeps the resulting values of the cost function in a readable range. The warm-up timestep $k_w$, after which the simulation results are included in the cost function, is set equivalent to 6 hours. This duration corresponds to the time required for the sensor temperature within the thermostatic bypass valve to stabilize, as shown in Section~\ref{sec::appendixbypasstemp}.
+
+% \section{Fixation of control inputs}
+
+% This results in the following control input bounds:
+% \begin{table}[ht]
+% \centering
+% \caption{Upper and lower bounds of $\theta_1, \theta_2$ and $ \theta_5$. }
+% \begin{tabular}{lcc}
+% \hline
+% Parameter & Lower bound & Upper bound \\
+% \hline
+% $\theta_1$ [$^{\circ}C$]& $60$ & $65$ \\
+% $\theta_2$ [$^{\circ}C$]& $60$ & $65$ \\
+% $\theta_5$ [$^{\circ}C$]& $30$ & $55$ \\
+% \hline
+% \end{tabular}
+% \label{tab:physical_bounds}
+% \end{table}
 
 
-\section{Simulation parameters}
-- besides the constants presented in Section ~\ref{sec::physicalConstants}, the following other simulation parameters are applied: 
+% \begin{table}[ht]
+% \centering
+% \caption{Profile-dependent input constraints for $\theta_3$.}
+% \begin{tabular}{lc}
+% \hline
+% Profile & $\theta_3$ \\
+% \hline
+% Profile 1 & $[200,\,500]\times10^3$ \\
+% Profile 2 & $[40,\,350]\times10^3$ \\
+% Profile 3 & $[0,\,300]\times10^3$ \\
+% Profile 4 & $[0,\,150]\times10^3$ \\
+% \hline
+% \end{tabular}
+% \label{tab:input_constraints}
+% \end{table}
 
-T_{\text{ambt}} = 20
-T_init_water = 20
-T_init_pipe = 20
-$\Delta \text{pump}$ = 50 kPa
 
-The network used for the simulations is similair to the network used by Eneco for its in-house steady-state model of the heat distribution within a DCS project. The simulated network represents a 23-floor building, with the floors spaced 3 m apart. At every floor, a heat exchanger is connected to the riser at a distance of 2.5 m from the junction, using DN20 piping. The supply and return risers themselves are divided into three sections with decreasing diameter along the height of the building: DN40 for the lowest six floors, DN32 for the following fourteen floors, and DN25 for the top three floors. The parameters of the four pipe types were presented in Tables~\ref{tab:pipe_dn_common} and~\ref{tab:pipe_dn_geometry}.
+% \section{Control results}
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_1.pdf}
+%     \caption{Profile 1}
+%     \label{fig::supply_return_profile1}
+% \end{figure}
+ 
 
-For the optimization both weights $w_1$ and $w_2$ are set equal to each other with a value of 1/4181 * 1e-3. Therefore not prioritizing the energy used to heat up the system or the energy used by the heat pump to store it. scaling down the weights made the outcome of the cost function more readable. The starting timestep $k_w$ after which the values of the simulation results are used is set equivalent to 6 hours. It was chosen in this way as this is the time it takes before the sensor temperature within the thermostatic bypass valve has stabilized. 
+% \begin{table}[htbp]
+% \centering
+% \caption{Profile 1}
+% \begin{tabular}{l|llllll}
+% $\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ [$^{\circ}C]$  \\ \hline
+% 0.05                                          & 65                       & 65                       & 0                        & 100000                   & 48.40                    & 3                        \\
+% 0.15                                          & 63.38                    & 65                       & 88827                    & 100000                   & 46.21                    & 3                        \\
+% 0.25                                          & 60.374                   & 65                       & 0                        & 100000                   & 40.36                    & 3                       
+% \end{tabular}
+% \end{table}
+
+% \FloatBarrier
 
 
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_2.pdf}
+%     \caption{Profile 2}
+%     \label{fig::supply_return_profile2}
+% \end{figure}
 
-\section{Fixation of control inputs}
 
+% \begin{table}[htbp]
+% \centering
+% \caption{Profile 2}
+% \begin{tabular}{l|llllll}
+% {}$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ [$^{\circ}C]$  \\ \hline
+% 0.05                                          & 65                       & 65                       & 170395                   & 100000                   & 49.93                    & 3                        \\
+% 0.15                                          & 65                       & 65                       & 40952                    & 100000                   & 43.27                    & 3                        \\
+% 0.25                                          & 63.75                    & 64.52                    & 43122                    & 100000                   & 37.39                    & 3                       
+% \end{tabular}
+% \end{table}
+
+% \FloatBarrier
+
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_3.pdf}
+%     \caption{Profile 3}
+%     \label{fig::supply_return_profile3}
+% \end{figure}
+
+% \begin{table}[htbp]
+% \centering
+% \caption{Profile 3}
+% \begin{tabular}{l|llllll}
+% $\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ [$^{\circ}C]$  \\ \hline
+% 0.05                                          & 65                       & 65                       & 170395                   & 100000                   & 49.93                    & 3                        \\
+% 0.15                                          & 65                       & 65                       & 40952                    & 100000                   & 43.27                    & 3                        \\
+% 0.25                                          & 63.75                    & 64.52                    & 43122                    & 100000                   & 37.39                    & 3                       
+% \end{tabular}
+% \end{table}
+
+% \FloatBarrier
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_4.pdf}
+%     \caption{Profile 4}
+%     \label{fig::supply_return_profile4}
+% \end{figure}
+
+% \begin{table}[htbp]
+% \centering
+% \caption{Profile 4}
+% \begin{tabular}{l|llllll}
+% $\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ [$^{\circ}C]$  \\ \hline
+% 0.05                                          & 65                       & 65                       & 0                        & 100000                   & 48.40                    & 3                        \\
+% 0.15                                          & 63.38                    & 65                       & 88827                    & 100000                   & 46.21                    & 3                        \\
+% 0.25                                          & 60.374                   & 65                       & 0                        & 100000                   & 40.36                    & 3                       
+% \end{tabular}
+% \end{table}
+
+% \section{Summary}
+
+
+\section{Control inputs}
+ 
+This results in the following control input bounds:
+\begin{table}[ht]
+\centering
+\caption{Upper and lower bounds of $\theta_1$, $\theta_2$ and $\theta_5$.}
+\label{tab:physical_bounds}
+\begin{tabular}{lcc}
+\hline
+\textbf{Parameter} & \textbf{Lower bound} & \textbf{Upper bound} \\
+\hline
+$\theta_1$ [°C] & 60 & 65 \\
+$\theta_2$ [°C] & 60 & 65 \\
+$\theta_5$ [°C] & 30 & 55 \\
+\hline
+\end{tabular}
+\end{table}
+ 
+ 
+\begin{table}[ht]
+\centering
+\caption{Profile-dependent input bounds for $\theta_3$.}
+\label{tab:input_constraints}
+\begin{tabular}{lc}
+\hline
+\textbf{Profile} & $\theta_3$ [kW]\\
+\hline
+1 & $[200,\,500]$ \\
+2 & $[40,\,350]$ \\
+3 & $[0,\,300]$ \\
+4 & $[0,\,150]$ \\
+\hline
+\end{tabular}
+\end{table}
+ 
+ 
 \section{Control results}
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_1.pdf}
     \caption{Profile 1}
-    \label{fig:placeholder}
+    \label{fig::supply_return_profile1}
 \end{figure}
  
-
+ 
 \begin{table}[htbp]
 \centering
-\caption{Profile 1}
-\begin{tabular}{l|llllll}
-$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ \\ \hline
-0.05                                          & 65                       & 65                       & 0                        & 100000                   & 48.40                    & 3                        \\
-0.15                                          & 63.38                    & 65                       & 88827                    & 100000                   & 46.21                    & 3                        \\
-0.25                                          & 60.374                   & 65                       & 0                        & 100000                   & 40.36                    & 3                       
+\caption{Optimal control inputs found by the constrained Bayesian optimization 
+for Profile 1, for the three constraint tolerance values. The parameters 
+$\theta_4$ and $\theta_6$ are fixed.}
+\label{tab::results_profile1}
+\begin{tabular}{lcccccc}
+\hline
+$\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_4$ [kW] & $\theta_5$ [°C] & $\theta_6$ [$^{\circ}C]$  \\
+\hline
+0.15 & 63.79 & 64.86 & 213.56 & 150 & 44.60 & 3 \\
+0.25 & 63.70 & 64.52 & 43.12  & 150 & 44.05 & 3 \\
+\hline
 \end{tabular}
 \end{table}
-
+ 
 \FloatBarrier
-
-
+ 
+ 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_2.pdf}
     \caption{Profile 2}
-    \label{fig:placeholder}
+    \label{fig::supply_return_profile2}
 \end{figure}
-
-
+ 
+ 
 \begin{table}[htbp]
 \centering
-\caption{Profile 2}
-\begin{tabular}{l|llllll}
-{}$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ \\ \hline
-0.05                                          & 65                       & 65                       & 170395                   & 100000                   & 49.93                    & 3                        \\
-0.15                                          & 65                       & 65                       & 40952                    & 100000                   & 43.27                    & 3                        \\
-0.25                                          & 63.75                    & 64.52                    & 43122                    & 100000                   & 37.39                    & 3                       
+\caption{Optimal control inputs found by the constrained Bayesian optimization 
+for Profile 2, for the three constraint tolerance values. The parameters 
+$\theta_4$ and $\theta_6$ are fixed.}
+\label{tab::results_profile2}
+\begin{tabular}{lcccccc}
+\hline
+$\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_4$ [kW] & $\theta_5$ [°C] & $\theta_6$ [$^{\circ}C]$  \\
+\hline
+0.05 & 65.00 & 65.00 & 170.40 & 100 & 49.93 & 3 \\
+0.15 & 65.00 & 65.00 & 40.95  & 100 & 43.27 & 3 \\
+0.25 & 63.75 & 64.52 & 43.12  & 100 & 37.39 & 3 \\
+\hline
 \end{tabular}
 \end{table}
-
+ 
 \FloatBarrier
-
+ 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_3.pdf}
     \caption{Profile 3}
-    \label{fig:placeholder}
+    \label{fig::supply_return_profile3}
 \end{figure}
-
+ 
 \begin{table}[htbp]
 \centering
-\caption{Profile 3}
-\begin{tabular}{l|llllll}
-$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ \\ \hline
-0.05                                          & 65                       & 65                       & 170395                   & 100000                   & 49.93                    & 3                        \\
-0.15                                          & 65                       & 65                       & 40952                    & 100000                   & 43.27                    & 3                        \\
-0.25                                          & 63.75                    & 64.52                    & 43122                    & 100000                   & 37.39                    & 3                       
+\caption{Optimal control inputs found by the constrained Bayesian optimization 
+for Profile 3, for the three constraint tolerance values. The parameters 
+$\theta_4$ and $\theta_6$ are fixed.}
+\label{tab::results_profile3}
+\begin{tabular}{lcccccc}
+\hline
+$\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_4$ [kW] & $\theta_5$ [°C] & $\theta_6$ [$^{\circ}C]$  \\
+\hline
+0.05 & 65.00 & 65.00 & 0.00 & 100 & 48.40 & 3 \\ % NOTE: identical to Profile 2 — verify data
+0.15 & 63.38 & 65.00 & 88.83  & 100 & 46.21 & 3 \\ % NOTE: identical to Profile 2 — verify data
+0.25 & 60.37 & 65.00 & 0.00  & 100 & 40.36 & 3 \\ % NOTE: identical to Profile 2 — verify data
+\hline
 \end{tabular}
 \end{table}
-
+ 
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_4.pdf}
     \caption{Profile 4}
-    \label{fig:placeholder}
+    \label{fig::supply_return_profile4}
 \end{figure}
-
+ 
 \begin{table}[htbp]
 \centering
-\caption{Profile 4}
-\begin{tabular}{l|llllll}
-$\alpha$ \& $\beta$ & $\theta_1$ & $\theta_2$ & $\theta_3$ & $\theta_4$ & $\theta_5$ & $\theta_6$ \\ \hline
-0.05                                          & 65                       & 65                       & 0                        & 100000                   & 48.40                    & 3                        \\
-0.15                                          & 63.38                    & 65                       & 88827                    & 100000                   & 46.21                    & 3                        \\
-0.25                                          & 60.374                   & 65                       & 0                        & 100000                   & 40.36                    & 3                       
+\caption{Optimal control inputs found by the constrained Bayesian optimization 
+for Profile 4, for the three constraint tolerance values. The parameters 
+$\theta_4$ and $\theta_6$ are fixed.}
+\label{tab::results_profile4}
+\begin{tabular}{lcccccc}
+\hline
+$\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_4$ [kW] & $\theta_5$ [°C] & $\theta_6$ [$^{\circ}C]$  \\
+\hline
+0.05 & 64.97 & 65.00 & 139.30 & 75 & 38.04 & 3 \\ 
+0.15 & 63.38 & 65.00 & 19.13 & 75 & 36.65 & 3 \\ 
+0.25 & 65 & 65.00 & 149.58  & 75 & 33.58 & 3 \\
+\hline
 \end{tabular}
 \end{table}
-
-
-
-
-
-zeg dat je de simulatie hebt gerund op 50kPa ipv 60kPa. 
+ 
 \section{Summary}

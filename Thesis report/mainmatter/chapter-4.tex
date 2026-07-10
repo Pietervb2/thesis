@@ -301,7 +301,7 @@ This reduces the optimization variables to $\boldsymbol{\theta} = \left[\theta_1
 This section presents the settings chosen for the constrained Bayesian Optimization used to generate the results. The Python package used to implement the optimization is 'bayesian-optimization' because it provides a user-friendly interface and is well-documented. 
 
 \subsection{Stopping criterion}
-In conventional optimization, the algorithm terminates once a convergence criterion such as $||x^{+} -x|| \leq \varepsilon$ is satisfied. For Bayesian optimization, such a criterion is of limited use: the number of function evaluations is deliberately kept small, and convergence in this sense may never be observed. Instead, the total evaluation budget is typically specified upfront \cite{brochu2010tutorial}. This budget consists of two parts: an initialization phase, in which points are sampled randomly to diversify the exploration of the search space, and the subsequent Bayesian optimization phase, in which new evaluation points are selected by maximizing the acquisition function. Since the optimization is subject to constraints, the algorithm must find points within the feasible region. To assist with this, an initial probe point that is known to be feasible is supplied, ensuring that the algorithm starts with at least some knowledge of the feasible region. Without such a point, the algorithm may fail to locate the feasible region during random exploration, in which case it terminates prematurely, as it is unable to propose feasible candidate points. Since a one-day simulation takes approximately 20 minutes on an HP ZBook Studio G4 laptop with an Intel Core i7 processor, the random exploration phase was set to 10 function evaluations and the number of evaluations performed for the Bayesian Optimization was set to 15, such that a full optimization run could be performed overnight. 
+In conventional optimization, the algorithm terminates once a convergence criterion such as $||x^{+} -x|| \leq \varepsilon$ is satisfied. For Bayesian optimization, such a criterion is of limited use: the number of function evaluations is deliberately kept small, and convergence in this sense may never be observed. Instead, the total evaluation budget is typically specified upfront \cite{bo_tutorial}. This budget consists of two parts: an initialization phase, in which points are sampled randomly to diversify the exploration of the search space, and the subsequent Bayesian optimization phase, in which new evaluation points are selected by maximizing the acquisition function. Since the optimization is subject to constraints, the algorithm must find points within the feasible region. To assist with this, an initial probe point that is known to be feasible is supplied, ensuring that the algorithm starts with at least some knowledge of the feasible region. Without such a point, the algorithm may fail to locate the feasible region during random exploration, in which case it terminates prematurely, as it is unable to propose feasible candidate points. Since a one-day simulation takes approximately 20 minutes on an HP ZBook Studio G4 laptop with an Intel Core i7 processor, the random exploration phase was set to 10 function evaluations and the number of evaluations performed for the Bayesian Optimization was set to 15, such that a full optimization run could be performed overnight. 
 
 \subsection{Kernel}
 The package uses a Mat\'ern  covariance kernel, which is a common choice within BO \cite{bo_tutorial}. The Mat\'ern kernel is defined as \cite{rasmussen2006gaussian}:
@@ -327,7 +327,6 @@ The length scales $l$ used for the kernels of both the objective function and th
 \end{equation}
 with $K$ as the covariance matrix $k(\boldsymbol{X},\boldsymbol{X})$. 
 
-% The length scales of the constraint GPs are not optimized, as each additional constraint would further increase the number of hyperparameters to be fitted, which, given the small number of samples, could lead to overfitting. Instead, the lengthscale of each constraint GP is fixed per dimension to the range of the corresponding input parameter.
 
 The term $\alpha I$ in Equation \eqref{eq::lml} represents the level of observation noise the Gaussian Process can handle, which the package defines via the parameter $\alpha$. It enters the model as additive Gaussian noise on the diagonal of the covariance matrix:
 \begin{equation}\label{eq::nugget}
@@ -352,8 +351,8 @@ To validate the constraint Bayesian Optimization setup, the optimization of the 
 \begin{figure}
     \centering
     \includegraphics[width=0.5\linewidth]{Thesis report/figures_thesis/validation_simulation.png}
-    \caption{Result of constrained Bayesian Optimization performed on \ref{eq::simulation1}. White points indicate feasible points and the black crosses indicate infeasible points.}
-    \label{fig:placeholder}
+    \caption{Result of constrained Bayesian Optimization performed on \ref{eq::simuliont1}. White points indicate feasible points and the black crosses indicate infeasible points.}
+    \label{fig::validationSimulation}
 \end{figure}
 
 \section{Summary}
