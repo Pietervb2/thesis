@@ -1,6 +1,7 @@
 \chapter{Results}
 \label{chapter:Results}
-This section presents the results of the constrained Bayesian optimization applied to a full-day simulation compared with the defined benchmark simulation. Three tolerance values, $\alpha = \beta \in \{0.05, 0.15, 0.25\}$ are considered, each applied to simulations using the four heat demand profiles introduced in Section~\ref{sec::heatdemand}. Before presenting the control results, the simulation settings, the ranges of the control inputs, and the fixed values of two control inputs are described.
+
+This Chapter presents the results of the constrained Bayesian Optimization applied to a full-day simulation compared with the defined benchmark simulation. Before presenting the control results, the simulation settings, the ranges of the control inputs, and the fixed values of two control inputs are described.
 
 \section{Simulation settings}
 Besides the constants presented in Section~\ref{sec::physicalConstants}, the following simulation parameters are applied. The ambient temperature is set constant at 20\,°C, and the initial temperature of the water and the pipes is set equal to this ambient temperature. Furthermore, the maximum pump pressure is set at 50 kPa.
@@ -11,23 +12,63 @@ For the optimization, both weights $w_1$ and $w_2$ are set equal to
 $\frac{1}{4181} \cdot 10^{-3}$, thereby equally prioritizing both terms. Scaling down the weights in this manner keeps the resulting values of the cost function in a readable range. The warm-up timestep $k_w$, after which the simulation results are included in the cost function, is set equivalent to 6 hours. This duration corresponds to the time required for the sensor temperature within the thermostatic bypass valve to stabilize, as shown in Section~\ref{sec::appendixbypasstemp}.
 
 \section{Control inputs}
-While performing the optimization, the control inputs $\theta_4$ and $\theta_6$ seemed to not influence the objective function. This was indicated by the size of their respective lengthscales. For the fitting of the lengthscales the Bayesian Optimization got to vary the lengtscales 0.05 to 3 times their input range. Their lengthscales became the maximum of this, indicating the low correlation between the datasamples close to each other within this set input parameter range. 
--the range of theta4 changed per profile in order to adjust the P-band range to the size of the total heat demand so that the BO did not waste function evaluatios to explore those regions. 
-- to check whether the GP correctly fitted to the objective function lanscape wrt $\theta_4$ a parameter sweep was done. Due to high amount of time these sweeps take it was only performed on Profile two just to have an indication. And also on $\theta_2$, $\theta_3$ and $\theta_5$ to compare their impact with $\theta_4$. The results are shown in Chapter \ref{chapter::appendixExtraPlots}, validating the fixation of $\theta_4$. It was chosen to be fixed at the halfway point of its range per profile.  
+While performing the optimization, the control inputs $\theta_4$ and $\theta_6$ 
+appeared to not influence the objective function. This was indicated by 
+the size of their fitted lengthscales: during the fitting of the Gaussian 
+Process, the lengthscales are allowed to vary between 0.05 and 3 times the 
+range of their respective input parameter, and for both $\theta_4$ and 
+$\theta_6$ the fitted lengthscale reached this upper bound. Such a large 
+lengthscale implies that the objective function barely varies over the entire 
+parameter range, indicating that the parameter has almost no effect within 
+its bounds. Based on this, it was decided to fix $\theta_6$ at 3 $^{\circ}C$.
 
- 
-This results in the following control input bounds:
+In the case of $\theta_4$, it was decided to verify that the Gaussian Process correctly captured the shape of the objective function with respect to $\theta_4$; a parameter sweep was performed. Since these sweeps are computationally expensive, the sweeps were only performed for Profile 2 to serve as an indication. For comparison, sweeps over $\theta_2$, $\theta_3$ and $\theta_5$ were performed as well, showing the impact of these parameters relative to that of $\theta_4$. These sweeps were used to get a sense of the effects of these parameters on the objective function and on the constraints. Table \ref{tab::sweep_theta4} shows the change in the objective function or the constraints over the full range of these control inputs and confirms the negligible influence of $\theta_4$. The plots of the sweeps are presented in Chapter~\ref{chapter::appendixExtraPlots}. These results confirm the negligible influence of $\theta_4$ on the objective function and the variables which are constrained. Therefore, it was decided to fix $\theta_4$ at the halfway point of its profile-dependent range. 
+
+% \begin{table}[h!]
+% \centering
+% \caption{Effect of the control input parameters on the objective function and on the constrained parameters in percentage. The percentage of change is measured against an increase of the control inputs.}
+% \label{tab:physical_bounds}
+% \begin{tabular}{lcc}
+% \hline
+% \textbf{Parameter} & $f(x)$ & \Delta Q_{\text{tot}} & $\Delta Q_{\text{resp,max}}$ & $\mathrm{softmax}_k T_r$ \\
+% \hline
+% $\theta_2$ & -25.17 & -37.76 & -25.0 & -0.75\\
+% $\theta_3$ & 9.96 & -46.55 & -23.57 & 1.07\\
+% $\theta_4$ & 3.36 & -3.57 &  -3.34 & 0.0 \\
+% $\theta_5$ & 69.15 & 12.68 & 16.4 & 27.73 \\
+% \hline
+% \end{tabular}
+% \end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Relative effect of increasing the control inputs on the objective function and constrained quantities shown in percentages.}
+\label{tab:physical_bounds}
+\begin{tabular}{ccccc}
+\hline
+\textbf{Parameter} & $f(x)$ & $\Delta Q_{\mathrm{tot}}$ & $\Delta Q_{\mathrm{resp,max}}$ & $\mathrm{softmax}_k T_r$ \\
+\hline
+$\theta_2$ & -25.17 & -37.76 & -25.00 & -0.75 \\
+$\theta_3$ & 9.96 & -46.55 & -23.57 & 1.07 \\
+$\theta_4$ & 3.36 & -3.57 & -3.34 & 0.00 \\
+$\theta_5$ & 69.15 & 12.68 & 16.40 & 27.73 \\
+\hline
+\end{tabular}
+\end{table}
+
+A profile-dependent range was used for $\theta_3$ as well, to scale it to the size of the total heat demand, such that the optimization would not waste function evaluations exploring irrelevant regions. This results in the following control input bounds:
+
 \begin{table}[h!]
 \centering
 \caption{Upper and lower bounds of $\theta_1$, $\theta_2$ and $\theta_5$.}
 \label{tab:physical_bounds}
-\begin{tabular}{lcc}
+\begin{tabular}{ccc}
 \hline
-\textbf{Parameter} & \textbf{Lower bound} & \textbf{Upper bound} \\
+\textbf{Parameter} & \textbf{Lower bound} [°C]& \textbf{Upper bound} [°C] \\
 \hline
-$\theta_1$ [°C] & 60 & 65 \\
-$\theta_2$ [°C] & 60 & 65 \\
-$\theta_5$ [°C] & 30 & 55 \\
+$\theta_1$  & 60 & 65 \\
+$\theta_2$  & 60 & 65 \\
+$\theta_5$  & 30 & 55 \\
 \hline
 \end{tabular}
 \end{table}
@@ -35,11 +76,11 @@ $\theta_5$ [°C] & 30 & 55 \\
  
 \begin{table}[h!]
 \centering
-\caption{Profile-dependent input bounds for $\theta_3$ [kW].}
+\caption{Profile-dependent bounds for $\theta_3$.}
 \label{tab:input_constraints}
-\begin{tabular}{lcc}
+\begin{tabular}{ccc}
 \hline
-\textbf{Profile} & \textbf{Lower bound} & \textbf{Upper bound} \\
+\textbf{Profile} & \textbf{Lower bound} [kW] & \textbf{Upper bound} [kW] \\
 \hline
 1 & 200 & 500 \\
 2 & 40 & 350 \\
@@ -48,9 +89,12 @@ $\theta_5$ [°C] & 30 & 55 \\
 \hline
 \end{tabular}
 \end{table}
+
+\section{Control results}
+This section presents the results of the constrained Bayesian optimization applied to a full-day simulation compared with the defined benchmark simulation. Three tolerance values, $\alpha = \beta \in \{0.05, 0.15, 0.25\}$ are considered, each applied to simulations using the four heat demand profiles introduced in Section~\ref{sec::heatdemand}. In addition to the plots of the optimized simulations, the optimized control input values and the fitted lengthscales of the Gaussian Process are shown. 
  
 \clearpage
-\section{Control results}
+
 \begin{figure}[h!]
     \centering
     \includegraphics[width=\linewidth]{Thesis report/figures_thesis/return_supply_temperature_profile_1.pdf}
@@ -65,7 +109,7 @@ $\theta_5$ [°C] & 30 & 55 \\
 for Profile 1, for the three constraint tolerance values. The parameters 
 $\theta_4$ and $\theta_6$ are fixed.}
 \label{tab::results_profile1}
-\begin{tabular}{lcccccc}
+\begin{tabular}{ccccccc}
 \hline
 $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_4$ [kW] & $\theta_5$ [°C] & $\theta_6$ [$^{\circ}C]$  \\
 \hline
@@ -92,7 +136,7 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 for Profile 2, for the three constraint tolerance values. The parameters 
 $\theta_4$ and $\theta_6$ are fixed.}
 \label{tab::results_profile2}
-\begin{tabular}{lcccccc}
+\begin{tabular}{ccccccc}
 \hline
 $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_4$ [kW] & $\theta_5$ [°C] & $\theta_6$ [$^{\circ}C]$  \\
 \hline
@@ -120,7 +164,7 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 for Profile 3, for the three constraint tolerance values. The parameters 
 $\theta_4$ and $\theta_6$ are fixed.}
 \label{tab::results_profile3}
-\begin{tabular}{lcccccc}
+\begin{tabular}{ccccccc}
 \hline
 $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_4$ [kW] & $\theta_5$ [°C] & $\theta_6$ [$^{\circ}C]$  \\
 \hline
@@ -147,7 +191,7 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 for Profile 4, for the three constraint tolerance values. The parameters 
 $\theta_4$ and $\theta_6$ are fixed.}
 \label{tab::results_profile4}
-\begin{tabular}{lcccccc}
+\begin{tabular}{ccccccc}
 \hline
 $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\theta_4$ [kW] & $\theta_5$ [°C] & $\theta_6$ [$^{\circ}C]$  \\
 \hline
@@ -168,7 +212,7 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 % \begin{table}[ht]
 % \centering
 % \caption{Upper and lower bounds of $\theta_1, \theta_2$ and $ \theta_5$. }
-% \begin{tabular}{lcc}
+% \begin{tabular}{ccc}
 % \hline
 % Parameter & Lower bound & Upper bound \\
 % \hline
@@ -184,7 +228,7 @@ $\alpha = \beta$ & $\theta_1$ [°C] & $\theta_2$ [°C] & $\theta_3$ [kW] & $\the
 % \begin{table}[ht]
 % \centering
 % \caption{Profile-dependent input constraints for $\theta_3$.}
-% \begin{tabular}{lc}
+% \begin{tabular}{cc}
 % \hline
 % Profile & $\theta_3$ \\
 % \hline

@@ -1,6 +1,6 @@
 \chapter{Control Policy}
 \label{chapter:ControlPolicy}
-This chapter begins by presenting the mathematical framework for Bayesian Optimization. It concludes with the problem definition and the applied settings for Bayesian Optimization. 
+This Chapter begins by presenting the mathematical framework for Bayesian Optimization. It concludes with the problem definition and the applied settings for Bayesian Optimization. 
 
 \section{Bayesian Optimization overview}
 Bayesian Optimization (BO) is used to find the extrema of objective functions that are expensive or time-consuming to evaluate. It can be applied in situations where there is no closed-form expression of the objective function, but it is possible to gather some data points of the function. BO techniques are highly efficient considering the number of samples needed to find an extreme. This is 
@@ -150,7 +150,7 @@ The optimization problem is defined as follows:
 \begin{mini!}|s|
   {\boldsymbol{\theta}}
   {\sum_{k=k_w}^{N-1} \Big[\, w_1\, \dot{m}_s(k)\, c_p \big(T_s(k) - 20\big)
-      + w_2\, \dot{m}_r(k)\, c_p \big(T_r(k) - 10 \big) \Big] \Delta k}
+      + w_2\, \dot{m}_r(k)\, c_p \big(T_r(k) - 10 \big) \Big] \Delta k + \boldsymbol{\theta}^{\top} R \boldsymbol{\theta}}
   {}{}
   \addConstraint{\boldsymbol{x}(k+1)}{= f\!\left(\boldsymbol{x}(k-\tau(k)\!:\!k), \boldsymbol{u}(k), \boldsymbol{d}(k) \right),}{\quad k = 0,\ldots,N-1}
   \addConstraint{\boldsymbol{u}(k)}{= \left[T_s(k),\, h(k)\right]^{\top}}{}
@@ -207,15 +207,12 @@ Q_{|\mathcal{N}_{\text{hex}}|}(k)
 % \quad \boldsymbol{x}(k) \in \mathcal{X}
 \]
 
-The optimization variable $\boldsymbol{\theta}$ is used to parameterize the control inputs $T_s$ and $h$ via piece-wise affine functions $f_1: \mathbb{R}^5 \rightarrow [\theta_1,\theta_2]$ and $f_{2}: \mathbb{R}^3 \rightarrow [0,1]$. The definition of these piece-wise affine functions is further discussed in Section \ref{sec::controlInputs}. The constraint definitions are explained in Section \ref{sec::optconstraints}.
+The optimization variable $\boldsymbol{\theta} \in \mathbb{R}^6$ is used to parameterize the control inputs $T_s$ and $h$ via piece-wise affine functions $f_1: \mathbb{R}^5 \rightarrow [\theta_1,\theta_2]$ and $f_{2}: \mathbb{R}^3 \rightarrow [0,1]$. The definition of these piece-wise affine functions is further discussed in Section \ref{sec::controlInputs}. The same holds for the objective function and the constraint definitions.
 
 \subsubsection{Objective function}
 The goal of the control policy is to lower the return temperature while still sufficiently meeting the heat demand and the response requirements. Lowering the return temperature primarily serves to prevent heat pump failure caused by excessive return temperatures. Even when no failure occurs, a high return temperature still requires more energy from the heat pump to store water in the hot well of the ATES. This is simplified to $\dot{m}_r(k)\, c_p \big(T_r(k) - 10\big)$, where the hot ATES well is assumed to be at a constant temperature of $10\,^{\circ}$C. Since this term only penalizes high return temperatures rather than strictly preventing them, an explicit constraint on the return temperature is added as well, which is discussed in Section \ref{sec::optconstraints}.
 
-In addition to the energy required for storage, the energy supplied to the network is included in the cost function, ensuring that the complete energy consumption of the DCS is addressed. During summer operation, the hot water is not extracted from the ATES but is instead supplied by the backup district heating network. The energy delivered by this network to heat the supply water is simplified to $\dot{m}_s(k)\, c_p \big(T_s(k) - 20\big)$, where it is assumed that the water is heated starting from the ambient temperature of $20\,^{\circ}$C.
-
-\todo[inline]{Regularization term!}
- 
+In addition to the energy required for storage, the energy supplied to the network is included in the cost function, ensuring that the complete energy consumption of the DCS is addressed. During summer operation, the hot water is not extracted from the ATES but is instead supplied by the backup district heating network. The energy delivered by this network to heat the supply water is simplified to $\dot{m}_s(k)\, c_p \big(T_s(k) - 20\big)$, where it is assumed that the water is heated starting from the ambient temperature of $20\,^{\circ}$C. The third term present in the objective function is the regularization term, defined by $R \in \mathbb{R}^{6 \times 6}$.
 
 \subsubsection{Constraints}\label{sec::optconstraints}
 % To prevent heat pumps from failing, an explicit temperature constraint is imposed on the return temperature in \eqref{eq::Trcons}
