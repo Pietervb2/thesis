@@ -1,6 +1,6 @@
 \chapter{Control Policy}
 \label{chapter:ControlPolicy}
-This chapter begins by presenting the mathematical framework for Bayesian Optimization. It concludes with the problem definition and the applied settings for Bayesian Optimization. 
+This Chapter begins by presenting the mathematical framework for Bayesian Optimization. It concludes with the problem definition and the applied settings for Bayesian Optimization. 
 
 \section{Bayesian Optimization overview}
 Bayesian Optimization (BO) is used to find the extrema of objective functions that are expensive or time-consuming to evaluate. It can be applied in situations where there is no closed-form expression of the objective function, but it is possible to gather some data points of the function. BO techniques are highly efficient considering the number of samples needed to find an extreme. This is 
@@ -96,7 +96,7 @@ E I(\hat{\mathbf{x}}) & =\tilde{\Sigma}_{\ell}(\hat{\mathbf{x}})(Z \Phi(Z)+\phi(
 & \text { with: } Z=\frac{\tilde{\mu}_{\ell}(\hat{\mathbf{x}})-\ell\left(\mathbf{x}^{+}\right) - \xi}{\tilde{\Sigma}_{\ell}(\hat{\mathbf{x}})},
 \end{array}
 \end{equation}
-in which $\Phi$ and $\phi$ denote the cumulative distribution function and probability density function of the standard normal distribution, respectively \cite{gardner2014bayesian}. Where $\xi$ is introduced by Lizotte \cite{Lizotte2008} as an extra parameter to improve the trade-off towards more exploration in stead of exploitation. 
+in which $\Phi$ and $\phi$ denote the cumulative distribution function and probability density function of the standard normal distribution, respectively \cite{gardner2014bayesian}. Where $\xi$ is introduced by Lizotte \cite{Lizotte2008} as an extra parameter to improve the trade-off towards more exploration instead of exploitation. 
 
 \subsubsection{Constrained Acquisition Function}\label{sec::constacq}
 Up to now, we have only looked at unconstrained Bayesian Optimization. In order to extend the Bayesian Optimization approach incorporating inequality constraints, the problem becomes:
@@ -141,15 +141,16 @@ Up to now, only a single inequality constraint has been considered. The approach
 \begin{equation}
     \mathrm{PF}(x_{n+1}) = \Pr\left[\tilde{c}_1(x_{n+1}) \leq \lambda_1, \dots, \tilde{c}_k(x_{n+1}) \leq \lambda_k\right],
 \end{equation}
-while the rest of the expected constrained improvement in Equation \ref{eq::addingconstraint2EI} stays the same. This joint probability is now a multivariate Gaussian, which can be computed using available numerical methods \cite{gardner2014bayesian}. When the constraints are assumed to be conditionally independent given the sampling point, the probability simplifies into a product of univariate Gaussian CDFs, $\prod_{i=1}^{k} \Pr[\tilde{c}_i(x_{n+1}) \leq \lambda_i]$, making the evaluation just as cheap as with a single constraint.
+while the rest of the expected constrained improvement in  ~\eqref{eq::addingconstraint2EI} stays the same. This joint probability is now a multivariate Gaussian, which can be computed using available numerical methods \cite{gardner2014bayesian}. When the constraints are assumed to be conditionally independent given the sampling point, the probability simplifies into a product of univariate Gaussian CDFs, $\prod_{i=1}^{k} \Pr[\tilde{c}_i(x_{n+1}) \leq \lambda_i]$, making the evaluation just as cheap as with a single constraint.
 
+\clearpage
 \section{Problem definition}
 The optimization problem is defined as follows:
 
 \begin{mini!}|s|
   {\boldsymbol{\theta}}
   {\sum_{k=k_w}^{N-1} \Big[\, w_1\, \dot{m}_s(k)\, c_p \big(T_s(k) - 20\big)
-      + w_2\, \dot{m}_r(k)\, c_p \big(T_r(k) - 10 \big) \Big] \Delta k}
+      + w_2\, \dot{m}_r(k)\, c_p \big(T_r(k) - 10 \big) \Big] \Delta k + \boldsymbol{\theta}^{\top} R \boldsymbol{\theta}}
   {}{}
   \addConstraint{\boldsymbol{x}(k+1)}{= f\!\left(\boldsymbol{x}(k-\tau(k)\!:\!k), \boldsymbol{u}(k), \boldsymbol{d}(k) \right),}{\quad k = 0,\ldots,N-1}
   \addConstraint{\boldsymbol{u}(k)}{= \left[T_s(k),\, h(k)\right]^{\top}}{}
@@ -206,13 +207,12 @@ Q_{|\mathcal{N}_{\text{hex}}|}(k)
 % \quad \boldsymbol{x}(k) \in \mathcal{X}
 \]
 
-The optimization variable $\boldsymbol{\theta}$ is used to parameterize the control inputs $T_s$ and $h$ via piece-wise affine functions $f_1: \mathbb{R}^5 \rightarrow [\theta_1,\theta_2]$ and $f_{2}: \mathbb{R}^3 \rightarrow [0,1]$. The definition of these piece-wise affine functions is further discussed in Section \ref{sec::controlInputs}. The constraint definitions are explained in Section \ref{sec::optconstraints}.
+The optimization variable $\boldsymbol{\theta} \in \mathbb{R}^6$ is used to parameterize the control inputs $T_s$ and $h$ via piece-wise affine functions $f_1: \mathbb{R}^5 \rightarrow [\theta_1,\theta_2]$ and $f_{2}: \mathbb{R}^3 \rightarrow [0,1]$. The definition of these piece-wise affine functions is further discussed in Section \ref{sec::controlInputs}. The same holds for the objective function and the constraint definitions.
 
 \subsubsection{Objective function}
 The goal of the control policy is to lower the return temperature while still sufficiently meeting the heat demand and the response requirements. Lowering the return temperature primarily serves to prevent heat pump failure caused by excessive return temperatures. Even when no failure occurs, a high return temperature still requires more energy from the heat pump to store water in the hot well of the ATES. This is simplified to $\dot{m}_r(k)\, c_p \big(T_r(k) - 10\big)$, where the hot ATES well is assumed to be at a constant temperature of $10\,^{\circ}$C. Since this term only penalizes high return temperatures rather than strictly preventing them, an explicit constraint on the return temperature is added as well, which is discussed in Section \ref{sec::optconstraints}.
 
-In addition to the energy required for storage, the energy supplied to the network is included in the cost function, ensuring that the complete energy consumption of the DCS is addressed. During summer operation, the hot water is not extracted from the ATES but is instead supplied by the backup district heating network. The energy delivered by this network to heat the supply water is simplified to $\dot{m}_s(k)\, c_p \big(T_s(k) - 20\big)$, where it is assumed that the water is heated starting from the ambient temperature of $20\,^{\circ}$C.
- 
+In addition to the energy required for storage, the energy supplied to the network is included in the cost function, ensuring that the complete energy consumption of the DCS is addressed. During summer operation, the hot water is not extracted from the ATES but is instead supplied by the backup district heating network. The energy delivered by this network to heat the supply water is simplified to $\dot{m}_s(k)\, c_p \big(T_s(k) - 20\big)$, where it is assumed that the water is heated starting from the ambient temperature of $20\,^{\circ}$C. The third term present in the objective function is the regularization term, defined by $R \in \mathbb{R}^{6 \times 6}$.
 
 \subsubsection{Constraints}\label{sec::optconstraints}
 % To prevent heat pumps from failing, an explicit temperature constraint is imposed on the return temperature in \eqref{eq::Trcons}
@@ -315,7 +315,7 @@ with $d(\cdot,\cdot)$ as the Euclidean distance,  $Kv(\cdot)$ the modified Besse
 % \begin{equation}\label{eq::matern}
 %     k(x, x') = \sigma_f^2 \, \frac{2^{1-\nu}}{\Gamma(\nu)} \left( \sqrt{2\nu}\, r \right)^{\!\nu} K_\nu\!\left( \sqrt{2\nu}\, r \right), \qquad r = \sqrt{\sum_{d=1}^{D} \frac{(x_d - x_d')^2}{l_d^2}},
 % \end{equation}
-% where $\sigma_f^2$ is the signal variance, $\Gamma$ the gamma function, and $K_\nu$ the modified Bessel function of the second kind. An anisotropic formulation is used, in which each of the $D$ input dimensions has its own lengthscale $l_d$, such that the model can adapt its sensitivity per input parameter. The smoothness parameter $\nu$ controls the differentiability of the functions drawn from the GP prior: sample paths are $\lceil \nu \rceil - 1$ times differentiable. In this work, $\nu = 5/2$ is used, for which the kernel reduces to the simple closed form:
+% where $\sigma_f^2$ is the signal variance, $\Gamma$ the gamma function, and $K_\nu$ the modified Bessel function of the second kind. An anisotropic formulation is used, in which each of the $D$ input dimensions has its own length scale $l_d$, such that the model can adapt its sensitivity per input parameter. The smoothness parameter $\nu$ controls the differentiability of the functions drawn from the GP prior: sample paths are $\lceil \nu \rceil - 1$ times differentiable. In this work, $\nu = 5/2$ is used, for which the kernel reduces to the simple closed form:
 % \begin{equation}\label{eq::matern52}
 %     k(x, x') = \sigma_f^2 \left( 1 + \sqrt{5}\, r + \tfrac{5}{3} r^2 \right) \exp\!\left( -\sqrt{5}\, r \right),
 % \end{equation}
@@ -327,12 +327,11 @@ The length scales $l$ used for the kernels of both the objective function and th
 \end{equation}
 with $K$ as the covariance matrix $k(\boldsymbol{X},\boldsymbol{X})$. 
 
-
-The term $\alpha I$ in Equation \eqref{eq::lml} represents the level of observation noise the Gaussian Process can handle, which the package defines via the parameter $\alpha$. It enters the model as additive Gaussian noise on the diagonal of the covariance matrix:
+The term $\alpha I$ in ~\eqref{eq::lml} represents the level of observation noise the Gaussian Process can handle, which the package defines via the parameter $\alpha$. It enters the model as additive Gaussian noise on the diagonal of the covariance matrix:
 \begin{equation}\label{eq::nugget}
     \tilde{K} = K + \alpha I.
 \end{equation}
-This term, known as the nugget, is generally used to account for noise in the function evaluations. A second purpose it serves is to improve the conditioning of the covariance matrix, preventing it from becoming numerically singular when sampled points lie close together. For this reason, the default value of $\alpha = 10^{-6}$ is retained even though no noise is modeled and the model is deterministic. 
+This term, known as the nugget, is generally used to account for noise in the function evaluations. A second purpose it serves is to improve the conditioning of the covariance matrix, preventing it from becoming numerically singular when sampled points lie close together. For this reason, the default value of $\alpha = 10^{-6}$ is kept even though no noise is modeled and the model is deterministic. 
 
 \subsection{Acquisition Function}
 Following the constrained Bayesian Optimization implementation of Gardner et al. \cite{gardner2014bayesian} discussed in Section \ref{sec::constacq}, the Expected Improvement acquisition function is applied, weighted by the probability of feasibility of the candidate point. Expected Improvement was chosen because it is the acquisition function for which this constrained formulation is derived.
@@ -351,7 +350,7 @@ To validate the constraint Bayesian Optimization setup, the optimization of the 
 \begin{figure}
     \centering
     \includegraphics[width=0.5\linewidth]{Thesis report/figures_thesis/validation_simulation.png}
-    \caption{Result of constrained Bayesian Optimization performed on \ref{eq::simuliont1}. White points indicate feasible points and the black crosses indicate infeasible points.}
+    \caption{Result of constrained Bayesian Optimization performed on ~\eqref{eq::simuliont1}. White points indicate feasible points and the black crosses indicate infeasible points.}
     \label{fig::validationSimulation}
 \end{figure}
 

@@ -35,7 +35,7 @@ structure of the simulation model leaves room to extend the network with new com
 
 % \subsection{Simulation step}
 
-% Algorithms~\ref{alg::hydraulicstep} and~\ref{alg::thermostep} summarize one timestep of the simulation. Following the decoupling assumption of Section~\ref{sec::assumptions}, the hydraulic step is solved first, after which the resulting mass flows are used as input for the thermodynamic step.
+% Algorithms~\ref{alg::hydraulicstep} and~\ref{alg::thermostep} summarize one timestep of the simulation. Following the decoupling assumption of Section~\ref{sec::assumptions}, the hydraulic step is solved first, after which the resulting mass flow rates are used as input for the thermodynamic step.
 
 % \begin{algorithm}[h!]
 % \caption{Hydraulic step at timestep $N$ (\texttt{set\_mflow\_network})}
@@ -81,7 +81,7 @@ structure of the simulation model leaves room to extend the network with new com
 
 
 \section{Model assessment}
-The model assessment will be performed by addressing the five criteria points stated in Section ~\eqref{sec::researhqes}. An artificial 23-floor DCS network (with the same number of consumers) was selected for the assessment, as recreating a complete DCS was deemed beyond the scope of this work. Additionally, Eneco has some synthetic data on mass flows for this specific network configuration available. This data is used to determine the hydraulic conductivity of the heat exchanger valves. 
+The model assessment will be performed by addressing the five criteria points stated in Section ~\eqref{sec::researhqes}. An artificial 23-floor DCS network (with the same number of consumers) was selected for the assessment, as recreating a complete DCS was deemed beyond the scope of this work. Additionally, Eneco has some synthetic data on mass flow rates for this specific network configuration available. This data is used to determine the hydraulic conductivity of the heat exchanger valves. 
 
 
 \subsection{Kirchhoff's hydraulic laws}
@@ -98,7 +98,7 @@ F(\dot{\mathbf{m}}(k)) =
 \end{equation}
 where $F(\dot{\mathbf{m}}(k)) \in \mathbb{R}^{(|\mathcal{L}|+|\mathcal{N}|-1)}$ is composed of two blocks: the nodal mass balance residuals $A_{\text{red}}\,\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{N}|-1}$, one equation per node excluding the reference node, and the pressure drop residuals $L \, \mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{L}|}$, one equation per fundamental loop, with the vector $\dot{\mathbf{m}}(k) \in \mathbb{R}^{|\mathcal{E}|}$ containing all the mass flow rates of the edges at timestep $k$ and $\mathbf{\Delta p_e} (\dot{\mathbf{m}}(k)) \in \mathbb{R}^{|\mathcal{N}|}$ as the vector containing the pressure drop over all the edges. 
 
-The Hardy-Cross \cite{HardyCross} and Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods start with an initial guess of the flow and adjust it iteratively until it converges. While the Hardy-Cross method iterates through each loop independently, the Newton–Raphson method iterates through all loops simultaneously \cite{NewtonenHard}. As a result, Newton-Raphson generally converges more quickly than Hardy-Cross. While there are several articles claiming a faster convergence or more accurate determination of the mass flows in cases with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Raphson was selected for this work, given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
+The Hardy-Cross \cite{HardyCross} and Newton-Raphson \cite{NewtonenHard} methods are often used to solve such systems \cite{KUNTUAROVA}. These iterative methods start with an initial guess of the flow and adjust it iteratively until it converges. While the Hardy-Cross method iterates through each loop independently, the Newton–Raphson method iterates through all loops simultaneously \cite{NewtonenHard}. As a result, Newton-Raphson generally converges more quickly than Hardy-Cross. While there are several articles claiming faster convergence or more accurate determination of the mass flow rates in cases with low flow rates \cite{STEVANOVIC, ARSENE}, Newton-Raphson was selected for this work, given the use of Newton-Raphson type solvers by popular simulation tools such as Pandapipes \cite{pandapipes} and OpenModelica \cite{OpenModelica} and its widely available documentation. 
 
 % The developed simulation model uses the root function of scipy to \eqref{eq::KirchoffNR}, using the default method apply the modified Powell method. 
 
@@ -108,13 +108,13 @@ The Hardy-Cross \cite{HardyCross} and Newton-Raphson \cite{NewtonenHard} methods
 The developed simulation model solves \eqref{eq::KirchoffNR} using the \texttt{root} function of the \texttt{SciPy} \cite{scipy} package, with its default method, the modified Powell method. The Jacobian is derived analytically to aid the solver. The hydraulic dynamics are resolved to five decimal places. Over the course of a full simulation, the solver occasionally fails to converge. These occurrences are rare: fewer than 20 instances over a full-day simulation with a time step of one second, and in most simulations they do not occur at all. When this happens, the problem is solved by minimizing $\min ||F(x)||^{2}$ using the L-BFGS-B algorithm, with the mass flow rates from the previous time step used to warm-start the minimization.
 
 To validate the massflows, the results were re-implemented in ~\eqref{eq::KirchoffNR}. 
-\todo[inline]{uitvoeren van check van de kirchhoff vergelijkingen.}
+\todo[inline]{The checking of the Kirchhoff output still needs to be performed.}
 
 \subsection{Nodal energy conservation}
 The energy dynamics within the nodes are described by ~\eqref{eq::NTUnodes} and ~\eqref{eq::TempMix}, ensuring energy conservation at every node. To verify this, four simulations are performed, each with a different heat demand profile. At the end of each timestep the nodal energy balance of ~\eqref{eq::NodalEnergybal} is re-evaluated for all nodes that do not exchange heat with a heat exchanger ($n \in \mathcal{N} \setminus \mathcal{N}_{\text{hex}}$). For the remaining nodes ($n \in \mathcal{N}_{\text{hex}}$), the energy balance is checked by subtracting the heat transfer rate at the primary ('hot') side, 
 $\dot{Q}_h$, from that at the secondary ('cold') side, $\dot{Q}_c$, both defined in ~\eqref{eq::hotandcolheatratetransfer}. 
 The evaluations of the energy conservation within the heat exchanger nods showed evaluations showed errors below \num{1e-11} at every timestep, indicating that energy is conserved at the nodes.
-\todo[inline]{uitvoeren van de simulaties}
+\todo[inline]{The same holds for the verification of energy conservation of the 'normal' nodes.}
 
 \begin{equation}\label{eq::NodalEnergybal}
         \sum_{e  \in \mathcal{E}_{\rightarrow n}} \dot{m}_e(k)T_e(k) = \sum_{e  \in \mathcal{E}_{n \rightarrow}} \dot{m}_e(k)T_e(k).
@@ -283,7 +283,7 @@ D & 0.38 & 0.30 \\
 
 
 
-
+\clearpage
 \subsection{Physical constants}\label{sec::physicalConstants}
 
 
@@ -341,50 +341,49 @@ Insulation thickness & $d_{\text{insu}}$     & m & 0.013   \\
 \end{table}
 
 \subsubsection{Thermostatic bypass valve}
-
+\todo[inline]{Needs to be added}
 
 \subsubsection{Heat exchangers}
-The thermal conductance at design point and the pressure loss coefficient are 
-deducted from the information brochure of the Arctic WKW-S 4P 
-\cite{fortes_wkw_s_4p}. The PI-controller values were chosen after some tuning, resulting in a controller that is neither saturated nor closing unrealistically rapid. The hydraulic conductivity required considerably more work, as no accurate value was provided in the brochure.
+% The thermal conductance at the design point and the pressure loss coefficient are deduced from the information brochure of the Arctic WKW-S 4P \cite{fortes_wkw_s_4p}. The PI-controller values were chosen after some tuning, resulting in a controller that is neither saturated nor closing unrealistically rapidly. The hydraulic conductivity required considerably more work, as no accurate value was provided in the brochure.
 
-To determine a realistic $K_{vs}$, the valve positions required to reproduce a 
-measured mass flow distribution in the network are first derived, after which the range of $K_{vs}$ values that maps these positions onto physically valid valve lifts $h \in [0, 1]$ is established. The mass flow distribution is obtained from fluid velocity data generated by an in-house steady-state model used by Eneco for a 23-floor building, provided by Rutger, from which the mass flows per pipe segment are computed directly.
+% To determine a realistic $K_{vs}$, the valve positions required to reproduce a measured mass flow distribution in the network are first derived, after which the range of $K_{vs}$ values that maps these positions onto physically valid valve lifts $h \in [0, 1]$ is established. The mass flow distribution is obtained from fluid velocity data generated by an in-house steady-state model used by Eneco for a 23-floor building, provided by Rutger, from which the mass flow rates per pipe segment are computed directly.
 
-The loop residual is evaluated at these mass flows, with the valve contribution separated from the remaining friction and pump terms. Following the pressure loss definitions from Section~\ref{sec::hydromodel}, the pressure loss vector without valve contributions is:
+% The loop residual is evaluated at these mass flow rates, with the valve contribution separated from the remaining friction and pump terms. Following the pressure loss definitions from Section~\ref{sec::hydromodel}, the pressure loss vector without valve contributions is:
 
-\begin{equation}
-    \mathbf{f} = f \frac{8L}{\pi^2 D^5 \rho_w} + K_p
-\end{equation}
+% \begin{equation}
+%     \mathbf{f} = f \frac{8L}{\pi^2 D^5 \rho_w} + K_p
+% \end{equation}
 
-\noindent giving the loop residual:
+% \noindent giving the loop residual:
 
-\begin{equation}
-    \mathbf{r}_{\text{loop}} = \mathbf{L}\,\Delta p_{\text{pump}} - 
-    \mathbf{L}\left(\mathbf{f} \cdot |\dot{\mathbf{m}}| \cdot \dot{\mathbf{m}}\right)
-\end{equation}
+% \begin{equation}
+%     \mathbf{r}_{\text{loop}} = \mathbf{L}\,\Delta p_{\text{pump}} - 
+%     \mathbf{L}\left(\mathbf{f} \cdot |\dot{\mathbf{m}}| \cdot \dot{\mathbf{m}}\right)
+% \end{equation}
 
-\noindent where $\mathbf{L}$ is the loop matrix and $\Delta p_{\text{pump}}$ is the pump pressure evaluated at the known mass flows following \ref{eq::pump2order}. This residual must be absorbed by the valve pressure drops. Following \ref{eq::valvedp}, the valve contribution to the loop equations is:
+% \noindent where $\mathbf{L}$ is the loop matrix and $\Delta p_{\text{pump}}$ is the pump pressure evaluated at the known mass flow rates following \ref{eq::pump2order}. This residual must be absorbed by the valve pressure drops. Following \ref{eq::valvedp}, the valve contribution to the loop equations is:
 
-\begin{equation}
-    \mathbf{r}_{\text{valve}} = \mathbf{L}\left(\boldsymbol{\delta}_v \cdot 
-    |\dot{\mathbf{m}}| \cdot \dot{\mathbf{m}}\right)
-\end{equation}
+% \begin{equation}
+%     \mathbf{r}_{\text{valve}} = \mathbf{L}\left(\boldsymbol{\delta}_v \cdot 
+%     |\dot{\mathbf{m}}| \cdot \dot{\mathbf{m}}\right)
+% \end{equation}
 
-\noindent where $\boldsymbol{\delta}_v$ is a binary vector indicating which pipes 
-contain a valve. Since $\Delta p_v = \dot{m}|\dot{m}| / K_v^2$ from 
-(\ref{eq::valvedp}), requiring loop closure yields:
+% \noindent where $\boldsymbol{\delta}_v$ is a binary vector indicating which pipes 
+% contain a valve. Since $\Delta p_v = \dot{m}|\dot{m}| / K_v^2$ from 
+% (\ref{eq::valvedp}), requiring loop closure yields:
 
-\begin{equation}
-    K_v = \sqrt{\frac{\mathbf{r}_{\text{valve}}}{\mathbf{r}_{\text{loop}}}}
-    \label{eq:Kv_fit}
-\end{equation}
+% \begin{equation}
+%     K_v = \sqrt{\frac{\mathbf{r}_{\text{valve}}}{\mathbf{r}_{\text{loop}}}}
+%     \label{eq:Kv_fit}
+% \end{equation}
 
-\noindent These $K_v$ values are verified with the Newton-Raphson solver, 
-recovering the original mass flow distribution with a residual of order 
-$\mathcal{O}(10^{-8})$ kg/s. The valid $K_{vs}$ range is then determined in the following section.
+% \noindent These $K_v$ values are verified with the Newton-Raphson solver, 
+% recovering the original  distribution with a residual of order 
+% $\mathcal{O}(10^{-8})$ kg/s. The valid $K_{vs}$ range is then determined in the following section.
 
-\todo[inline]{need to still add the part of how to determine Kvs also further elaborate with the dimsnesions of the arrays}
+% \todo[inline]{need to still add the part of how to determine Kvs also further elaborate with the dimsnesions of the arrays}
+
+\todo[inline]{Needs to be finished.}
 
 \begin{table}[h!]
 \centering
@@ -408,7 +407,7 @@ Integral gain                      & $K_i$          & --                & $1\tim
 % Assessment goes here.
 
 \subsection{CFL condition}
-The Courant-Friedrichs-Lewy condition is a criterion for ensuring numerical stability when solving partial differential equations using an explicit approach. This is validated by an \texttt{assert} statement that checks the condition in the code after the mass flows are computed.
+The Courant-Friedrichs-Lewy condition is a criterion for ensuring numerical stability when solving partial differential equations using an explicit approach. This is validated by an \texttt{assert} statement that checks the condition in the code after the mass flow rates are computed.
 
 % Assessment goes here.
 
@@ -417,5 +416,7 @@ The Courant-Friedrichs-Lewy condition is a criterion for ensuring numerical stab
 
 
 \section{Summary}
-\todo[inline]{bij de kleppen licht je de waardes van Kv0 en kvleak uit, of dat kan je ook bij de contantes doen. Vervolgens leg je uit waarom je welk type klep hebt gekozen. Dat had ik geloof ik al gedaan.}
+% \todo[inline]{bij de kleppen licht je de waardes van Kv0 en kvleak uit, of dat kan je ook bij de contantes doen. Vervolgens leg je uit waarom je welk type klep hebt gekozen. Dat had ik geloof ik al gedaan.}
+
+\todo[inline]{Needs to be added}
 

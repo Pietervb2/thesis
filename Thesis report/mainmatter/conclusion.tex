@@ -3,9 +3,37 @@
 
 \section{Conclusion}
 
-A good implementation would be the use of real data for the heat demand profiles. 
+
 
 
 \section{Recommendations}
+Several recommendations for future work can be made. 
 
+First, the Node Method should be replaced with an implicit 
+approach to solving the pipeline temperature dynamics. As discussed, the 
+explicit nature of the Node Method forces the small timestep of 1 second 
+through the CFL condition. An implicit method allows considerably larger timesteps. This would reduce the simulation time and relax the pressure that the small timestep places on the steady-state assumptions of the heat exchanger and valve models.
+
+Second, several component models could be made more realistic. The pump is 
+currently restricted to a single head curve, and a more sophisticated model incorporating variable shaft speeds would better capture its behavior. Likewise, a more detailed model of the ATES and of the heat supply would improve the model's realism. Extending the network with additional components, such as multiple producers or storage 
+buffers, would further broaden the range of systems the model can represent.
+
+Third, more realistic heat demand profiles. Incorporating measured demand data would increase the fidelity of the simulations and, in turn, the relevance of the optimization results.
+
+Fourth, the simulation should be run over a longer period in combination with a longer warm-up time. As noted in the discussion, the 6-hour warm-up is based on the stabilization of the bypass valve sensor temperature and does not guarantee that the water and pipe temperatures have reached steady state. A longer horizon would reduce the influence of the initialization settings on the results.
+
+Finally, the cost function could be expanded to better reflect the operational priorities of the network. Combined with a sensitivity analysis of the optimization under noisy observations, this would provide a more complete and realistic basis for evaluating the control policy.
+
+
+
+
+
+% - applying another method than the Node method which is uses an implicit approach in order to get rid of the small timesteps. 
+% - And addin gmore realistic model of the ATES and pump and expanding with other compnents would be interesting
+% -more realistic model of the heat demand
+% - perform the simulation with over a longer amount of time in combination with a longer warm up time to lower the effect of the initialization settings
+% - expand the cost function
+
+
+% - making use of an average heat demand profile
 \todo[inline]{specify added value of thesis}
