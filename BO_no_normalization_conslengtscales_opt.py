@@ -134,7 +134,7 @@ class CostFunction:
             deltaQ_tot = np.sum(deltaQ_sq)
 
             T_r = net.nodes['Node 1.6'].T
-            warmup_steps = int(4.5 / 24 * len(T_r))
+            warmup_steps = int(6 / 24 * len(T_r))
             smooth_max_Tr = smooth_max(T_r[warmup_steps:])
             cost = self.compute_cost(net, theta)
             self._cache[key] = (cost, Q_respond_max, deltaQ_tot, smooth_max_Tr)
@@ -415,4 +415,4 @@ if __name__ == '__main__':
         dt = 1
         pump_pressure = 60
         curve = True
-        run_bo(profile_num, dt, pump_pressure, curve, new_benchmark_run=False, split_Ts_bounds=split)
+        run_bo(profile_num, dt, pump_pressure, curve, new_benchmark_run=True, split_Ts_bounds=split)
